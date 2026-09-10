@@ -39,6 +39,12 @@
 
   window.PINPOINTE_CONFIG = {
     functionUrl: project.url ? project.url + '/functions/v1/unlock-session' : '',
+
+    // Where register.html posts. Separate endpoint because it is a different act:
+    // registering costs nothing and needs no staff password, so it must not sit
+    // behind -- or anywhere near -- the one that takes money.
+    registerUrl: project.url ? project.url + '/functions/v1/register-player' : '',
+
     anonKey: project.anonKey,
     environment: project === PROJECTS.prod ? 'prod' : 'dev'
   };

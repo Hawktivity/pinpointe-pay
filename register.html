@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14141a">
+<meta name="robots" content="noindex, nofollow">
+<title>Join the board &middot; PinPointe Social</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@400;500;600;700&display=swap">
+
+<style>
+/* ---------------------------------------------------------------------------
+   Same palette and type as the pay page, because a group will scan both codes
+   within a few minutes of each other and they should plainly be one product.
+
+   Single theme on purpose: used for a minute in a dim pub, and it should look
+   the same to everybody whatever their phone prefers.
+--------------------------------------------------------------------------- */
+:root {
+  --ink: #14141a;
+  --ink-2: #1b1b22;
+  --ink-3: #24242c;
+  --line: #2c2c34;
+  --brick: #a8433f;
+  --brick-lit: #c0504b;
+  --go: #3e9b4f;
+  --warn: #d08a2c;
+  --paper: #f0f0f2;
+  --dim: #9b9ba4;
+  --dimmer: #74747e;
+  --display: 'Anton', 'Arial Narrow', Impact, sans-serif;
+  --body: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body { min-height: 100%; }
+
+body {
+  margin: 0;
+  background: linear-gradient(168deg, #17171d 0%, #101015 100%);
+  background-attachment: fixed;
+  color: var(--paper);
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+
+.wrap {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem calc(2.5rem + env(safe-area-inset-bottom));
+}
+
+.mark {
+  font-family: var(--display);
+  font-size: 1.05rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin: 0 0 1.5rem;
+}
+.mark b { color: var(--brick-lit); font-weight: 400; }
+
+h1 {
+  font-family: var(--display);
+  font-size: clamp(2.1rem, 10vw, 2.9rem);
+  line-height: .98;
+  letter-spacing: .01em;
+  text-transform: uppercase;
+  margin: 0 0 .5rem;
+  text-wrap: balance;
+}
+
+.lede { color: var(--dim); margin: 0 0 1.75rem; }
+.lede b { color: var(--paper); font-weight: 600; }
+
+/* --- the form ---------------------------------------------------------- */
+.field { margin: 0 0 1.15rem; }
+
+label {
+  display: block;
+  font-size: .78rem;
+  font-weight: 600;
+  letter-spacing: .085em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin: 0 0 .4rem;
+}
+label .opt { color: var(--dimmer); font-weight: 500; letter-spacing: .04em; }
+
+input[type=text], input[type=email], input[type=tel], input[type=date] {
+  width: 100%;
+  padding: .85rem .9rem;
+  font-family: var(--body);
+  font-size: 1.05rem;
+  color: var(--paper);
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  appearance: none;
+}
+input:focus-visible {
+  outline: 2px solid var(--brick-lit);
+  outline-offset: 1px;
+  border-color: var(--brick-lit);
+}
+/* Safari renders an empty date input as a placeholder-less blank; keep the text
+   the same colour as everything else so it does not read as disabled. */
+input[type=date] { min-height: 3.1rem; }
+
+.row { display: flex; gap: .75rem; }
+.row > * { flex: 1 1 0; min-width: 0; }
+
+/* --- disclaimer -------------------------------------------------------- */
+.rules {
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--warn);
+  border-radius: 3px;
+  padding: .9rem 1rem;
+  margin: 0 0 1.15rem;
+}
+.rules h2 {
+  font-family: var(--display);
+  font-size: 1rem;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  margin: 0 0 .45rem;
+}
+.rules ul { margin: 0; padding-left: 1.1rem; color: var(--dim); font-size: .93rem; }
+.rules li + li { margin-top: .3rem; }
+
+.tick {
+  display: flex;
+  gap: .75rem;
+  align-items: flex-start;
+  padding: .9rem 0 0;
+  cursor: pointer;
+}
+.tick input {
+  flex: 0 0 auto;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0;
+  accent-color: var(--brick-lit);
+}
+.tick span { font-size: .95rem; }
+
+/* --- buttons ----------------------------------------------------------- */
+button {
+  width: 100%;
+  padding: 1.05rem 1rem;
+  font-family: var(--display);
+  font-size: 1.2rem;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: var(--brick);
+  border: 0;
+  border-radius: 3px;
+  cursor: pointer;
+}
+button:disabled { background: var(--ink-3); color: var(--dimmer); cursor: default; }
+button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
+
+/* --- notices ----------------------------------------------------------- */
+.notice {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--brick);
+  background: var(--ink-2);
+  border-radius: 3px;
+  padding: .85rem 1rem;
+  margin: 0 0 1.15rem;
+}
+.notice h2 {
+  font-family: var(--display);
+  font-size: 1rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin: 0 0 .25rem;
+}
+.notice p { margin: 0; color: var(--dim); font-size: .95rem; }
+
+.done-mark {
+  font-family: var(--display);
+  font-size: clamp(3rem, 18vw, 5rem);
+  line-height: 1;
+  color: var(--go);
+  margin: 0 0 .5rem;
+}
+
+.privacy {
+  margin: 2rem 0 0;
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--line);
+  color: var(--dimmer);
+  font-size: .82rem;
+  line-height: 1.55;
+}
+
+.spinner {
+  width: 1.9rem; height: 1.9rem;
+  border: 3px solid var(--line);
+  border-top-color: var(--brick-lit);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+  margin: 2.5rem auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="mark">Pin<b>Pointe</b> Social</p>
+
+  <!-- 1. loading -------------------------------------------------------- -->
+  <section id="screen-loading">
+    <div class="spinner" role="status" aria-label="Checking this code"></div>
+  </section>
+
+  <!-- 2. the form ------------------------------------------------------- -->
+  <section id="screen-form" hidden>
+    <h1>Join the board</h1>
+    <p class="lede">Put your name in and you'll appear on <b id="suite-name">the board</b>.
+      Somebody at the board taps you in to play.</p>
+
+    <div id="form-notice-slot"></div>
+
+    <form id="form" novalidate>
+      <div class="row">
+        <div class="field">
+          <label for="firstName">First name</label>
+          <input id="firstName" name="firstName" type="text" autocomplete="given-name"
+                 enterkeyhint="next" maxlength="40" required>
+        </div>
+        <div class="field">
+          <label for="lastName">Last name <span class="opt">optional</span></label>
+          <input id="lastName" name="lastName" type="text" autocomplete="family-name"
+                 enterkeyhint="next" maxlength="40">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="email">Email <span class="opt">optional &mdash; for your scores afterwards</span></label>
+        <input id="email" name="email" type="email" autocomplete="email"
+               inputmode="email" enterkeyhint="next" maxlength="120">
+      </div>
+
+      <div class="field">
+        <label for="mobileNumber">Mobile <span class="opt">optional</span></label>
+        <input id="mobileNumber" name="mobileNumber" type="tel" autocomplete="tel"
+               inputmode="tel" enterkeyhint="next" maxlength="30">
+      </div>
+
+      <div class="field">
+        <label for="dateOfBirth">Date of birth <span class="opt">optional</span></label>
+        <input id="dateOfBirth" name="dateOfBirth" type="date" autocomplete="bday">
+      </div>
+
+      <div class="rules">
+        <h2>Before you throw</h2>
+        <ul>
+          <li>Stand behind the line, and never throw while somebody is at the board.</li>
+          <li>Darts are sharp. Collect yours yourself, and carry them point down.</li>
+          <li>Play sensibly. Staff can end a session that stops being safe.</li>
+        </ul>
+        <label class="tick" for="disclaimer">
+          <input id="disclaimer" type="checkbox">
+          <span>I've read these and I'll play by them.</span>
+        </label>
+      </div>
+
+      <button id="submit" type="submit">I'm in</button>
+    </form>
+
+    <p class="privacy">
+      Your name goes to the board so people can see who's playing. Anything else you
+      put in is kept only for this session and cleared when it ends &mdash; we don't
+      build a profile and we won't market to you. Leave the optional fields blank and
+      the board still works exactly the same.
+    </p>
+  </section>
+
+  <!-- 3. done ----------------------------------------------------------- -->
+  <section id="screen-done" hidden>
+    <p class="done-mark">&check;</p>
+    <h1 id="done-heading">You're on</h1>
+    <p class="lede">Look up at the board &mdash; your name is on it. Someone at the
+      board taps you in when you're ready to play.</p>
+    <p class="privacy">You can close this page.</p>
+  </section>
+
+  <!-- 4. no good -------------------------------------------------------- -->
+  <section id="screen-error" hidden>
+    <h1 id="error-heading">That didn't work</h1>
+    <p class="lede" id="error-body">Ask a member of staff to add you at the board.</p>
+  </section>
+</div>
+
+<script src="config.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var cfg = window.PINPOINTE_CONFIG || {};
+  var params = new URLSearchParams(window.location.search);
+
+  // The signed payload. Everything about this registration -- which board, which
+  // session -- is inside it and signed by the venue's key. The page never reads a
+  // field out of it: it hands it back untouched and lets the endpoint decide, the
+  // same way the pay page never trusts an amount from the URL.
+  var code = params.get('c') || '';
+
+  // Minted once per page load so a double tap, or a submit on a flaky connection
+  // that actually succeeded, adds one player rather than two.
+  var submissionId = (function () {
+    if (window.crypto && window.crypto.randomUUID) { return window.crypto.randomUUID(); }
+    // Older iOS Safari. Not security-relevant -- this only has to be unique.
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      var r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  })();
+
+  var busy = false;
+
+  function el(id) { return document.getElementById(id); }
+
+  function show(name) {
+    ['loading', 'form', 'done', 'error'].forEach(function (s) {
+      el('screen-' + s).hidden = (s !== name);
+    });
+  }
+
+  function fail(heading, body) {
+    el('error-heading').textContent = heading;
+    el('error-body').textContent = body;
+    show('error');
+  }
+
+  function notice(slot, heading, body) {
+    var box = document.createElement('div');
+    box.className = 'notice';
+    var h = document.createElement('h2');
+    h.textContent = heading;
+    var p = document.createElement('p');
+    p.textContent = body;
+    box.appendChild(h);
+    box.appendChild(p);
+    el(slot).replaceChildren(box);
+  }
+
+  function post(body) {
+    return fetch(cfg.registerUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + cfg.anonKey,
+        'apikey': cfg.anonKey
+      },
+      body: JSON.stringify(body)
+    }).then(function (r) {
+      return r.json().then(function (data) { return { status: r.status, data: data }; });
+    });
+  }
+
+  // --- on load: ask whose board this is, before showing anybody a form --------
+  if (!code) {
+    fail('This link is incomplete', 'Scan the code on the board again.');
+    return;
+  }
+
+  if (!cfg.registerUrl) {
+    fail('Not set up yet',
+         'This board cannot take registrations from phones. Ask a member of staff to add you.');
+    return;
+  }
+
+  post({ action: 'describe', code: code }).then(function (res) {
+    var data = res.data || {};
+
+    if (!data.ok) {
+      fail(
+        data.reason === 'expired' ? 'This code has expired'
+          : data.reason === 'altered' ? 'This code isn’t valid'
+          : 'That didn’t work',
+        data.message || 'Ask a member of staff to add you at the board.');
+      return;
+    }
+
+    if (data.suiteName) { el('suite-name').textContent = data.suiteName; }
+
+    if (data.full) {
+      notice('form-notice-slot', 'This board is full',
+        'It has had all the registrations it can take. Ask a member of staff.');
+      el('submit').disabled = true;
+    }
+
+    show('form');
+    el('firstName').focus();
+  }).catch(function () {
+    fail('No connection',
+         'Your phone could not reach us. Ask a member of staff to add you at the board.');
+  });
+
+  // --- submit ---------------------------------------------------------------
+  el('form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (busy) { return; }
+
+    var firstName = el('firstName').value.trim();
+    if (!firstName) {
+      notice('form-notice-slot', 'Name needed', 'Put in at least a first name.');
+      el('firstName').focus();
+      return;
+    }
+
+    if (!el('disclaimer').checked) {
+      notice('form-notice-slot', 'One more thing',
+        'Tick to say you’ve read the rules before you throw.');
+      el('disclaimer').focus();
+      return;
+    }
+
+    busy = true;
+    el('submit').disabled = true;
+    el('submit').textContent = 'Sending…';
+
+    post({
+      code: code,
+      submissionId: submissionId,
+      firstName: firstName,
+      lastName: el('lastName').value.trim(),
+      email: el('email').value.trim(),
+      mobileNumber: el('mobileNumber').value.trim(),
+      dateOfBirth: el('dateOfBirth').value,
+      acceptedDisclaimer: true
+    }).then(function (res) {
+      var data = res.data || {};
+
+      if (data.ok) {
+        el('done-heading').textContent = 'You’re on, ' + (data.firstName || firstName);
+        show('done');
+        return;
+      }
+
+      busy = false;
+      el('submit').disabled = false;
+      el('submit').textContent = 'I’m in';
+
+      if (data.reason === 'full') {
+        notice('form-notice-slot', 'This board is full', data.message);
+      } else if (data.reason === 'not_recorded') {
+        notice('form-notice-slot', 'That didn’t save',
+          'Try once more. If it still fails, ask a member of staff to add you.');
+      } else if (data.reason === 'expired') {
+        fail('This code has expired', 'The board will be showing a new one. Scan that.');
+      } else {
+        notice('form-notice-slot', 'That didn’t work',
+          data.message || 'Try again, or ask a member of staff.');
+      }
+    }).catch(function () {
+      busy = false;
+      el('submit').disabled = false;
+      el('submit').textContent = 'I’m in';
+      notice('form-notice-slot', 'No connection',
+        'Your phone could not reach us. Try again, or ask a member of staff.');
+    });
+  });
+})();
+</script>
+</body>
+</html>
