@@ -65,7 +65,14 @@ Typing the wrong password five times reaches the lockout screen.
 ## Deploying
 
 GitHub Pages, from `main` at the repository root. There is no build step, so a
-push is a deploy.
+push is a deploy. Live at https://hawktivity.github.io/pinpointe-pay/ with HTTPS
+enforced.
+
+Pages has no meaningful availability guarantee, and this page now sits on the
+payment path: if it is down, a group cannot pay. The board's typed six-digit
+token is the way through that, which is the same fallback that covers the board
+losing its own network. Cloudflare Pages and Netlify are the same amount of work
+if that trade stops being acceptable.
 
 The live domain is `pay.pinpointe.uk`, pointed at Pages with a `CNAME` record.
 `config.js` keys off that hostname to pick the production Supabase project, so
