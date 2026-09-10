@@ -1,0 +1,4 @@
+# Nothing here is meant to be found by searching. Every URL is one signed,
+# half-hour code scanned off a board.
+User-agent: *
+Disallow: /

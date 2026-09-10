@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14141a">
+<meta name="robots" content="noindex, nofollow">
+<title>Pay at the bar &middot; PinPointe Social</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@400;500;600;700&display=swap">
+
+<style>
+/* ---------------------------------------------------------------------------
+   The suite's own palette, so a guest holding this phone next to the board is
+   plainly looking at the same product. Single theme on purpose: this is a page
+   used for ninety seconds in a dim pub, and it should look the same to
+   everybody regardless of what their phone prefers.
+--------------------------------------------------------------------------- */
+:root {
+  --ink: #14141a;
+  --ink-2: #1b1b22;
+  --ink-3: #24242c;
+  --line: #2c2c34;
+  --brick: #a8433f;
+  --brick-lit: #c0504b;
+  --go: #3e9b4f;
+  --warn: #d08a2c;
+  --paper: #f0f0f2;
+  --dim: #9b9ba4;
+  --dimmer: #74747e;
+  --display: 'Anton', 'Arial Narrow', Impact, sans-serif;
+  --body: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body { min-height: 100%; }
+
+body {
+  margin: 0;
+  background: linear-gradient(168deg, #17171d 0%, #101015 100%);
+  background-attachment: fixed;
+  color: var(--paper);
+  font-family: var(--body);
+  -webkit-font-smoothing: antialiased;
+  /* Safe areas so nothing important hides under a notch or a home bar. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.shell { max-width: 430px; margin: 0 auto; padding: 22px 24px 40px; }
+
+/* ---- masthead --------------------------------------------------------- */
+.brand {
+  text-align: center; font: 400 22px/1 var(--display);
+  letter-spacing: .12em; text-transform: uppercase; color: #cfcfd5;
+}
+.brand b { color: var(--brick-lit); font-weight: 400; }
+.venue {
+  text-align: center; font: 500 11px/1 var(--body); letter-spacing: .16em;
+  text-transform: uppercase; color: var(--dimmer); margin-top: 9px;
+}
+
+/* ---- headings and text ------------------------------------------------ */
+h1 {
+  font: 400 34px/1.2 var(--display); text-transform: uppercase;
+  margin: 0 0 8px; color: var(--paper); text-wrap: balance;
+}
+h1.small { font-size: 26px; }
+p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--dim); }
+p + p { margin-top: 10px; }
+
+/* ---- the amount ------------------------------------------------------- */
+.amount-label {
+  font: 600 11px/1 var(--body); letter-spacing: .2em; text-transform: uppercase;
+  color: var(--dimmer); margin-bottom: 22px;
+}
+.amount {
+  font: 400 84px/1 var(--display); color: #fff;
+  font-variant-numeric: tabular-nums; letter-spacing: -.01em;
+}
+
+/* ---- detail rows ------------------------------------------------------ */
+.rows { display: flex; flex-direction: column; }
+.row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 13px 0; border-bottom: 1px solid #292930; gap: 16px;
+}
+.row .k { font: 500 13px/1.3 var(--body); color: #8b8b95; }
+.row .v {
+  font: 400 19px/1.2 var(--display); color: #e9e9eb; letter-spacing: .02em;
+  text-align: right; font-variant-numeric: tabular-nums;
+}
+.who { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 14px; }
+.who span {
+  font: 600 11.5px/1 var(--body); padding: 6px 10px; border-radius: 999px;
+  background: var(--ink-3); color: #b4b4bd; border: 1px solid #33333c;
+}
+
+/* ---- buttons ---------------------------------------------------------- */
+button {
+  font-family: var(--display); -webkit-appearance: none; appearance: none;
+  border: 0; cursor: pointer;
+}
+.cta, .ghost {
+  display: block; width: 100%; height: 62px; border-radius: 6px;
+  font: 400 22px/1 var(--display); letter-spacing: .06em; text-transform: uppercase;
+}
+.cta { background: var(--brick); color: #fff; }
+.cta:active { background: #933936; }
+.cta[disabled] { background: #3a3a44; color: #8f8f99; cursor: default; }
+.ghost {
+  background: transparent; border: 2px solid #45454f; color: #b9b9c2;
+  height: 52px; font-size: 18px; margin-top: 12px;
+}
+.ghost:active { border-color: #5a5a66; }
+button:focus-visible, input:focus-visible {
+  outline: 3px solid var(--brick-lit); outline-offset: 2px;
+}
+
+/* ---- the staff bar ---------------------------------------------------- */
+.staff-bar {
+  background: var(--brick); color: #fff; text-align: center;
+  font: 600 11px/1 var(--body); letter-spacing: .24em; text-transform: uppercase;
+  padding: 14px 12px; margin: -22px -24px 24px;
+}
+
+/* ---- the password field ---------------------------------------------- */
+.field {
+  display: flex; align-items: center; gap: 10px;
+  height: 62px; border: 2px solid #3d3d47; border-radius: 8px; background: #1d1d24;
+  padding: 0 6px 0 16px;
+}
+.field:focus-within { border-color: var(--brick); background: #26191b; }
+.field.bad { border-color: #8a5a2a; background: #241d12; }
+.field input {
+  flex: 1 1 auto; min-width: 0; background: none; border: 0; color: var(--paper);
+  font: 500 19px/1 var(--body); letter-spacing: .16em; padding: 0;
+}
+.field input::placeholder { color: #6f6f79; letter-spacing: normal; font-size: 15px; }
+.field input:focus { outline: none; }
+.reveal {
+  flex: 0 0 auto; width: 46px; height: 46px; border-radius: 6px;
+  background: none; display: grid; place-items: center; opacity: .6;
+}
+.reveal svg { width: 22px; height: 22px; display: block; }
+.hint { font: 500 12px/1.5 var(--body); color: var(--dimmer); margin-top: 10px; }
+
+/* ---- notices ---------------------------------------------------------- */
+.notice {
+  border-left: 3px solid var(--warn); background: #241d12; padding: 13px 15px;
+  font: 500 13px/1.5 var(--body); color: #e6c38c; border-radius: 0 4px 4px 0;
+}
+.notice b { display: block; color: #f2dcb4; font-weight: 600; margin-bottom: 3px; }
+.notice.stop { border-left-color: var(--brick-lit); background: #241618; color: #e8b4b0; }
+.notice.stop b { color: #f4d2cf; }
+
+/* ---- success ---------------------------------------------------------- */
+.tick {
+  width: 118px; height: 118px; border-radius: 50%; margin: 0 auto 26px;
+  border: 5px solid var(--go); display: grid; place-items: center;
+}
+.tick svg { width: 60px; height: 60px; }
+
+/* ---- the fallback digits --------------------------------------------- */
+.token-box {
+  border: 2px dashed #4a4a54; border-radius: 8px; background: #1a1a20;
+  padding: 18px 12px 22px; text-align: center;
+}
+.token {
+  font: 400 56px/1.45 var(--display); color: #fff; letter-spacing: .1em;
+  text-indent: .1em; font-variant-numeric: tabular-nums;
+}
+.token-cap {
+  font: 600 10.5px/1 var(--body); letter-spacing: .2em; text-transform: uppercase;
+  color: var(--dimmer);
+}
+
+/* ---- layout helpers -------------------------------------------------- */
+.stack { display: flex; flex-direction: column; gap: 26px; }
+.tight { display: flex; flex-direction: column; gap: 12px; }
+.spinner {
+  width: 34px; height: 34px; border-radius: 50%; margin: 40px auto;
+  border: 3px solid #33333c; border-top-color: var(--brick-lit);
+  animation: spin 900ms linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
+
+[hidden] { display: none !important; }
+.sr {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+</style>
+</head>
+<body>
+
+<main class="shell">
+
+  <!-- ============ loading ============ -->
+  <section id="view-loading">
+    <div class="brand">Pin<b>Pointe</b></div>
+    <div class="venue">Checking your code</div>
+    <div class="spinner" role="status" aria-label="Checking"></div>
+  </section>
+
+  <!-- ============ what you're paying ============ -->
+  <section id="view-pay" hidden>
+    <div class="brand">Pin<b>Pointe</b></div>
+    <div class="venue" id="pay-venue">Suite</div>
+
+    <div class="stack" style="margin-top:30px">
+      <div>
+        <div class="amount-label">To pay at the bar</div>
+        <div class="amount" id="pay-amount">&mdash;</div>
+      </div>
+
+      <div>
+        <div class="rows">
+          <div class="row"><span class="k">Players</span><span class="v" id="pay-players">&mdash;</span></div>
+          <div class="row"><span class="k">Time</span><span class="v" id="pay-minutes">&mdash;</span></div>
+          <div class="row"><span class="k">This code lasts</span><span class="v" id="pay-expires">&mdash;</span></div>
+        </div>
+      </div>
+
+      <div>
+        <h1>Show this at the bar</h1>
+        <p id="pay-blurb">
+          Your server takes the payment, then taps below and enters their own
+          password to start the board.
+        </p>
+      </div>
+
+      <div class="tight">
+        <button class="cta" id="to-staff">Paid &mdash; unlock</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ staff: password ============ -->
+  <section id="view-staff" hidden>
+    <div class="staff-bar">Staff &mdash; your password</div>
+
+    <div class="stack">
+      <div>
+        <h1 class="small" id="staff-amount">&mdash; taken?</h1>
+        <p id="staff-detail">&mdash;</p>
+      </div>
+
+      <div>
+        <label class="sr" for="password">Your staff password</label>
+        <div class="field" id="password-field">
+          <input id="password" type="password" inputmode="text" autocomplete="off"
+                 autocapitalize="none" autocorrect="off" spellcheck="false"
+                 enterkeyhint="go" placeholder="Password">
+          <button class="reveal" id="reveal" type="button"
+                  aria-label="Show password" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#c9c9d1" stroke-width="1.7">
+              <path d="M1.8 12S5.4 5.5 12 5.5 22.2 12 22.2 12 18.6 18.5 12 18.5 1.8 12 1.8 12Z"/>
+              <circle cx="12" cy="12" r="3.2"/>
+            </svg>
+          </button>
+        </div>
+        <p class="hint">
+          Your own password, not the guest&rsquo;s. Every unlock is recorded against
+          your name.
+        </p>
+      </div>
+
+      <div id="staff-notice-slot" hidden></div>
+
+      <div class="tight">
+        <button class="cta" id="unlock">Unlock the board</button>
+        <button class="ghost" id="staff-back">Not paid &mdash; go back</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ unlocked ============ -->
+  <section id="view-done" hidden>
+    <div class="stack" style="margin-top:40px">
+      <div>
+        <div class="tick">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#3e9b4f" stroke-width="2.6"
+               stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.8 9.4 18 20 6.6"/></svg>
+        </div>
+        <div style="text-align:center">
+          <h1 id="done-title">Unlocked</h1>
+          <p id="done-blurb">Go and throw.</p>
+        </div>
+      </div>
+
+      <div class="rows">
+        <div class="row"><span class="k">Paid</span><span class="v" id="done-amount">&mdash;</span></div>
+        <div class="row"><span class="k">Time bought</span><span class="v" id="done-minutes">&mdash;</span></div>
+        <div class="row"><span class="k">Approved by</span><span class="v" id="done-by">&mdash;</span></div>
+      </div>
+
+      <!-- Only shown when the board did not pick the unlock up itself. -->
+      <div id="done-token" hidden>
+        <div class="notice">
+          <b>The board hasn&rsquo;t answered yet</b>
+          Your session is paid for either way. Type these six digits on the
+          touchscreen to start it.
+        </div>
+        <div class="token-box" style="margin-top:14px">
+          <div class="token" id="token-digits">&mdash;</div>
+          <div class="token-cap">Enter at the board</div>
+        </div>
+      </div>
+
+      <p class="hint" id="done-hint">
+        We&rsquo;ll nudge this phone ten minutes before the time runs out, in case
+        you want longer.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ something is wrong ============ -->
+  <section id="view-error" hidden>
+    <div class="brand">Pin<b>Pointe</b></div>
+    <div class="stack" style="margin-top:36px">
+      <div>
+        <h1 id="error-title">This code didn&rsquo;t work</h1>
+        <p id="error-detail">Ask the suite for a new one.</p>
+      </div>
+      <div id="error-notice-slot" hidden></div>
+      <button class="ghost" id="error-retry">Try again</button>
+    </div>
+  </section>
+
+</main>
+
+<!-- Which Supabase project to talk to. Kept out of this file so the page can be
+     pointed at dev or production without editing the app, and so a local copy can
+     be driven from a fake. -->
+<script src="config.js"></script>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------------------------------------------------------------------------
+  // Where to ask. Both values are publishable by design: the anon key grants
+  // nothing on its own, because every table is behind row-level security scoped
+  // to a suite's own auth user, and staff password hashes have no policy at all.
+  // ---------------------------------------------------------------------------
+  var CONFIG = window.PINPOINTE_CONFIG || {};
+  var FUNCTION_URL = CONFIG.functionUrl || '';
+  var ANON_KEY = CONFIG.anonKey || '';
+
+  var el = function (id) { return document.getElementById(id); };
+  var views = ['loading', 'pay', 'staff', 'done', 'error'];
+
+  function show(name) {
+    views.forEach(function (v) { el('view-' + v).hidden = v !== name; });
+    window.scrollTo(0, 0);
+  }
+
+  function money(minor, currency) {
+    var symbol = { GBP: '£', EUR: '€', USD: '$', CAD: '$' }[currency];
+    var amount = (minor / 100).toFixed(2);
+    return symbol ? symbol + amount : (currency || '') + ' ' + amount;
+  }
+
+  function duration(minutes) {
+    if (minutes === 60) return '1 hour';
+    if (minutes === 90) return '90 min';
+    if (minutes > 60 && minutes % 60 === 0) return (minutes / 60) + ' hours';
+    return minutes + ' min';
+  }
+
+  function notice(slotId, title, body, stop) {
+    var slot = el(slotId);
+    slot.innerHTML = '';
+    var box = document.createElement('div');
+    box.className = 'notice' + (stop ? ' stop' : '');
+    var strong = document.createElement('b');
+    strong.textContent = title;
+    box.appendChild(strong);
+    box.appendChild(document.createTextNode(body));
+    slot.appendChild(box);
+    slot.hidden = false;
+    // Announced, because a server who has just tapped Unlock is looking at the
+    // button, not at the space above it.
+    box.setAttribute('role', 'alert');
+  }
+
+  function fail(title, detail) {
+    el('error-title').textContent = title;
+    el('error-detail').textContent = detail || '';
+    el('error-notice-slot').hidden = true;
+    show('error');
+  }
+
+  // ---------------------------------------------------------------------------
+  // The code arrives in the URL. It is never trusted for anything shown on
+  // screen: the amount comes back from `describe`, which checks the signature
+  // first. A forged link claiming two pounds would otherwise have a server take
+  // two pounds before anybody validated it.
+  // ---------------------------------------------------------------------------
+  function codeFromUrl() {
+    var params = new URLSearchParams(window.location.search);
+    var code = params.get('c') || params.get('code');
+    if (code) return code;
+    // Also accept it after the hash, since some scanners strip query strings.
+    var hash = (window.location.hash || '').replace(/^#/, '');
+    return hash || null;
+  }
+
+  var code = codeFromUrl();
+  var session = null;
+
+  function call(body) {
+    // A local copy can supply its own responder. Never present in a deployed
+    // build, because config.js only installs one for localhost.
+    if (typeof CONFIG.transport === 'function') {
+      return Promise.resolve(CONFIG.transport(body));
+    }
+
+    if (!FUNCTION_URL || !ANON_KEY) {
+      return Promise.reject(new Error(
+        'This page has not been configured with a Supabase project yet.'));
+    }
+
+    return fetch(FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'apikey': ANON_KEY,
+        'authorization': 'Bearer ' + ANON_KEY
+      },
+      body: JSON.stringify(body)
+    }).then(function (response) {
+      return response.json().catch(function () { return {}; }).then(function (data) {
+        return { status: response.status, data: data };
+      });
+    });
+  }
+
+  // ---- 1. describe ---------------------------------------------------------
+  function describe() {
+    if (!code) {
+      fail('This link is incomplete',
+        'Scan the code on the suite screen again, or ask a member of staff.');
+      return;
+    }
+
+    call({ action: 'describe', code: code }).then(function (result) {
+      var data = result.data || {};
+
+      if (!data.ok) {
+        fail(
+          data.reason === 'expired' ? 'This code has expired'
+            : data.reason === 'altered' ? 'This code isn’t valid'
+            : 'This code didn’t work',
+          data.message || 'Ask the suite for a new one.');
+        return;
+      }
+
+      session = data;
+
+      if (data.alreadyPaid) {
+        // Never invite a second payment for the same session.
+        el('done-title').textContent = 'Already paid';
+        el('done-blurb').textContent = 'This session has been unlocked.';
+        el('done-amount').textContent = money(data.amountMinor, data.currency);
+        el('done-minutes').textContent = duration(data.minutes);
+        el('done-by').textContent = (data.approvedBy || 'Staff').toUpperCase();
+        el('done-hint').textContent =
+          'Nothing more to pay. If the board has not started, ask a member of staff.';
+        show('done');
+        return;
+      }
+
+      el('pay-venue').textContent = 'Suite ' + (data.suiteId ? shortSuite(data.suiteId) : '');
+      el('pay-amount').textContent = money(data.amountMinor, data.currency);
+      el('pay-players').textContent = data.players;
+      el('pay-minutes').textContent = duration(data.minutes);
+      el('pay-expires').textContent = Math.max(1, Math.round(data.expiresInSeconds / 60)) + ' MIN';
+
+      if (data.kind === 'ext') {
+        el('pay-blurb').textContent =
+          'This adds more time to the session you are already playing. Your server '
+          + 'takes the payment, then enters their own password below.';
+      }
+
+      el('staff-amount').textContent = money(data.amountMinor, data.currency) + ' taken?';
+      el('staff-detail').textContent =
+        data.players + ' players · ' + duration(data.minutes)
+        + (data.kind === 'ext' ? ' · extra time' : '');
+
+      show('pay');
+    }).catch(function (error) {
+      fail('We can’t reach the till system',
+        (error && error.message)
+          ? error.message
+          : 'Check the phone has signal and try again, or ask a member of staff.');
+      el('error-retry').hidden = false;
+    });
+  }
+
+  /** A suite id is a uuid; only the readable tail is worth putting on screen. */
+  function shortSuite(id) {
+    return String(id).slice(0, 8);
+  }
+
+  // ---- 2. staff password --------------------------------------------------
+  var unlocking = false;
+
+  function unlock() {
+    if (unlocking) return;
+
+    var password = el('password').value;
+    if (!password.trim()) {
+      notice('staff-notice-slot', 'Enter your password',
+        'This is your own staff password. Ask a manager if you have not been given one.');
+      el('password').focus();
+      return;
+    }
+
+    unlocking = true;
+    el('unlock').disabled = true;
+    el('unlock').textContent = 'Checking…';
+    el('staff-notice-slot').hidden = true;
+    el('password-field').classList.remove('bad');
+
+    call({ action: 'unlock', code: code, password: password }).then(function (result) {
+      var data = result.data || {};
+      unlocking = false;
+      el('unlock').disabled = false;
+      el('unlock').textContent = 'Unlock the board';
+
+      if (data.ok) {
+        el('password').value = '';
+        el('done-title').textContent = 'Board unlocked';
+        el('done-blurb').textContent = duration(data.minutes) + ' on the clock. Go and throw.';
+        el('done-amount').textContent = money(data.amountMinor, data.currency);
+        el('done-minutes').textContent = duration(data.minutes);
+        el('done-by').textContent = (data.approvedBy || '—').toUpperCase();
+
+        // The digits are only useful if the board did not hear it over the
+        // network, so they are held back until that is actually the case.
+        if (data.fallbackToken) {
+          el('token-digits').textContent =
+            data.fallbackToken.slice(0, 3) + ' ' + data.fallbackToken.slice(3);
+          watchForBoard(data.fallbackToken);
+        }
+
+        show('done');
+        return;
+      }
+
+      el('password-field').classList.add('bad');
+
+      if (data.reason === 'locked') {
+        var wait = data.retryAfterSeconds
+          ? 'Try again in ' + data.retryAfterSeconds + ' seconds.'
+          : 'Try again shortly.';
+        notice('staff-notice-slot', 'Too many wrong passwords',
+          wait + ' If you have forgotten yours, ask a manager to set a new one — '
+          + 'do not use somebody else’s.', true);
+      } else if (data.reason === 'no_staff') {
+        notice('staff-notice-slot', 'No staff passwords set up',
+          'Nobody can unlock a board at this venue yet. Ask a manager.', true);
+      } else if (data.reason === 'wrong_password') {
+        var left = typeof data.attemptsRemaining === 'number' ? data.attemptsRemaining : null;
+        notice('staff-notice-slot', 'That password didn’t work',
+          (left === null ? '' : left + (left === 1 ? ' try' : ' tries') + ' left, then this locks for a moment. ')
+          + 'If you have forgotten it, ask a manager to set a new one.');
+      } else if (data.reason === 'not_recorded') {
+        notice('staff-notice-slot', 'Payment accepted but not recorded',
+          'Tell a manager before the group plays — this session will not appear in '
+          + 'tonight’s takings.', true);
+      } else {
+        notice('staff-notice-slot', 'That didn’t work',
+          data.message || 'Try again, or ask a manager.', true);
+      }
+
+      el('password').select();
+    }).catch(function () {
+      unlocking = false;
+      el('unlock').disabled = false;
+      el('unlock').textContent = 'Unlock the board';
+      notice('staff-notice-slot', 'No connection',
+        'The payment has not been taken through this page, so nothing is lost. '
+        + 'Check the phone has signal and try again.', true);
+    });
+  }
+
+  /**
+   * The board normally hears about the unlock over its own connection and starts
+   * on its own, so the six digits are noise in the common case. They appear only
+   * once it is clear that has not happened.
+   */
+  function watchForBoard(token) {
+    el('done-token').hidden = true;
+    window.setTimeout(function () {
+      el('done-token').hidden = false;
+    }, 12000);
+  }
+
+  // ---- wiring -------------------------------------------------------------
+  el('to-staff').addEventListener('click', function () {
+    show('staff');
+    // Not focused automatically: the phone is still being handed over, and a
+    // keyboard springing up while it moves is how a password gets mistyped.
+  });
+
+  el('staff-back').addEventListener('click', function () {
+    el('password').value = '';
+    el('staff-notice-slot').hidden = true;
+    el('password-field').classList.remove('bad');
+    show('pay');
+  });
+
+  el('unlock').addEventListener('click', unlock);
+
+  el('password').addEventListener('keydown', function (event) {
+    if (event.key === 'Enter') { event.preventDefault(); unlock(); }
+  });
+
+  el('reveal').addEventListener('click', function () {
+    var input = el('password');
+    var showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    this.setAttribute('aria-pressed', String(!showing));
+    this.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+    this.style.opacity = showing ? '.6' : '1';
+    input.focus();
+  });
+
+  el('error-retry').addEventListener('click', function () {
+    show('loading');
+    describe();
+  });
+
+  show('loading');
+  describe();
+})();
+</script>
+</body>
+</html>
