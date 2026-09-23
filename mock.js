@@ -7,6 +7,7 @@
  * Scenarios, chosen with &case=:
  *   (default)     a £70 session, correct password is "pub"
  *   ext           an extension to a session already running
+ *   join          one more player buying a seat on a session already running
  *   paid          a code that has already been redeemed
  *   expired       a code past its half hour
  *   altered       a forged payload
@@ -59,9 +60,19 @@
       }));
     }
 
+    // A join is always exactly one head and its minutes are what is LEFT to play, not time
+    // bought -- which is the case the page used to get wrong in three places.
+    if (scenario === 'join') {
+      return later(body({
+        ok: true, players: 1, minutes: 45, amountMinor: 750, currency: 'GBP',
+        kind: 'join', suiteId: '9f2c41ab-0e55-4a71-9c8e-2b3d5f6a7c81',
+        expiresInSeconds: 1524, alreadyPaid: false, approvedBy: null
+      }));
+    }
+
     return later(body({
       ok: true,
-      players: scenario === 'ext' ? 7 : 7,
+      players: 7,
       minutes: scenario === 'ext' ? 30 : 60,
       amountMinor: scenario === 'ext' ? 3500 : 7000,
       currency: 'GBP',
@@ -98,12 +109,14 @@
       }, 403));
     }
 
+    // No kind here, deliberately: the real endpoint does not send one either, so this is what
+    // keeps the page honest about reading it from the describe response instead.
     return later(body({
       ok: true,
       approvedBy: 'Dani',
-      minutes: scenario === 'ext' ? 30 : 60,
-      players: 7,
-      amountMinor: scenario === 'ext' ? 3500 : 7000,
+      minutes: scenario === 'join' ? 45 : scenario === 'ext' ? 30 : 60,
+      players: scenario === 'join' ? 1 : 7,
+      amountMinor: scenario === 'join' ? 750 : scenario === 'ext' ? 3500 : 7000,
       currency: 'GBP',
       fallbackToken: '481902'
     }), 900);

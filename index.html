@@ -220,8 +220,8 @@ button:focus-visible, input:focus-visible {
 
       <div>
         <div class="rows">
-          <div class="row"><span class="k">Players</span><span class="v" id="pay-players">&mdash;</span></div>
-          <div class="row"><span class="k">Time</span><span class="v" id="pay-minutes">&mdash;</span></div>
+          <div class="row"><span class="k" id="pay-players-label">Players</span><span class="v" id="pay-players">&mdash;</span></div>
+          <div class="row"><span class="k" id="pay-minutes-label">Time</span><span class="v" id="pay-minutes">&mdash;</span></div>
           <div class="row"><span class="k">This code lasts</span><span class="v" id="pay-expires">&mdash;</span></div>
         </div>
       </div>
@@ -295,7 +295,7 @@ button:focus-visible, input:focus-visible {
 
       <div class="rows">
         <div class="row"><span class="k">Paid</span><span class="v" id="done-amount">&mdash;</span></div>
-        <div class="row"><span class="k">Time bought</span><span class="v" id="done-minutes">&mdash;</span></div>
+        <div class="row"><span class="k" id="done-minutes-label">Time bought</span><span class="v" id="done-minutes">&mdash;</span></div>
         <div class="row"><span class="k">Approved by</span><span class="v" id="done-by">&mdash;</span></div>
       </div>
 
@@ -466,9 +466,12 @@ button:focus-visible, input:focus-visible {
       if (data.alreadyPaid) {
         // Never invite a second payment for the same session.
         el('done-title').textContent = 'Already paid';
-        el('done-blurb').textContent = 'This session has been unlocked.';
+        el('done-blurb').textContent =
+          data.kind === 'join'
+            ? 'This seat has already been paid for.'
+            : 'This session has been unlocked.';
         el('done-amount').textContent = money(data.amountMinor, data.currency);
-        el('done-minutes').textContent = duration(data.minutes);
+        setTimeRow(data);
         el('done-by').textContent = (data.approvedBy || 'Staff').toUpperCase();
         el('done-hint').textContent =
           'Nothing more to pay. If the board has not started, ask a member of staff.';
@@ -482,16 +485,26 @@ button:focus-visible, input:focus-visible {
       el('pay-minutes').textContent = duration(data.minutes);
       el('pay-expires').textContent = Math.max(1, Math.round(data.expiresInSeconds / 60)) + ' MIN';
 
+      // Every branch on this page used to test for 'ext' and nothing else, so a join -- which
+      // buys ONE SEAT on a session already running and adds no time at all -- was shown the
+      // wording written for a brand new booking. Measured on the board 23 Sep 2026: a joiner's
+      // phone offered "Players 1 / Time 45 min" and said the server's password would "start the
+      // board", which was already running.
       if (data.kind === 'ext') {
         el('pay-blurb').textContent =
           'This adds more time to the session you are already playing. Your server '
           + 'takes the payment, then enters their own password below.';
+      } else if (data.kind === 'join') {
+        el('pay-players-label').textContent = 'Joining';
+        el('pay-minutes-label').textContent = 'Time left to play';
+        el('pay-blurb').textContent =
+          'This adds you to the session already running — a seat for the time that is '
+          + 'left, not extra time on the clock. Your server takes the payment, then '
+          + 'enters their own password below.';
       }
 
       el('staff-amount').textContent = money(data.amountMinor, data.currency) + ' taken?';
-      el('staff-detail').textContent =
-        data.players + ' players · ' + duration(data.minutes)
-        + (data.kind === 'ext' ? ' · extra time' : '');
+      el('staff-detail').textContent = staffDetail(data);
 
       show('pay');
     }).catch(function (error) {
@@ -501,6 +514,54 @@ button:focus-visible, input:focus-visible {
           : 'Check the phone has signal and try again, or ask a member of staff.');
       el('error-retry').hidden = false;
     });
+  }
+
+  /**
+   * The time row on the unlocked screen, which depends on what was bought.
+   *
+   * "Time bought: 45 min" is only true of a new booking. An extension adds its minutes to
+   * whatever is already running, and a join buys a seat and moves the clock by nothing at all --
+   * so labelling either of them that way states a total the board does not have.
+   */
+  function setTimeRow(data) {
+    var kind = kindOf(data);
+
+    el('done-minutes-label').textContent =
+      kind === 'join' ? 'Covers' : kind === 'ext' ? 'Time added' : 'Time bought';
+
+    el('done-minutes').textContent =
+      kind === 'join' ? 'the rest of the session' : duration(data.minutes);
+  }
+
+  /**
+   * What this payment is: a new booking, extra time, or one more player.
+   *
+   * The describe call is the one that carries it, and the page keeps that response in
+   * `session`. The unlock call does not send a kind at all, so anything reading it straight off
+   * an unlock response silently gets undefined and falls through to the new-booking wording --
+   * which is the bug this exists to stop coming back.
+   */
+  function kindOf(data) {
+    return (data && data.kind) || (session && session.kind) || 'new';
+  }
+
+  /**
+   * The line the server reads back before taking money.
+   *
+   * It said "1 players" on every join -- a join is always exactly one head, so the plural bug
+   * showed every single time -- and carried nothing to say the money was for one extra person
+   * rather than a 45-minute session for one. Seen on the board 23 Sep 2026.
+   */
+  function staffDetail(data) {
+    var heads = data.players + (Number(data.players) === 1 ? ' player' : ' players');
+    var kind = kindOf(data);
+
+    if (kind === 'join') {
+      return heads + ' joining · ' + duration(data.minutes) + ' left to play';
+    }
+
+    return heads + ' · ' + duration(data.minutes)
+      + (kind === 'ext' ? ' · extra time' : '');
   }
 
   /** A suite id is a uuid; only the readable tail is worth putting on screen. */
@@ -536,10 +597,26 @@ button:focus-visible, input:focus-visible {
 
       if (data.ok) {
         el('password').value = '';
-        el('done-title').textContent = 'Board unlocked';
-        el('done-blurb').textContent = duration(data.minutes) + ' on the clock. Go and throw.';
+
+        // This block had no kind branch at all, so it reported what was BOUGHT as though it
+        // were what is on the clock. Proved on a real extension, 23 Sep 2026: 30 minutes bought
+        // with 9 still to run, the phone said "30 min on the clock", the board read 00:38:01.
+        // On a join it is worse -- a join buys a seat and moves the clock by nothing.
+        //
+        // The kind comes from the session the describe call returned, not from this response:
+        // the unlock endpoint does not send one, so branching on data.kind here would have
+        // quietly done nothing and left the wrong wording in place.
+        var kind = kindOf(data);
+
+        el('done-title').textContent = kind === 'join' ? 'You’re in' : 'Board unlocked';
+        el('done-blurb').textContent =
+          kind === 'join'
+            ? 'You’re on the board for the rest of the session. Go and throw.'
+            : kind === 'ext'
+              ? 'Another ' + duration(data.minutes) + ' added to the clock. Go and throw.'
+              : duration(data.minutes) + ' on the clock. Go and throw.';
         el('done-amount').textContent = money(data.amountMinor, data.currency);
-        el('done-minutes').textContent = duration(data.minutes);
+        setTimeRow(data);
         el('done-by').textContent = (data.approvedBy || '—').toUpperCase();
 
         // The digits are only useful if the board did not hear it over the
