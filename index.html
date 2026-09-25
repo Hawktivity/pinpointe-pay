@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#14141a">
 <meta name="robots" content="noindex, nofollow">
-<title>Pay at the bar &middot; PinPointe Social</title>
+<title>Pay at the bar</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,11 +53,6 @@ body {
 .shell { max-width: 430px; margin: 0 auto; padding: 22px 24px 40px; }
 
 /* ---- masthead --------------------------------------------------------- */
-.brand {
-  text-align: center; font: 400 22px/1 var(--display);
-  letter-spacing: .12em; text-transform: uppercase; color: #cfcfd5;
-}
-.brand b { color: var(--brick-lit); font-weight: 400; }
 .venue {
   text-align: center; font: 500 11px/1 var(--body); letter-spacing: .16em;
   text-transform: uppercase; color: var(--dimmer); margin-top: 9px;
@@ -202,14 +197,12 @@ button:focus-visible, input:focus-visible {
 
   <!-- ============ loading ============ -->
   <section id="view-loading">
-    <div class="brand">Pin<b>Pointe</b></div>
     <div class="venue">Checking your code</div>
     <div class="spinner" role="status" aria-label="Checking"></div>
   </section>
 
   <!-- ============ what you're paying ============ -->
   <section id="view-pay" hidden>
-    <div class="brand">Pin<b>Pointe</b></div>
     <div class="venue" id="pay-venue">Suite</div>
 
     <div class="stack" style="margin-top:30px">
@@ -321,7 +314,6 @@ button:focus-visible, input:focus-visible {
 
   <!-- ============ something is wrong ============ -->
   <section id="view-error" hidden>
-    <div class="brand">Pin<b>Pointe</b></div>
     <div class="stack" style="margin-top:36px">
       <div>
         <h1 id="error-title">This code didn&rsquo;t work</h1>
