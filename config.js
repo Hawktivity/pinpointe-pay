@@ -20,12 +20,11 @@
       url: 'https://kdwwhftbakaozgdzspeq.supabase.co',
       anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtkd3doZnRiYWthb3pnZHpzcGVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwMjEzNzcsImV4cCI6MjEwNDU5NzM3N30.D5SzNLJUCO1RxRL4NNauPwl1dj_AJH123dowpmZfM_I'
     },
-    // Filled in when pinpointe-prod-uk has the function deployed. Left explicit
-    // rather than defaulted to dev: a real venue silently talking to the dev
-    // project would take money against the wrong ledger.
+    // pinpointe-prod-uk. Named explicitly rather than defaulted to: a real venue
+    // silently talking to the dev project would take money against the wrong ledger.
     prod: {
-      url: '',
-      anonKey: ''
+      url: 'https://qtkldntrchsvgizwojvv.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0a2xkbnRyY2hzdmdpendvanZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwMjE0MDIsImV4cCI6MjEwNDU5NzQwMn0.oPRMFuZ21TKCggAQWPYitTMSMMLVm6fCShi3l6Oc2Cg'
     }
   };
 
@@ -33,9 +32,9 @@
   var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '' ||
                 host === '[::1]' || /\.local$/.test(host);
 
-  // pay.pinpointe.uk is the live domain. Everything else -- the github.io
-  // fallback URL, a preview, a branch deploy -- is treated as dev.
-  var project = host === 'pay.pinpointe.uk' ? PROJECTS.prod : PROJECTS.dev;
+  // pay.hawktivity.com is the live domain. Everything else -- the github.io copy
+  // the dev boards use, a preview, a branch deploy -- is treated as dev.
+  var project = host === 'pay.hawktivity.com' ? PROJECTS.prod : PROJECTS.dev;
 
   window.PINPOINTE_CONFIG = {
     functionUrl: project.url ? project.url + '/functions/v1/unlock-session' : '',

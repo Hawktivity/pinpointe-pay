@@ -10,7 +10,7 @@ key, and nothing else. There is no secret here to leak.
 ## How a session gets unlocked
 
 1. The suite quotes a price, signs it with the venue's key, and puts
-   `https://pay.pinpointe.uk/?c=<signed payload>` in a QR code on screen.
+   `https://pay.hawktivity.com/?c=<signed payload>` in a QR code on screen.
 2. A guest scans it and walks to the bar with their phone.
 3. This page calls the `unlock-session` Edge Function with `action: "describe"`.
    The function checks the signature **before** returning any figure, so the
@@ -74,7 +74,12 @@ token is the way through that, which is the same fallback that covers the board
 losing its own network. Cloudflare Pages and Netlify are the same amount of work
 if that trade stops being acceptable.
 
-The live domain is `pay.pinpointe.uk`, pointed at Pages with a `CNAME` record.
-`config.js` keys off that hostname to pick the production Supabase project, so
-until the record and `PROJECTS.prod` are both filled in, every copy of the page
-talks to `pinpointe-dev-uk`.
+The live domain is `pay.hawktivity.com`. `config.js` keys off that hostname to
+pick the production Supabase project (`pinpointe-prod-uk`); every other copy of
+the page, including the github.io one above, talks to `pinpointe-dev-uk`.
+
+Do **not** give this repository's GitHub Pages site a custom domain. Pages then
+redirects the github.io address to it, and every dev board -- whose QR codes
+point at github.io -- would land on the production page and be refused. The live
+domain is served separately, from the same `main`, so dev and production keep
+one codebase and two addresses.
