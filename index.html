@@ -340,7 +340,7 @@ button:focus-visible, input:focus-visible {
   // nothing on its own, because every table is behind row-level security scoped
   // to a suite's own auth user, and staff password hashes have no policy at all.
   // ---------------------------------------------------------------------------
-  var CONFIG = window.PINPOINTE_CONFIG || {};
+  var CONFIG = window.PAY_CONFIG || {};
   var FUNCTION_URL = CONFIG.functionUrl || '';
   var ANON_KEY = CONFIG.anonKey || '';
 

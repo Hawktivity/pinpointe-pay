@@ -1,8 +1,7 @@
-# PinPointe Pay
+# Pay at the bar
 
-The page a guest lands on after scanning the QR code on a PinPointe Social
-board. It shows what the venue is charging, and then takes a member of staff's
-own password to unlock the board once they have been paid at the bar.
+The page a guest lands on after scanning the QR code on a dart board. It shows
+what the venue is charging, and then takes a member of staff's own password to unlock the board once they have been paid at the bar.
 
 Public repository on purpose: it holds a static page and a publishable Supabase
 key, and nothing else. There is no secret here to leak.
@@ -64,22 +63,23 @@ Typing the wrong password five times reaches the lockout screen.
 
 ## Deploying
 
-GitHub Pages, from `main` at the repository root. There is no build step, so a
-push is a deploy. Live at https://hawktivity.github.io/pinpointe-pay/ with HTTPS
-enforced.
+There is no build step, so a push to `main` is a deploy, to two places:
 
-Pages has no meaningful availability guarantee, and this page now sits on the
-payment path: if it is down, a group cannot pay. The board's typed six-digit
-token is the way through that, which is the same fallback that covers the board
-losing its own network. Cloudflare Pages and Netlify are the same amount of work
-if that trade stops being acceptable.
-
-The live domain is `pay.hawktivity.com`. `config.js` keys off that hostname to
-pick the production Supabase project (`pinpointe-prod-uk`); every other copy of
-the page, including the github.io one above, talks to `pinpointe-dev-uk`.
+- **Production: `pay.hawktivity.com`**, served by the Cloudflare Pages project
+  `hawktivity-pay`. `config.js` keys off that hostname to pick the production
+  Supabase project.
+- **Dev: this repository's GitHub Pages site**, which is what the dev boards'
+  QR codes point at. Every host other than `pay.hawktivity.com` talks to the dev
+  project.
 
 Do **not** give this repository's GitHub Pages site a custom domain. Pages then
-redirects the github.io address to it, and every dev board -- whose QR codes
-point at github.io -- would land on the production page and be refused. The live
-domain is served separately, from the same `main`, so dev and production keep
-one codebase and two addresses.
+redirects the github.io address to it, and every dev board would land on the
+production page and be refused.
+
+Everything in the repository root is served publicly, this file included, so
+nothing here may carry a product brand: the payment flow is unbranded on
+purpose. Keep it that way in new files too.
+
+If the page is down a group cannot pay through it; the board's typed six-digit
+token is the way through that, the same fallback that covers the board losing
+its own network.

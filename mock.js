@@ -122,7 +122,7 @@
     }), 900);
   }
 
-  window.PINPOINTE_CONFIG.transport = function (request) {
+  window.PAY_CONFIG.transport = function (request) {
     return request.action === 'describe' ? describe() : unlock(request);
   };
 

@@ -20,7 +20,7 @@
       url: 'https://kdwwhftbakaozgdzspeq.supabase.co',
       anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtkd3doZnRiYWthb3pnZHpzcGVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwMjEzNzcsImV4cCI6MjEwNDU5NzM3N30.D5SzNLJUCO1RxRL4NNauPwl1dj_AJH123dowpmZfM_I'
     },
-    // pinpointe-prod-uk. Named explicitly rather than defaulted to: a real venue
+    // The production project. Named explicitly rather than defaulted to: a real venue
     // silently talking to the dev project would take money against the wrong ledger.
     prod: {
       url: 'https://qtkldntrchsvgizwojvv.supabase.co',
@@ -36,7 +36,7 @@
   // the dev boards use, a preview, a branch deploy -- is treated as dev.
   var project = host === 'pay.hawktivity.com' ? PROJECTS.prod : PROJECTS.dev;
 
-  window.PINPOINTE_CONFIG = {
+  window.PAY_CONFIG = {
     functionUrl: project.url ? project.url + '/functions/v1/unlock-session' : '',
 
     // Where register.html posts. Separate endpoint because it is a different act:
