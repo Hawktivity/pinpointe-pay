@@ -170,12 +170,12 @@
     return request.action === 'describe' ? describe() : unlock(request);
   };
 
-  window.PINPOINTE_CONFIG.checkoutTransport = checkout;
+  window.PAY_CONFIG.checkoutTransport = checkout;
 
   // Six quick asks rather than fifteen slow ones, so the "still confirming" screen can be
   // reached in a few seconds instead of half a minute.
-  window.PINPOINTE_CONFIG.paymentPollAttempts = 6;
-  window.PINPOINTE_CONFIG.paymentPollMs = 500;
+  window.PAY_CONFIG.paymentPollAttempts = 6;
+  window.PAY_CONFIG.paymentPollMs = 500;
 
   // Obvious on screen, so a mocked run is never mistaken for a real one.
   window.addEventListener('DOMContentLoaded', function () {
