@@ -18,6 +18,7 @@
  *   cardreturn    back from the card page; the row lands on the third ask
  *   cardpending   back from the card page and the row never lands
  *   cardoff       the button shows but checkout refuses it
+ *   cardonly      a venue that sells by card alone: no bar button at all
  * -------------------------------------------------------------------------- */
 (function () {
   'use strict';
@@ -106,7 +107,9 @@
       expiresInSeconds: 1524,
       alreadyPaid: false,
       approvedBy: null,
-      cardPayment: scenario === 'card' || scenario === 'cardoff'
+      cardPayment: scenario === 'card' || scenario === 'cardoff' || scenario === 'cardonly',
+      // Only ever false where a venue has withdrawn the bar route. Absent means bar.
+      barPayment: scenario !== 'cardonly'
     }));
   }
 

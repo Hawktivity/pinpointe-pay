@@ -788,22 +788,36 @@ button:focus-visible, input:focus-visible {
     }
 
     var kind = kindOf(data);
+    // Some venues sell by card alone -- their agreement says so, and unlock-session refuses
+    // a bar purchase there whatever this page shows. describe reports it; the page never
+    // assumes, because a venue with no setting at all still sells at the bar.
+    var barToo = data.barPayment !== false;
+
+    var context = kind === 'ext'
+      ? 'This adds more time to the session you are already playing. '
+      : kind === 'join'
+        ? 'This adds you to the session already running — a seat for the time that is '
+          + 'left, not extra time on the clock. '
+        : '';
 
     el('pay-card').hidden = false;
     el('pay-amount-label').textContent = 'To pay';
-    el('pay-heading').textContent = 'Pay now, or at the bar';
-    el('pay-blurb').textContent =
-      (kind === 'ext'
-        ? 'This adds more time to the session you are already playing. '
-        : kind === 'join'
-          ? 'This adds you to the session already running — a seat for the time that is '
-            + 'left, not extra time on the clock. '
-          : '')
-      + 'Pay by card here and the board starts on its own, or take this screen to the bar '
-      + 'and your server will start it.';
+    el('pay-heading').textContent = barToo ? 'Pay now, or at the bar' : 'Pay to start the board';
+    // The document title is written for the bar and is wrong at a card-only venue -- it is
+    // small, and it is also the one piece of this page that follows a guest into their tab
+    // list and their history.
+    if (!barToo) document.title = 'Pay for the board';
+    el('pay-blurb').textContent = context + (barToo
+      ? 'Pay by card here and the board starts on its own, or take this screen to the bar '
+        + 'and your server will start it.'
+      // No mention of the bar, and no apology for it. A guest told "you cannot pay at the
+      // bar here" will go and try anyway, and a server who is asked often enough starts
+      // looking for a way to help -- which is the thing the venue agreed not to do.
+      : 'Pay by card here and the board starts on its own.');
 
-    // The bar route keeps its place and its single tap to the password screen. It only
-    // stops being the only way.
+    // The bar route keeps its place and its single tap to the password screen wherever it
+    // exists. It only stops being the only way -- or, at a card-only venue, stops existing.
+    el('to-staff').hidden = !barToo;
     el('to-staff').className = 'ghost';
     el('to-staff').textContent = 'Paid at the bar — unlock';
   }
@@ -819,6 +833,10 @@ button:focus-visible, input:focus-visible {
    */
   function withdrawCard(data) {
     el('pay-card').hidden = true;
+    // Whatever else is true, the bar button comes back when card is not on offer. A venue
+    // cannot be configured with neither route -- the database refuses it -- so if there is
+    // no card here, there is a bar.
+    el('to-staff').hidden = false;
     el('pay-amount-label').textContent = 'To pay at the bar';
     el('pay-heading').textContent = 'Show this at the bar';
     el('pay-blurb').textContent = barBlurb(kindOf(data));
