@@ -44,6 +44,12 @@
     // behind -- or anywhere near -- the one that takes money.
     registerUrl: project.url ? project.url + '/functions/v1/register-player' : '',
 
+    // Where "pay by card" posts. A third endpoint for the same reason as the second:
+    // it starts a payment and unlocks nothing, so it has no business sharing a door
+    // with the one that checks a staff password. Whether the button appears at all is
+    // not decided here -- the describe response says whether this venue sells that way.
+    checkoutUrl: project.url ? project.url + '/functions/v1/create-checkout' : '',
+
     anonKey: project.anonKey,
     environment: project === PROJECTS.prod ? 'prod' : 'dev'
   };

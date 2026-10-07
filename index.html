@@ -197,7 +197,7 @@ button:focus-visible, input:focus-visible {
 
   <!-- ============ loading ============ -->
   <section id="view-loading">
-    <div class="venue">Checking your code</div>
+    <div class="venue" id="loading-caption">Checking your code</div>
     <div class="spinner" role="status" aria-label="Checking"></div>
   </section>
 
@@ -207,7 +207,7 @@ button:focus-visible, input:focus-visible {
 
     <div class="stack" style="margin-top:30px">
       <div>
-        <div class="amount-label">To pay at the bar</div>
+        <div class="amount-label" id="pay-amount-label">To pay at the bar</div>
         <div class="amount" id="pay-amount">&mdash;</div>
       </div>
 
@@ -220,15 +220,23 @@ button:focus-visible, input:focus-visible {
       </div>
 
       <div>
-        <h1>Show this at the bar</h1>
+        <h1 id="pay-heading">Show this at the bar</h1>
         <p id="pay-blurb">
           Your server takes the payment, then taps below and enters their own
           password to start the board.
         </p>
       </div>
 
+      <!--
+        Two ways to buy the same thing. The card button is hidden unless the describe
+        response says this venue sells that way, and the bar button never moves or
+        changes what it does: a server taps it dozens of times a night and it is still
+        one tap to the password, whether or not a card button appeared above it.
+      -->
       <div class="tight">
+        <button class="cta" id="pay-card" hidden>Pay by card</button>
         <button class="cta" id="to-staff">Paid &mdash; unlock</button>
+        <div id="pay-notice-slot" hidden></div>
       </div>
     </div>
   </section>
@@ -289,7 +297,7 @@ button:focus-visible, input:focus-visible {
       <div class="rows">
         <div class="row"><span class="k">Paid</span><span class="v" id="done-amount">&mdash;</span></div>
         <div class="row"><span class="k" id="done-minutes-label">Time bought</span><span class="v" id="done-minutes">&mdash;</span></div>
-        <div class="row"><span class="k">Approved by</span><span class="v" id="done-by">&mdash;</span></div>
+        <div class="row"><span class="k" id="done-by-label">Approved by</span><span class="v" id="done-by">&mdash;</span></div>
       </div>
 
       <!-- Only shown when the board did not pick the unlock up itself. -->
@@ -342,6 +350,7 @@ button:focus-visible, input:focus-visible {
   // ---------------------------------------------------------------------------
   var CONFIG = window.PAY_CONFIG || {};
   var FUNCTION_URL = CONFIG.functionUrl || '';
+  var CHECKOUT_URL = CONFIG.checkoutUrl || '';
   var ANON_KEY = CONFIG.anonKey || '';
 
   var el = function (id) { return document.getElementById(id); };
@@ -406,6 +415,12 @@ button:focus-visible, input:focus-visible {
   var code = codeFromUrl();
   var session = null;
 
+  // Stripe adds this on the way back, and only on the way back from a payment that went
+  // through. It changes what this page does on load: not "what is this code worth" but
+  // "has the money landed yet".
+  var returningFromPayment =
+    new URLSearchParams(window.location.search).get('paid') === '1';
+
   function call(body) {
     // A local copy can supply its own responder. Never present in a deployed
     // build, because config.js only installs one for localhost.
@@ -418,7 +433,28 @@ button:focus-visible, input:focus-visible {
         'This page has not been configured with a Supabase project yet.'));
     }
 
-    return fetch(FUNCTION_URL, {
+    return post(FUNCTION_URL, body);
+  }
+
+  /**
+   * The card endpoint. A different door on purpose: it starts a payment and unlocks
+   * nothing, so it does not share one with the call that checks a staff password.
+   */
+  function callCheckout(body) {
+    if (typeof CONFIG.checkoutTransport === 'function') {
+      return Promise.resolve(CONFIG.checkoutTransport(body));
+    }
+
+    if (!CHECKOUT_URL || !ANON_KEY) {
+      return Promise.reject(new Error(
+        'This page has not been configured with a Supabase project yet.'));
+    }
+
+    return post(CHECKOUT_URL, body);
+  }
+
+  function post(url, body) {
+    return fetch(url, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -457,17 +493,7 @@ button:focus-visible, input:focus-visible {
 
       if (data.alreadyPaid) {
         // Never invite a second payment for the same session.
-        el('done-title').textContent = 'Already paid';
-        el('done-blurb').textContent =
-          data.kind === 'join'
-            ? 'This seat has already been paid for.'
-            : 'This session has been unlocked.';
-        el('done-amount').textContent = money(data.amountMinor, data.currency);
-        setTimeRow(data);
-        el('done-by').textContent = (data.approvedBy || 'Staff').toUpperCase();
-        el('done-hint').textContent =
-          'Nothing more to pay. If the board has not started, ask a member of staff.';
-        show('done');
+        showPaid(data, false);
         return;
       }
 
@@ -482,18 +508,16 @@ button:focus-visible, input:focus-visible {
       // wording written for a brand new booking. Measured on the board 23 Sep 2026: a joiner's
       // phone offered "Players 1 / Time 45 min" and said the server's password would "start the
       // board", which was already running.
-      if (data.kind === 'ext') {
-        el('pay-blurb').textContent =
-          'This adds more time to the session you are already playing. Your server '
-          + 'takes the payment, then enters their own password below.';
-      } else if (data.kind === 'join') {
+      if (data.kind === 'join') {
         el('pay-players-label').textContent = 'Joining';
         el('pay-minutes-label').textContent = 'Time left to play';
-        el('pay-blurb').textContent =
-          'This adds you to the session already running — a seat for the time that is '
-          + 'left, not extra time on the clock. Your server takes the payment, then '
-          + 'enters their own password below.';
       }
+      el('pay-blurb').textContent = barBlurb(data.kind);
+
+      // Offered after the kind wording above, because it replaces those sentences rather
+      // than adding to them: a screen that tells a guest both to pay here and to show this
+      // at the bar is how one board gets paid for twice.
+      offerCard(data);
 
       el('staff-amount').textContent = money(data.amountMinor, data.currency) + ' taken?';
       el('staff-detail').textContent = staffDetail(data);
@@ -672,6 +696,251 @@ button:focus-visible, input:focus-visible {
     }, 12000);
   }
 
+  /**
+   * The unlocked screen, for a session that is paid for.
+   *
+   * Reached two ways and worded for each: a code re-scanned after somebody already bought
+   * it, and a guest landing back here from the card page, where the same screen has to say
+   * "that just worked" rather than "somebody already did this".
+   */
+  function showPaid(data, justPaid) {
+    var kind = kindOf(data);
+    var byCard = data.paidVia === 'card';
+
+    el('done-title').textContent = justPaid
+      ? (kind === 'join' ? 'You’re in' : 'Board unlocked')
+      : 'Already paid';
+
+    el('done-blurb').textContent = justPaid
+      ? (kind === 'join'
+          ? 'You’re on the board for the rest of the session. Go and throw.'
+          : kind === 'ext'
+            ? 'Another ' + duration(data.minutes) + ' added to the clock. Go and throw.'
+            : duration(data.minutes) + ' on the clock. Go and throw.')
+      : (kind === 'join'
+          ? 'This seat has already been paid for.'
+          : 'This session has been unlocked.');
+
+    el('done-amount').textContent = money(data.amountMinor, data.currency);
+    setTimeRow(data);
+
+    // "Approved by" names the person who took the money. A card sale had nobody, and
+    // writing "Staff" there would be a small lie in the one place a guest looks to work
+    // out who to go and ask.
+    el('done-by-label').textContent = byCard ? 'Paid by' : 'Approved by';
+    el('done-by').textContent = byCard ? 'CARD' : (data.approvedBy || 'Staff').toUpperCase();
+
+    if (!justPaid) {
+      el('done-hint').textContent =
+        'Nothing more to pay. If the board has not started, ask a member of staff.';
+    }
+
+    // The six digits matter only if the board did not hear it over the network. A card
+    // sale has no unlock response to carry them, so describe hands them over once -- and
+    // only once -- the session has actually been paid for.
+    if (data.fallbackToken) {
+      el('token-digits').textContent =
+        data.fallbackToken.slice(0, 3) + ' ' + data.fallbackToken.slice(3);
+      watchForBoard(data.fallbackToken);
+    }
+
+    show('done');
+  }
+
+  // ---- 3. pay by card ------------------------------------------------------
+
+  /**
+   * What the screen says when the bar is the only way to buy.
+   *
+   * Every branch on this page used to test for 'ext' and nothing else, so a join -- which
+   * buys ONE SEAT on a session already running and adds no time at all -- was shown the
+   * wording written for a brand new booking. Measured on the board 23 Sep 2026: a joiner's
+   * phone offered "Players 1 / Time 45 min" and said the server's password would "start the
+   * board", which was already running.
+   */
+  function barBlurb(kind) {
+    if (kind === 'ext') {
+      return 'This adds more time to the session you are already playing. Your server '
+        + 'takes the payment, then enters their own password below.';
+    }
+    if (kind === 'join') {
+      return 'This adds you to the session already running — a seat for the time that is '
+        + 'left, not extra time on the clock. Your server takes the payment, then '
+        + 'enters their own password below.';
+    }
+    return 'Your server takes the payment, then taps below and enters their own '
+      + 'password to start the board.';
+  }
+
+  /**
+   * The card button and the wording that goes with it.
+   *
+   * Hidden unless describe said this venue sells that way. The endpoint would refuse it
+   * anyway, and a button that is always refused is worse than no button at all.
+   */
+  function offerCard(data) {
+    var available = !!data.cardPayment
+      && (!!CHECKOUT_URL || typeof CONFIG.checkoutTransport === 'function');
+
+    if (!available) {
+      withdrawCard(data);
+      return;
+    }
+
+    var kind = kindOf(data);
+    // Some venues sell by card alone -- their agreement says so, and unlock-session refuses
+    // a bar purchase there whatever this page shows. describe reports it; the page never
+    // assumes, because a venue with no setting at all still sells at the bar.
+    var barToo = data.barPayment !== false;
+
+    var context = kind === 'ext'
+      ? 'This adds more time to the session you are already playing. '
+      : kind === 'join'
+        ? 'This adds you to the session already running — a seat for the time that is '
+          + 'left, not extra time on the clock. '
+        : '';
+
+    el('pay-card').hidden = false;
+    el('pay-amount-label').textContent = 'To pay';
+    el('pay-heading').textContent = barToo ? 'Pay now, or at the bar' : 'Pay to start the board';
+    // The document title is written for the bar and is wrong at a card-only venue -- it is
+    // small, and it is also the one piece of this page that follows a guest into their tab
+    // list and their history.
+    if (!barToo) document.title = 'Pay for the board';
+    el('pay-blurb').textContent = context + (barToo
+      ? 'Pay by card here and the board starts on its own, or take this screen to the bar '
+        + 'and your server will start it.'
+      // No mention of the bar, and no apology for it. A guest told "you cannot pay at the
+      // bar here" will go and try anyway, and a server who is asked often enough starts
+      // looking for a way to help -- which is the thing the venue agreed not to do.
+      : 'Pay by card here and the board starts on its own.');
+
+    // The bar route keeps its place and its single tap to the password screen wherever it
+    // exists. It only stops being the only way -- or, at a card-only venue, stops existing.
+    el('to-staff').hidden = !barToo;
+    el('to-staff').className = 'ghost';
+    el('to-staff').textContent = 'Paid at the bar — unlock';
+  }
+
+  /**
+   * Put the screen back to bar-only.
+   *
+   * Taking the button away is not enough on its own: the heading and the blurb above it
+   * are still inviting a guest to pay here, and a screen that offers a payment it has just
+   * withdrawn is worse than one that never offered it. Seen on the first run of the
+   * refused-venue case, where "Pay by card here and the board starts on its own" sat above
+   * a notice saying card payment was not available.
+   */
+  function withdrawCard(data) {
+    el('pay-card').hidden = true;
+    // Whatever else is true, the bar button comes back when card is not on offer. A venue
+    // cannot be configured with neither route -- the database refuses it -- so if there is
+    // no card here, there is a bar.
+    el('to-staff').hidden = false;
+    el('pay-amount-label').textContent = 'To pay at the bar';
+    el('pay-heading').textContent = 'Show this at the bar';
+    el('pay-blurb').textContent = barBlurb(kindOf(data));
+    el('to-staff').className = 'cta';
+    el('to-staff').textContent = 'Paid — unlock';
+  }
+
+  var startingCheckout = false;
+
+  function payByCard() {
+    if (startingCheckout) return;
+    startingCheckout = true;
+    el('pay-card').disabled = true;
+    el('pay-card').textContent = 'Opening…';
+    el('pay-notice-slot').hidden = true;
+
+    callCheckout({ code: code }).then(function (result) {
+      var data = result.data || {};
+
+      if (data.ok && data.url) {
+        // Away to Stripe. Nothing is reset on this path: the button must not become
+        // tappable again while the browser is still navigating away.
+        window.location.href = data.url;
+        return;
+      }
+
+      startingCheckout = false;
+      el('pay-card').disabled = false;
+      el('pay-card').textContent = 'Pay by card';
+
+      if (data.reason === 'already_paid') {
+        // Somebody bought it at the bar while this screen sat open. Ask again rather than
+        // explain: describe will put the unlocked screen up.
+        show('loading');
+        describe();
+        return;
+      }
+
+      // A venue that does not sell this way, or a project with no Stripe keys, is not a
+      // thing to retry -- put the screen back to bar-only rather than leave a button to be
+      // tapped again under a heading that promises it works.
+      if (data.reason === 'not_enabled' || data.reason === 'not_configured') {
+        withdrawCard(session || data);
+      }
+
+      notice('pay-notice-slot', 'Card payment isn’t available',
+        (data.message || 'Pay at the bar instead.'), true);
+    }).catch(function () {
+      startingCheckout = false;
+      el('pay-card').disabled = false;
+      el('pay-card').textContent = 'Pay by card';
+      notice('pay-notice-slot', 'No connection',
+        'Nothing has been charged. Check the phone has signal and try again, or pay at '
+        + 'the bar.', true);
+    });
+  }
+
+  // ---- 4. back from the card page ------------------------------------------
+  //
+  // Stripe only sends a guest here once their payment went through, but the board is
+  // unlocked by the webhook rather than by this redirect, so what this waits for is the
+  // activation row to appear. Usually a second or two. Nothing on this page can hurry it,
+  // and nothing on this page may offer to take the money a second time.
+  var PAYMENT_POLL_MS = CONFIG.paymentPollMs || 2000;
+  var PAYMENT_POLL_ATTEMPTS = CONFIG.paymentPollAttempts || 15;
+
+  function awaitPayment(attempt) {
+    var again = function () {
+      if (attempt >= PAYMENT_POLL_ATTEMPTS) {
+        paymentStillPending();
+        return;
+      }
+      window.setTimeout(function () { awaitPayment(attempt + 1); }, PAYMENT_POLL_MS);
+    };
+
+    call({ action: 'describe', code: code }).then(function (result) {
+      var data = result.data || {};
+
+      if (data.ok) {
+        session = data;
+        if (data.alreadyPaid) {
+          showPaid(data, true);
+          return;
+        }
+      }
+
+      again();
+    }).catch(again);
+  }
+
+  /**
+   * Half a minute gone and the row still is not there.
+   *
+   * Worded to send the guest to a person, because that is the only thing that helps. The
+   * one thing it must never say is anything a guest could read as "try paying again".
+   */
+  function paymentStillPending() {
+    fail('We’re still confirming your payment',
+      'Your card payment went through. The board should start in a moment.');
+    notice('error-notice-slot', 'Do not pay again',
+      'Show this screen to a member of staff if the board has not started.', true);
+    el('error-retry').hidden = false;
+  }
+
   // ---- wiring -------------------------------------------------------------
   el('to-staff').addEventListener('click', function () {
     show('staff');
@@ -702,13 +971,31 @@ button:focus-visible, input:focus-visible {
     input.focus();
   });
 
+  el('pay-card').addEventListener('click', payByCard);
+
   el('error-retry').addEventListener('click', function () {
     show('loading');
-    describe();
+    start();
   });
 
+  /**
+   * Two different questions on load, decided by how the guest got here.
+   *
+   * Coming back from the card page, "what is this code worth" is the wrong one: the code
+   * has been spent, and asking it would show the price again to somebody who has already
+   * paid it.
+   */
+  function start() {
+    if (returningFromPayment) {
+      el('loading-caption').textContent = 'Confirming your payment';
+      awaitPayment(0);
+      return;
+    }
+    describe();
+  }
+
   show('loading');
-  describe();
+  start();
 })();
 </script>
 </body>
