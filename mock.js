@@ -204,6 +204,28 @@
 
   window.PAY_CONFIG.checkoutTransport = checkout;
 
+  // register.html. Says whether the registration was for an under-18, from the date of
+  // birth, the way the real endpoint does, so both done screens can be seen. Records the
+  // last submission on window.lastRegistration for checking what the page sent.
+  window.PAY_CONFIG.registerTransport = function (request) {
+    if (request.action === 'describe') {
+      return later(body({ ok: true, suiteName: 'Suite 1', expiresInSeconds: 1500, registered: 0, full: false }));
+    }
+    window.lastRegistration = request;
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(request.dateOfBirth || '');
+    if (!m) {
+      return later(body({ ok: false, reason: 'no_birth_date', message: 'Enter your date of birth.' }, 400));
+    }
+    var now = new Date();
+    var had = now.getMonth() + 1 > +m[2] || (now.getMonth() + 1 === +m[2] && now.getDate() >= +m[3]);
+    var minor = now.getFullYear() - +m[1] - (had ? 0 : 1) < 18;
+    return later(body({
+      ok: true, firstName: request.firstName, suiteName: 'Suite 1',
+      underEighteen: minor, photoKept: !minor && !!request.photo
+    }));
+  };
+
+
   // Six quick asks rather than fifteen slow ones, so the "still confirming" screen can be
   // reached in a few seconds instead of half a minute.
   window.PAY_CONFIG.paymentPollAttempts = 6;
