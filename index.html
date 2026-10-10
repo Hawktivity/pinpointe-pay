@@ -300,12 +300,17 @@ button:focus-visible, input:focus-visible {
         <div class="row"><span class="k" id="done-by-label">Approved by</span><span class="v" id="done-by">&mdash;</span></div>
       </div>
 
-      <!-- Only shown when the board did not pick the unlock up itself. -->
+      <!--
+        Shown only once the board has had its chance and not said it got the session.
+        The wording does not assert that anything failed: the page asks the board, and
+        the worst it can honestly report is that it has not heard back yet. It used to
+        announce a failure it had no way to detect.
+      -->
       <div id="done-token" hidden>
         <div class="notice">
-          <b>The board hasn&rsquo;t answered yet</b>
-          Your session is paid for either way. Type these six digits on the
-          touchscreen to start it.
+          <b>If the board hasn&rsquo;t started</b>
+          Your session is paid for. If the clock on the board is not running,
+          type these six digits on the touchscreen.
         </div>
         <div class="token-box" style="margin-top:14px">
           <div class="token" id="token-digits">&mdash;</div>
@@ -352,6 +357,16 @@ button:focus-visible, input:focus-visible {
   var FUNCTION_URL = CONFIG.functionUrl || '';
   var CHECKOUT_URL = CONFIG.checkoutUrl || '';
   var ANON_KEY = CONFIG.anonKey || '';
+
+  // How long to let the board answer before offering the six digits instead.
+  //
+  // A board that is listening acknowledges in about a second -- the webhook writes the row
+  // and realtime carries it straight over. Sixteen seconds is therefore a long wait for the
+  // healthy case, and that is the point: the cost of waiting is a few quiet seconds under a
+  // green tick, and the cost of not waiting is telling a group their board is broken while
+  // it stands there running. Erring the other way is what this is replacing.
+  var BOARD_ACK_TRIES = CONFIG.boardAckTries || 8;
+  var BOARD_ACK_POLL_MS = CONFIG.boardAckPollMs || 2000;
 
   var el = function (id) { return document.getElementById(id); };
   var views = ['loading', 'pay', 'staff', 'done', 'error'];
@@ -635,12 +650,14 @@ button:focus-visible, input:focus-visible {
         setTimeRow(data);
         el('done-by').textContent = (data.approvedBy || '—').toUpperCase();
 
-        // The digits are only useful if the board did not hear it over the
-        // network, so they are held back until that is actually the case.
+        // The digits are only useful if the board did not hear it over the network,
+        // so they are held back until the board has been asked and has not answered.
+        // This comment used to say as much while watchForBoard revealed them on a
+        // timer regardless -- see the note on that function.
         if (data.fallbackToken) {
           el('token-digits').textContent =
             data.fallbackToken.slice(0, 3) + ' ' + data.fallbackToken.slice(3);
-          watchForBoard(data.fallbackToken);
+          watchForBoard();
         }
 
         show('done');
@@ -688,12 +705,52 @@ button:focus-visible, input:focus-visible {
    * The board normally hears about the unlock over its own connection and starts
    * on its own, so the six digits are noise in the common case. They appear only
    * once it is clear that has not happened.
+   *
+   * This was a twelve-second setTimeout that revealed them unconditionally. There was
+   * nothing to look at -- a board applied an activation to its own clock and told
+   * nobody -- so the page guessed, and on a healthy board the guess was wrong every
+   * time: "The board hasn't answered yet" under a board that had answered in under a
+   * second. Measured at the Oxford Arms on 10 Oct 2026.
+   *
+   * The board now records board_ack_at when it puts the time on the clock, and describe
+   * reports it. So this asks, instead of assuming.
+   *
+   * It keeps asking through a failure rather than giving up on the first one. A phone in
+   * a pub drops a request and comes back, and treating that as "the board is down" would
+   * reintroduce the same false alarm through a different door.
    */
-  function watchForBoard(token) {
-    el('done-token').hidden = true;
-    window.setTimeout(function () {
-      el('done-token').hidden = false;
-    }, 12000);
+  function watchForBoard() {
+    var panel = el('done-token');
+    panel.hidden = true;
+
+    var triesLeft = BOARD_ACK_TRIES;
+
+    function ask() {
+      if (triesLeft-- <= 0) {
+        // Asked as often as is reasonable and never heard the board say it had this.
+        // Either it is not listening or it cannot reach the network, and both are cases
+        // where somebody standing at the board needs a way in.
+        panel.hidden = false;
+        return;
+      }
+
+      call({ action: 'describe', code: code })
+        .then(function (result) {
+          if ((result.data || {}).boardAcknowledged) {
+            // The board has it and the clock is running. The tick at the top of this
+            // screen is the whole story; six digits underneath it would only invite
+            // somebody to go and type them at a board that is already started.
+            panel.hidden = true;
+            return;
+          }
+          window.setTimeout(ask, BOARD_ACK_POLL_MS);
+        })
+        .catch(function () {
+          window.setTimeout(ask, BOARD_ACK_POLL_MS);
+        });
+    }
+
+    ask();
   }
 
   /**
@@ -741,7 +798,7 @@ button:focus-visible, input:focus-visible {
     if (data.fallbackToken) {
       el('token-digits').textContent =
         data.fallbackToken.slice(0, 3) + ' ' + data.fallbackToken.slice(3);
-      watchForBoard(data.fallbackToken);
+      watchForBoard();
     }
 
     show('done');

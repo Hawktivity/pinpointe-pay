@@ -13,7 +13,8 @@
  *   altered       a forged payload
  *   nostaff       a venue with nobody set up to unlock
  *   offline       the network is down
- *   fallback      unlock succeeds but the board never answers
+ *   fallback      unlock succeeds but the board never answers -- with cardpending,
+ *                 the only way to see the six digits at all
  *   card          a venue that takes cards: the button shows and "pays"
  *   cardreturn    back from the card page; the row lands on the third ask
  *   cardpending   back from the card page and the row never lands
@@ -28,7 +29,26 @@
   var PASSWORD = 'pub';
   var failures = 0;
   var polls = 0;
+  var ackPolls = 0;
+  var unlocked = false;
   var LIMIT = 5;
+
+  /**
+   * Whether the board has said it applied this activation.
+   *
+   * The page polls describe for this and only offers the six digits once it has given up,
+   * so the mock has to be able to say no indefinitely -- `fallback` and `cardpending` are
+   * the boards that never answer, and they are the only way to see the digits panel at all.
+   * Everything else answers on the second ask, which is about what a real one does.
+   */
+  function acknowledged(paid) {
+    if (!paid && !unlocked) return false;
+    if (scenario === 'fallback' || scenario === 'cardpending') return false;
+    // Already redeemed and long since picked up -- a guest reopening their own link.
+    if (scenario === 'paid') return true;
+    ackPolls++;
+    return ackPolls >= 2;
+  }
 
   function later(value, ms) {
     return new Promise(function (resolve, reject) {
@@ -63,7 +83,8 @@
         ok: true, players: 7, minutes: 60, amountMinor: 7000, currency: 'GBP',
         kind: 'new', suiteId: '9f2c41ab-0e55-4a71-9c8e-2b3d5f6a7c81',
         expiresInSeconds: 900, alreadyPaid: true, approvedBy: 'Dani', paidVia: 'bar',
-        fallbackToken: '481902'
+        fallbackToken: '481902',
+        boardAcknowledged: acknowledged(true)
       }));
     }
 
@@ -82,7 +103,8 @@
         approvedBy: null,
         paidVia: landed ? 'card' : null,
         cardPayment: false,
-        fallbackToken: landed ? '481902' : null
+        fallbackToken: landed ? '481902' : null,
+        boardAcknowledged: acknowledged(landed)
       }), 250);
     }
 
@@ -92,7 +114,8 @@
       return later(body({
         ok: true, players: 1, minutes: 45, amountMinor: 750, currency: 'GBP',
         kind: 'join', suiteId: '9f2c41ab-0e55-4a71-9c8e-2b3d5f6a7c81',
-        expiresInSeconds: 1524, alreadyPaid: false, approvedBy: null
+        expiresInSeconds: 1524, alreadyPaid: false, approvedBy: null,
+        boardAcknowledged: acknowledged(false)
       }));
     }
 
@@ -109,7 +132,8 @@
       approvedBy: null,
       cardPayment: scenario === 'card' || scenario === 'cardoff' || scenario === 'cardonly',
       // Only ever false where a venue has withdrawn the bar route. Absent means bar.
-      barPayment: scenario !== 'cardonly'
+      barPayment: scenario !== 'cardonly',
+      boardAcknowledged: acknowledged(false)
     }));
   }
 
@@ -156,6 +180,11 @@
       }, 403));
     }
 
+    // The bar rail has now put a row in front of the board, so describe should start
+    // reporting that the board picked it up -- otherwise the default walkthrough ends on
+    // the six digits, which is the behaviour this whole change exists to remove.
+    unlocked = true;
+
     // No kind here, deliberately: the real endpoint does not send one either, so this is what
     // keeps the page honest about reading it from the describe response instead.
     return later(body({
@@ -179,6 +208,12 @@
   // reached in a few seconds instead of half a minute.
   window.PAY_CONFIG.paymentPollAttempts = 6;
   window.PAY_CONFIG.paymentPollMs = 500;
+
+  // Same reasoning for the wait on the board: sixteen seconds is right in a pub and
+  // tedious on a laptop, and the thing being walked through is which panel appears,
+  // not how long it took.
+  window.PAY_CONFIG.boardAckTries = 4;
+  window.PAY_CONFIG.boardAckPollMs = 400;
 
   // Obvious on screen, so a mocked run is never mistaken for a real one.
   window.addEventListener('DOMContentLoaded', function () {
