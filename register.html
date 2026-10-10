@@ -205,6 +205,40 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
 
+/* --- photo ------------------------------------------------------------- */
+.photo-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.photo-preview {
+  flex: 0 0 auto;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  background: var(--ink-3) center / cover no-repeat;
+  border: 2px solid var(--line);
+}
+.photo-row .photo-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.photo-row button {
+  width: auto;
+  padding: .6rem .9rem;
+  font-size: .95rem;
+  background: var(--ink-3);
+  border: 1px solid var(--line);
+}
+.photo-row button.quiet { background: transparent; color: var(--dim); }
+.hint { color: var(--dimmer); font-size: .85rem; margin: .4rem 0 0; }
+.minor-note {
+  border-left: 3px solid var(--warn);
+  background: var(--ink-2);
+  border-radius: 3px;
+  padding: .7rem .9rem;
+  margin: 0 0 1.15rem;
+  color: var(--dim);
+  font-size: .93rem;
+}
+
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -238,7 +272,29 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
       </div>
 
       <div class="field">
-        <label for="email">Email <span class="opt">optional &mdash; for your scores afterwards</span></label>
+        <label for="dateOfBirth">Date of birth</label>
+        <input id="dateOfBirth" name="dateOfBirth" type="date" autocomplete="bday" required>
+      </div>
+
+      <p class="minor-note" id="minor-note" hidden>
+        Under 18? You can still join. A parent or guardian gives their consent at the
+        board before you play, and you can add a photo there afterwards.
+      </p>
+
+      <div class="field" id="photo-field">
+        <label>Photo <span class="opt">optional &mdash; shown next to your name</span></label>
+        <div class="photo-row">
+          <div class="photo-preview" id="photo-preview" aria-hidden="true"></div>
+          <div class="photo-actions">
+            <button type="button" id="photo-pick">Add a photo</button>
+            <button type="button" class="quiet" id="photo-remove" hidden>Remove</button>
+          </div>
+        </div>
+        <input id="photo" type="file" accept="image/*" hidden>
+      </div>
+
+      <div class="field">
+        <label for="email">Email <span class="opt">optional</span></label>
         <input id="email" name="email" type="email" autocomplete="email"
                inputmode="email" enterkeyhint="next" maxlength="120">
       </div>
@@ -249,10 +305,6 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
                inputmode="tel" enterkeyhint="next" maxlength="30">
       </div>
 
-      <div class="field">
-        <label for="dateOfBirth">Date of birth <span class="opt">optional</span></label>
-        <input id="dateOfBirth" name="dateOfBirth" type="date" autocomplete="bday">
-      </div>
 
       <div class="rules">
         <h2>Before you throw</h2>
@@ -271,10 +323,11 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
     </form>
 
     <p class="privacy">
-      Your name goes to the board so people can see who's playing. Anything else you
-      put in is kept only for this session and cleared when it ends &mdash; we don't
-      build a profile and we won't market to you. Leave the optional fields blank and
-      the board still works exactly the same.
+      Your name, and your photo if you add one, go to the board so people can see
+      who's playing. We ask your date of birth so under-18s get a parent's consent.
+      Everything you put in is kept only for this session and cleared when it ends
+      &mdash; we don't build a profile and we won't market to you. Leave the optional
+      fields blank and the board still works exactly the same.
     </p>
   </section>
 
@@ -282,7 +335,7 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
   <section id="screen-done" hidden>
     <p class="done-mark">&check;</p>
     <h1 id="done-heading">You're on</h1>
-    <p class="lede">Look up at the board &mdash; your name is on it. Someone at the
+    <p class="lede" id="done-body">Look up at the board &mdash; your name is on it. Someone at the
       board taps you in when you're ready to play.</p>
     <p class="privacy">You can close this page.</p>
   </section>
@@ -348,6 +401,9 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
   }
 
   function post(body) {
+    // The local mock answers here instead of the network; see mock.js.
+    if (cfg.registerTransport) { return cfg.registerTransport(body); }
+
     return fetch(cfg.registerUrl, {
       method: 'POST',
       headers: {
@@ -400,6 +456,81 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
          'Your phone could not reach us. Ask a member of staff to add you at the board.');
   });
 
+  // --- age: decides the consent and whether a photo is offered ---------------
+  // The endpoint decides for itself; this only keeps the page from offering what it
+  // will not keep. Under 18, no photo: the phone is filled in before any parent has
+  // agreed to anything, so a child's photo waits until the consent at the board.
+  function ageFrom(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+    if (!m) { return null; }
+    var now = new Date();
+    var y = +m[1], mo = +m[2], d = +m[3];
+    var had = now.getMonth() + 1 > mo || (now.getMonth() + 1 === mo && now.getDate() >= d);
+    return now.getFullYear() - y - (had ? 0 : 1);
+  }
+
+  function isMinor() {
+    var age = ageFrom(el('dateOfBirth').value);
+    return age !== null && age < 18;
+  }
+
+  function onBirthDate() {
+    var minor = isMinor();
+    el('minor-note').hidden = !minor;
+    el('photo-field').hidden = minor;
+    if (minor) { clearPhoto(); }
+  }
+  el('dateOfBirth').addEventListener('change', onBirthDate);
+  el('dateOfBirth').addEventListener('input', onBirthDate);
+
+  // --- photo -----------------------------------------------------------------
+  // Cropped square and shrunk to 400 pixels on the phone, then re-encoded as a JPEG of
+  // roughly 40 KB. Drawing onto a canvas also leaves behind the location, camera and
+  // time a phone photo carries: none of it reaches us.
+  var PHOTO_SIZE = 400;
+  var photoBase64 = null;
+
+  function clearPhoto() {
+    photoBase64 = null;
+    el('photo').value = '';
+    el('photo-preview').style.backgroundImage = '';
+    el('photo-pick').textContent = 'Add a photo';
+    el('photo-remove').hidden = true;
+  }
+
+  el('photo-pick').addEventListener('click', function () { el('photo').click(); });
+  el('photo-remove').addEventListener('click', clearPhoto);
+
+  el('photo').addEventListener('change', function () {
+    var file = el('photo').files && el('photo').files[0];
+    if (!file) { return; }
+
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      var side = Math.min(img.naturalWidth, img.naturalHeight);
+      var canvas = document.createElement('canvas');
+      canvas.width = PHOTO_SIZE;
+      canvas.height = PHOTO_SIZE;
+      canvas.getContext('2d').drawImage(img,
+        (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side,
+        0, 0, PHOTO_SIZE, PHOTO_SIZE);
+      URL.revokeObjectURL(url);
+
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      photoBase64 = dataUrl.replace(/^data:image\/jpeg;base64,/, '');
+      el('photo-preview').style.backgroundImage = 'url(' + dataUrl + ')';
+      el('photo-pick').textContent = 'Change';
+      el('photo-remove').hidden = false;
+    };
+    img.onerror = function () {
+      URL.revokeObjectURL(url);
+      clearPhoto();
+      notice('form-notice-slot', 'That photo didn’t load', 'Try another, or leave it out.');
+    };
+    img.src = url;
+  });
+
   // --- submit ---------------------------------------------------------------
   el('form').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -409,6 +540,13 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
     if (!firstName) {
       notice('form-notice-slot', 'Name needed', 'Put in at least a first name.');
       el('firstName').focus();
+      return;
+    }
+
+    if (ageFrom(el('dateOfBirth').value) === null) {
+      notice('form-notice-slot', 'Date of birth needed',
+        'We ask so under-18s get a parent’s consent before they play.');
+      el('dateOfBirth').focus();
       return;
     }
 
@@ -431,12 +569,19 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
       email: el('email').value.trim(),
       mobileNumber: el('mobileNumber').value.trim(),
       dateOfBirth: el('dateOfBirth').value,
-      acceptedDisclaimer: true
+      acceptedDisclaimer: true,
+      photo: isMinor() ? null : photoBase64
     }).then(function (res) {
       var data = res.data || {};
 
       if (data.ok) {
         el('done-heading').textContent = 'You’re on, ' + (data.firstName || firstName);
+        if (data.underEighteen) {
+          el('done-body').textContent = 'Look up at the board — your name is on it. ' +
+            'Before you play, a parent or guardian gives their consent there when ' +
+            'somebody taps you in.';
+        }
+
         show('done');
         return;
       }
