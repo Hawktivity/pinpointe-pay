@@ -101,13 +101,7 @@ input:focus-visible {
   border-color: var(--brick-lit);
 }
 /* --- date of birth -------------------------------------------------------
-   Typed, as DD/MM/YYYY. A phone's own date input cannot be typed into -- it only
-   opens a picker, and scrolling a picker back thirty-odd years is slow -- so the
-   field is plain text with a calendar beside it for anyone who would rather pick.
-
-   The calendar is the phone's own date input, invisible and laid over a white
-   icon: tapping the icon is tapping that input, so the native picker opens on
-   every phone without script. Its own indicator was drawn black on this page. */
+   Typed as DD/MM/YYYY. The calendar is an invisible date input over the icon. */
 .date-entry { position: relative; }
 .date-entry input[type=text] { padding-right: 3.4rem; }
 .date-icon,
@@ -132,7 +126,6 @@ input:focus-visible {
   border: 0;
   opacity: 0;
   cursor: pointer;
-  /* So the picker that opens is dark like the page, where the browser draws its own. */
   color-scheme: dark;
 }
 
@@ -525,8 +518,7 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
     if (minor) { clearPhoto(); }
   }
 
-  // --- date of birth: typed as DD/MM/YYYY, or picked ---------------------------
-  // The field shows the British order; the endpoint is sent YYYY-MM-DD, as before.
+  // --- date of birth: typed as DD/MM/YYYY, sent as YYYY-MM-DD ------------------
   var DATE_PARTS = [2, 2, 4];
 
   function isoToday() {
@@ -535,12 +527,8 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
       ('0' + now.getDate()).slice(-2);
   }
 
-  // Shapes whatever is typed into DD/MM/YYYY as it goes. Digits fill the day, month
-  // and year in turn, and the slash appears once the next part is begun, so backspace
-  // never fights it. A slash, dash, dot or space typed by hand ends a part early:
-  // 1/2/1990 is 01/02/1990, not 12/19/90.
+  // Adds the slashes as you type; a typed separator ends a part, so 1/2/1990 is 01/02/1990.
   function tidyBirthDate(value) {
-    // A browser autofilling a birthday may hand over 1990-02-01.
     var iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
     if (iso) { return iso[3] + '/' + iso[2] + '/' + iso[1]; }
 
@@ -563,13 +551,12 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
     return parts.join('/');
   }
 
-  // The typed date as YYYY-MM-DD, or '' while it is not yet a real day in the past.
   function birthDateIso() {
     var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(el('dateOfBirth').value);
     if (!m) { return ''; }
     var d = +m[1], mo = +m[2], y = +m[3];
     var date = new Date(y, mo - 1, d);
-    // 31/02 rolls over into March; catch it rather than send a different day.
+    // 31/02 would roll over into March.
     if (date.getFullYear() !== y || date.getMonth() !== mo - 1 || date.getDate() !== d) { return ''; }
     var iso = m[3] + '-' + m[2] + '-' + m[1];
     return y >= 1900 && iso <= isoToday() ? iso : '';
@@ -582,8 +569,6 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
     onBirthDate();
   });
 
-  // The calendar opens on the typed date when there is one, and never offers a day
-  // that has not happened yet.
   var picker = el('dateOfBirthPicker');
   picker.max = isoToday();
 
@@ -591,11 +576,10 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
   picker.addEventListener('pointerdown', primePicker);
   picker.addEventListener('focus', primePicker);
 
-  // A phone opens its picker on the tap itself. A desktop browser only opens one
-  // from its own little icon, which here is invisible, so ask it directly.
+  // A desktop browser only opens its picker from its own (here invisible) icon.
   picker.addEventListener('click', function () {
     if (picker.showPicker && window.matchMedia('(pointer: fine)').matches) {
-      try { picker.showPicker(); } catch (e) { /* already open, or not allowed */ }
+      try { picker.showPicker(); } catch (e) {}
     }
   });
 
