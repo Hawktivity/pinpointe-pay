@@ -84,7 +84,7 @@ label {
 }
 label .opt { color: var(--dimmer); font-weight: 500; letter-spacing: .04em; }
 
-input[type=text], input[type=email], input[type=tel], input[type=date] {
+input[type=text], input[type=email], input[type=tel] {
   width: 100%;
   padding: .85rem .9rem;
   font-family: var(--body);
@@ -100,9 +100,34 @@ input:focus-visible {
   outline-offset: 1px;
   border-color: var(--brick-lit);
 }
-/* Safari renders an empty date input as a placeholder-less blank; keep the text
-   the same colour as everything else so it does not read as disabled. */
-input[type=date] { min-height: 3.1rem; }
+/* --- date of birth -------------------------------------------------------
+   Typed as DD/MM/YYYY. The calendar is an invisible date input over the icon. */
+.date-entry { position: relative; }
+.date-entry input[type=text] { padding-right: 3.4rem; }
+.date-icon,
+.date-entry input[type=date] {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 3.2rem;
+}
+.date-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--paper);
+  pointer-events: none;
+}
+.date-icon svg { width: 1.35rem; height: 1.35rem; }
+.date-entry input[type=date] {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+  color-scheme: dark;
+}
 
 .row { display: flex; gap: .75rem; }
 .row > * { flex: 1 1 0; min-width: 0; }
@@ -273,7 +298,19 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
 
       <div class="field">
         <label for="dateOfBirth">Date of birth</label>
-        <input id="dateOfBirth" name="dateOfBirth" type="date" autocomplete="bday" required>
+        <div class="date-entry">
+          <input id="dateOfBirth" name="dateOfBirth" type="text" inputmode="numeric"
+                 autocomplete="bday" placeholder="DD/MM/YYYY" maxlength="10"
+                 enterkeyhint="next" required>
+          <span class="date-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4.5" width="18" height="16.5" rx="2"/>
+              <path d="M3 9.5h18M8 2.5v4M16 2.5v4"/>
+            </svg>
+          </span>
+          <input id="dateOfBirthPicker" type="date" tabindex="-1" aria-label="Pick from a calendar">
+        </div>
       </div>
 
       <p class="minor-note" id="minor-note" hidden>
@@ -470,7 +507,7 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
   }
 
   function isMinor() {
-    var age = ageFrom(el('dateOfBirth').value);
+    var age = ageFrom(birthDateIso());
     return age !== null && age < 18;
   }
 
@@ -480,8 +517,80 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
     el('photo-field').hidden = minor;
     if (minor) { clearPhoto(); }
   }
-  el('dateOfBirth').addEventListener('change', onBirthDate);
-  el('dateOfBirth').addEventListener('input', onBirthDate);
+
+  // --- date of birth: typed as DD/MM/YYYY, sent as YYYY-MM-DD ------------------
+  var DATE_PARTS = [2, 2, 4];
+
+  function isoToday() {
+    var now = new Date();
+    return now.getFullYear() + '-' + ('0' + (now.getMonth() + 1)).slice(-2) + '-' +
+      ('0' + now.getDate()).slice(-2);
+  }
+
+  // Adds the slashes as you type; a typed separator ends a part, so 1/2/1990 is 01/02/1990.
+  function tidyBirthDate(value) {
+    var iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (iso) { return iso[3] + '/' + iso[2] + '/' + iso[1]; }
+
+    var parts = [''];
+    for (var i = 0; i < value.length; i++) {
+      var ch = value.charAt(i);
+      var at = parts.length - 1;
+      if (/\d/.test(ch)) {
+        if (parts[at].length === DATE_PARTS[at]) {
+          if (at === 2) { break; }
+          parts.push('');
+          at++;
+        }
+        parts[at] += ch;
+      } else if (/[\/\-. ]/.test(ch) && parts[at] !== '' && at < 2) {
+        if (parts[at].length === 1) { parts[at] = '0' + parts[at]; }
+        parts.push('');
+      }
+    }
+    return parts.join('/');
+  }
+
+  function birthDateIso() {
+    var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(el('dateOfBirth').value);
+    if (!m) { return ''; }
+    var d = +m[1], mo = +m[2], y = +m[3];
+    var date = new Date(y, mo - 1, d);
+    // 31/02 would roll over into March.
+    if (date.getFullYear() !== y || date.getMonth() !== mo - 1 || date.getDate() !== d) { return ''; }
+    var iso = m[3] + '-' + m[2] + '-' + m[1];
+    return y >= 1900 && iso <= isoToday() ? iso : '';
+  }
+
+  el('dateOfBirth').addEventListener('input', function () {
+    var field = el('dateOfBirth');
+    var tidy = tidyBirthDate(field.value);
+    if (tidy !== field.value) { field.value = tidy; }
+    onBirthDate();
+  });
+
+  var picker = el('dateOfBirthPicker');
+  picker.max = isoToday();
+
+  function primePicker() { picker.value = birthDateIso(); }
+  picker.addEventListener('pointerdown', primePicker);
+  picker.addEventListener('focus', primePicker);
+
+  // A desktop browser only opens its picker from its own (here invisible) icon.
+  picker.addEventListener('click', function () {
+    if (picker.showPicker && window.matchMedia('(pointer: fine)').matches) {
+      try { picker.showPicker(); } catch (e) {}
+    }
+  });
+
+  function onPicked() {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(picker.value);
+    if (!m) { return; }
+    el('dateOfBirth').value = m[3] + '/' + m[2] + '/' + m[1];
+    onBirthDate();
+  }
+  picker.addEventListener('change', onPicked);
+  picker.addEventListener('input', onPicked);
 
   // --- photo -----------------------------------------------------------------
   // Cropped square and shrunk to 400 pixels on the phone, then re-encoded as a JPEG of
@@ -543,9 +652,14 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
       return;
     }
 
-    if (ageFrom(el('dateOfBirth').value) === null) {
-      notice('form-notice-slot', 'Date of birth needed',
-        'We ask so under-18s get a parent’s consent before they play.');
+    if (ageFrom(birthDateIso()) === null) {
+      if (el('dateOfBirth').value.trim()) {
+        notice('form-notice-slot', 'Check your date of birth',
+          'Type it as day, month and year, like 25/12/1990, or pick it from the calendar.');
+      } else {
+        notice('form-notice-slot', 'Date of birth needed',
+          'We ask so under-18s get a parent’s consent before they play.');
+      }
       el('dateOfBirth').focus();
       return;
     }
@@ -568,7 +682,7 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
       lastName: el('lastName').value.trim(),
       email: el('email').value.trim(),
       mobileNumber: el('mobileNumber').value.trim(),
-      dateOfBirth: el('dateOfBirth').value,
+      dateOfBirth: birthDateIso(),
       acceptedDisclaimer: true,
       photo: isMinor() ? null : photoBase64
     }).then(function (res) {
