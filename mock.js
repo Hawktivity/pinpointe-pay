@@ -239,9 +239,69 @@
   // register.html. Says whether the registration was for an under-18, from the date of
   // birth, the way the real endpoint does, so both done screens can be seen. Records the
   // last submission on window.lastRegistration for checking what the page sent.
+  //
+  // Remembered players (register.html only), chosen with &case=:
+  //   (default)    passkeys offered; Join finds "Sam", Remember me saves
+  //   nopasskeys   a backend that doesn't offer them: the page looks as it always did
+  //   unknown      Join's passkey was forgotten on our side
+  //   cancel       the guest cancels Face ID, on Join and on Remember me
+  //   sameemail    Remember me keeps everything but the email
+  // The phone's passkey store is faked too (PAY_CONFIG.passkeys), so no real Face ID or
+  // Windows Hello prompt ever appears.
+  function fakeCredential(kind) {
+    var b = function (n) { return new Uint8Array(n).buffer; };
+    var response = kind === 'create'
+      ? { clientDataJSON: b(8), attestationObject: b(8), getTransports: function () { return ['internal']; } }
+      : { clientDataJSON: b(8), authenticatorData: b(8), signature: b(8), userHandle: b(16) };
+    return {
+      id: 'mock-credential', rawId: b(16), type: 'public-key', response: response,
+      authenticatorAttachment: 'platform', getClientExtensionResults: function () { return {}; }
+    };
+  }
+  function refused() {
+    var e = new Error('The operation either timed out or was not allowed.');
+    e.name = 'NotAllowedError';
+    return e;
+  }
+  window.PAY_CONFIG.passkeys = {
+    create: function () { return later(scenario === 'cancel' ? refused() : fakeCredential('create'), 700); },
+    get: function () { return later(scenario === 'cancel' ? refused() : fakeCredential('get'), 700); }
+  };
+  var mockOptions = {
+    create: { challenge: 'AAAA', rp: { id: 'localhost', name: 'Hawktivity Darts' },
+              user: { id: 'AAAAAAAAAAAAAAAAAAAAAA', name: 'Sam', displayName: 'Sam' },
+              pubKeyCredParams: [{ type: 'public-key', alg: -7 }] },
+    get: { challenge: 'AAAA', rpId: 'localhost', allowCredentials: [] }
+  };
+
   window.PAY_CONFIG.registerTransport = function (request) {
     if (request.action === 'describe') {
-      return later(body({ ok: true, suiteName: 'Suite 1', expiresInSeconds: 1500, registered: 0, full: false }));
+      return later(body({ ok: true, suiteName: 'Suite 1', expiresInSeconds: 1500, registered: 0, full: false,
+                          remember: scenario !== 'nopasskeys' }));
+    }
+    if (request.action === 'join_options') {
+      return later(body({ ok: true, challengeId: '00000000-0000-4000-8000-000000000001', options: mockOptions.get }), 300);
+    }
+    if (request.action === 'enrol_options') {
+      return later(body({ ok: true, challengeId: '00000000-0000-4000-8000-000000000002', options: mockOptions.create }), 300);
+    }
+    if (request.action === 'join') {
+      window.lastJoin = request;
+      if (scenario === 'unknown') {
+        return later(body({ ok: false, reason: 'unknown_passkey',
+          message: 'We don’t have that one saved any more. Fill in the form instead.' }, 400));
+      }
+      return later(body({ ok: true, firstName: 'Sam', suiteName: 'Suite 1', alreadyOn: false,
+                          photoKept: true, forgetToken: 'mock-forget-token-0000000000' }));
+    }
+    if (request.action === 'enrol') {
+      window.lastEnrol = request;
+      return later(body({ ok: true, firstName: request.firstName, emailKept: scenario !== 'sameemail',
+                          forgetToken: 'mock-forget-token-0000000000' }));
+    }
+    if (request.action === 'forget') {
+      window.lastForget = request;
+      return later(body({ ok: true }));
     }
     window.lastRegistration = request;
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(request.dateOfBirth || '');
@@ -253,7 +313,8 @@
     var minor = now.getFullYear() - +m[1] - (had ? 0 : 1) < 18;
     return later(body({
       ok: true, firstName: request.firstName, suiteName: 'Suite 1',
-      underEighteen: minor, photoKept: !minor && !!request.photo
+      underEighteen: minor, photoKept: !minor && !!request.photo,
+      canRemember: !minor && scenario !== 'nopasskeys'
     }));
   };
 
