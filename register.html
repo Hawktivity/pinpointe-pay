@@ -264,6 +264,49 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
   font-size: .93rem;
 }
 
+/* --- remembered players ----------------------------------------------------
+   The returning card sits above the form; the Remember me card on the done screen. */
+.saved {
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--go);
+  border-radius: 3px;
+  padding: 1rem;
+  margin: 0 0 1.4rem;
+}
+.saved h2 {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin: 0 0 .35rem;
+}
+.saved p { margin: 0 0 .9rem; color: var(--dim); font-size: .93rem; }
+.saved p.after { margin: .75rem 0 0; }
+.saved button { background: var(--go); }
+.or {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  color: var(--dimmer);
+  font-size: .8rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin: 0 0 1.2rem;
+}
+.or::before, .or::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
+button.link {
+  width: auto;
+  padding: .3rem 0;
+  background: none;
+  font-family: var(--body);
+  font-size: .9rem;
+  letter-spacing: 0;
+  text-transform: none;
+  text-decoration: underline;
+  color: var(--dim);
+}
+
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -281,6 +324,14 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
       Somebody at the board taps you in to play.</p>
 
     <div id="form-notice-slot"></div>
+
+    <!-- Only when this phone can use a passkey and the backend offers them. -->
+    <div class="saved" id="returning" hidden>
+      <h2>Played here before?</h2>
+      <p id="returning-body">If you chose Remember me last time, you don't need the form.</p>
+      <button type="button" id="join-saved" disabled>Join with Face ID or fingerprint</button>
+    </div>
+    <p class="or" id="returning-or" hidden>or sign up</p>
 
     <form id="form" novalidate>
       <div class="row">
@@ -368,8 +419,9 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
       Your name, and your photo if you add one, go to the board so people can see
       who's playing. We ask your date of birth so under-18s get a parent's consent.
       Everything you put in is kept only for this session and cleared when it ends
-      &mdash; we don't build a profile and we won't market to you. Leave the optional
-      fields blank and the board still works exactly the same.
+      &mdash; unless you choose Remember me afterwards. We don't build a profile and we
+      won't market to you. Leave the optional fields blank and the board still works
+      exactly the same.
     </p>
   </section>
 
@@ -379,6 +431,23 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
     <h1 id="done-heading">You're on</h1>
     <p class="lede" id="done-body">Look up at the board &mdash; your name is on it. Someone at the
       board taps you in when you're ready to play.</p>
+
+    <!-- Adults only, and only where this phone can save a passkey. -->
+    <div class="saved" id="remember" hidden>
+      <h2>Remember me on this phone</h2>
+      <p id="remember-body">Next time, scan the board's code and tap Join &mdash; no form. We keep
+        your name, date of birth, contact details and photo, and your phone keeps a passkey
+        (Face ID, fingerprint or your phone's PIN) that only works for you. If we don't see you
+        for two years, we delete them.</p>
+      <button type="button" id="remember-me" disabled>Remember me</button>
+      <p class="after" id="remember-after" hidden></p>
+    </div>
+
+    <p id="forget-wrap" hidden>
+      <button type="button" class="link" id="forget-me">Forget me</button>
+    </p>
+    <p class="lede" id="forget-done" hidden></p>
+
     <p class="privacy">You can close this page.</p>
   </section>
 
@@ -493,6 +562,7 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
 
     show('form');
     el('firstName').focus();
+    offerReturning(data);
   }).catch(function () {
     fail('No connection',
          'Your phone could not reach us. Ask a member of staff to add you at the board.');
@@ -687,9 +757,9 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
     el('submit').disabled = true;
     el('submit').textContent = 'Sending…';
 
-    post({
-      code: code,
-      submissionId: submissionId,
+    // Kept: Remember me sends the same details again, with the passkey, so nothing is
+    // stored about a guest who never taps it.
+    var details = {
       firstName: firstName,
       lastName: el('lastName').value.trim(),
       email: el('email').value.trim(),
@@ -697,7 +767,9 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
       dateOfBirth: birthDateIso(),
       acceptedDisclaimer: true,
       photo: isMinor() ? null : photoBase64
-    }).then(function (res) {
+    };
+
+    post(Object.assign({ code: code, submissionId: submissionId }, details)).then(function (res) {
       var data = res.data || {};
 
       if (data.ok) {
@@ -709,6 +781,10 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
         }
 
         show('done');
+        // The form is gone, so a second submit is impossible; Remember me and Forget me
+        // share this flag and would otherwise never respond.
+        busy = false;
+        offerRemember(data, details);
         return;
       }
 
@@ -733,6 +809,326 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
       el('submit').textContent = 'I’m in';
       notice('form-notice-slot', 'No connection',
         'Your phone could not reach us. Try again, or ask a member of staff.');
+    });
+  });
+
+  // --- remembered players ---------------------------------------------------------
+  // An adult can choose Remember me after signing up: their details are kept with a
+  // passkey their phone saves (Face ID, fingerprint or the phone's PIN). Next time the
+  // Join button above the form puts them on the board with one tap. Never offered to
+  // an under-18, and only when the backend says passkeys work for this page.
+  //
+  // Both buttons fetch their options in advance. Safari only shows a passkey prompt in
+  // direct response to a tap, and a network round trip in between can lose that.
+
+  // The passkey calls, swappable so the local mock can walk these screens without a
+  // real authenticator.
+  var credentials = cfg.passkeys || (window.navigator && navigator.credentials);
+  var HINT_KEY = 'hawktivity.rememberedAs';
+
+  function passkeysUsable() {
+    if (cfg.passkeys) { return Promise.resolve(true); }
+    var pkc = window.PublicKeyCredential;
+    if (!pkc || !credentials || !credentials.create || !credentials.get) {
+      return Promise.resolve(false);
+    }
+    // A phone with Face ID, a fingerprint or a screen lock. Without one, a passkey would
+    // mean scanning a code with another device, which is no use at a dartboard.
+    if (!pkc.isUserVerifyingPlatformAuthenticatorAvailable) { return Promise.resolve(true); }
+    return pkc.isUserVerifyingPlatformAuthenticatorAvailable().catch(function () { return false; });
+  }
+
+  // A name to put on the Join button. Only a convenience: Safari clears it after a week
+  // without a visit, and the passkey works just the same without it.
+  function rememberedAs() {
+    try { return window.localStorage.getItem(HINT_KEY) || ''; } catch (e) { return ''; }
+  }
+  function setRememberedAs(name) {
+    try {
+      if (name) { window.localStorage.setItem(HINT_KEY, name); }
+      else { window.localStorage.removeItem(HINT_KEY); }
+    } catch (e) {}
+  }
+
+  function fromB64u(value) {
+    var s = value.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) { s += '='; }
+    var raw = atob(s);
+    var bytes = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) { bytes[i] = raw.charCodeAt(i); }
+    return bytes.buffer;
+  }
+  function toB64u(buffer) {
+    var bytes = new Uint8Array(buffer);
+    var s = '';
+    for (var i = 0; i < bytes.length; i++) { s += String.fromCharCode(bytes[i]); }
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function creationOptions(json) {
+    var o = Object.assign({}, json);
+    o.challenge = fromB64u(json.challenge);
+    o.user = Object.assign({}, json.user, { id: fromB64u(json.user.id) });
+    o.excludeCredentials = (json.excludeCredentials || []).map(function (c) {
+      return Object.assign({}, c, { id: fromB64u(c.id) });
+    });
+    return o;
+  }
+  function requestOptions(json) {
+    var o = Object.assign({}, json);
+    o.challenge = fromB64u(json.challenge);
+    o.allowCredentials = (json.allowCredentials || []).map(function (c) {
+      return Object.assign({}, c, { id: fromB64u(c.id) });
+    });
+    return o;
+  }
+
+  function credentialJson(cred) {
+    var r = cred.response;
+    var response = { clientDataJSON: toB64u(r.clientDataJSON) };
+    if (r.attestationObject) {
+      response.attestationObject = toB64u(r.attestationObject);
+      if (r.getTransports) { try { response.transports = r.getTransports(); } catch (e) {} }
+    } else {
+      response.authenticatorData = toB64u(r.authenticatorData);
+      response.signature = toB64u(r.signature);
+      if (r.userHandle) { response.userHandle = toB64u(r.userHandle); }
+    }
+    return {
+      id: cred.id,
+      rawId: toB64u(cred.rawId),
+      type: cred.type,
+      response: response,
+      clientExtensionResults: cred.getClientExtensionResults ? cred.getClientExtensionResults() : {},
+      authenticatorAttachment: cred.authenticatorAttachment || undefined
+    };
+  }
+
+  // Tells the phone a passkey is no longer ours, where it supports being told, so it
+  // stops offering it. Best effort: older phones leave it in the list, harmlessly.
+  function forgetOnPhone(rpId, credentialId) {
+    var pkc = window.PublicKeyCredential;
+    if (!rpId || !credentialId || !pkc || !pkc.signalUnknownCredential) { return; }
+    try { pkc.signalUnknownCredential({ rpId: rpId, credentialId: credentialId }).catch(function () {}); }
+    catch (e) {}
+  }
+
+  var forgetToken = null;
+  var lastRpId = null;
+  var lastCredentialId = null;
+
+  function offerForget(token) {
+    forgetToken = token || null;
+    el('forget-wrap').hidden = !forgetToken;
+  }
+
+  el('forget-me').addEventListener('click', function () {
+    if (!forgetToken || busy) { return; }
+    if (!window.confirm('Delete your saved details? Next time you’ll fill in the form.')) { return; }
+    busy = true;
+    post({ action: 'forget', code: code, forgetToken: forgetToken }).then(function (res) {
+      busy = false;
+      var data = res.data || {};
+      el('forget-wrap').hidden = true;
+      el('forget-done').hidden = false;
+      if (data.ok) {
+        setRememberedAs('');
+        forgetOnPhone(lastRpId, lastCredentialId);
+        el('remember').hidden = true;
+        el('forget-done').textContent = 'Done — we’ve deleted your details. You’re still on ' +
+          'the board for tonight. If your phone still lists a passkey for us, you can ' +
+          'delete it in its password settings.';
+      } else {
+        el('forget-done').textContent = data.message ||
+          'That didn’t work. Scan the code again, tap Join, then Forget me.';
+      }
+    }).catch(function () {
+      busy = false;
+      el('forget-done').hidden = false;
+      el('forget-done').textContent = 'No connection. Try Forget me again in a moment.';
+    });
+  });
+
+  // --- Join, above the form ----------------------------------------------------------
+  var joinReady = null;
+
+  function fetchJoinOptions() {
+    el('join-saved').disabled = true;
+    return post({ action: 'join_options', code: code }).then(function (res) {
+      var data = res.data || {};
+      if (!data.ok) { throw new Error(data.reason || 'no options'); }
+      joinReady = data;
+      el('join-saved').disabled = false;
+      return data;
+    });
+  }
+
+  function offerReturning(describe) {
+    if (!describe.remember || describe.full) { return; }
+    passkeysUsable().then(function (usable) {
+      if (!usable) { return; }
+      return fetchJoinOptions().then(function () {
+        var name = rememberedAs();
+        el('join-saved').textContent = name ? 'Join as ' + name : 'Join with Face ID or fingerprint';
+        el('returning-body').textContent = name
+          ? 'You asked us to remember you on this phone. One tap and you’re on the board.'
+          : 'If you chose Remember me last time, you don’t need the form.';
+        el('returning').hidden = false;
+        el('returning-or').hidden = false;
+      });
+    }).catch(function () { /* no passkeys here: the form is all there is */ });
+  }
+
+  el('join-saved').addEventListener('click', function () {
+    if (busy || !joinReady) { return; }
+    var ready = joinReady;
+    joinReady = null;
+    busy = true;
+    el('join-saved').disabled = true;
+    var button = el('join-saved').textContent;
+    el('join-saved').textContent = 'Joining…';
+
+    function again(heading, body) {
+      busy = false;
+      el('join-saved').textContent = button;
+      notice('form-notice-slot', heading, body);
+      fetchJoinOptions().catch(function () { el('returning').hidden = true; });
+    }
+
+    credentials.get({ publicKey: requestOptions(ready.options) }).then(function (cred) {
+      if (!cred) { throw Object.assign(new Error('none'), { name: 'NotAllowedError' }); }
+      lastRpId = ready.options.rpId;
+      lastCredentialId = toB64u(cred.rawId);
+      return post({
+        action: 'join',
+        code: code,
+        challengeId: ready.challengeId,
+        credential: credentialJson(cred),
+        submissionId: submissionId
+      });
+    }).then(function (res) {
+      var data = res.data || {};
+      if (data.ok) {
+        busy = false;
+        setRememberedAs(data.firstName || '');
+        el('done-heading').textContent = (data.alreadyOn ? 'Already on, ' : 'Welcome back, ') +
+          (data.firstName || '');
+        el('done-body').textContent = data.alreadyOn
+          ? 'You’re already on this board — look up, your name is there.'
+          : 'Look up at the board — your name is on it. Someone at the board taps you in ' +
+            'when you’re ready to play.';
+        offerForget(data.forgetToken);
+        show('done');
+        return;
+      }
+      if (data.reason === 'unknown_passkey') {
+        setRememberedAs('');
+        forgetOnPhone(lastRpId, lastCredentialId);
+        el('returning').hidden = true;
+        el('returning-or').hidden = true;
+        busy = false;
+        notice('form-notice-slot', 'We don’t have you saved any more',
+          'Fill in the form below. You can choose Remember me again afterwards.');
+        return;
+      }
+      if (data.reason === 'full') {
+        busy = false;
+        notice('form-notice-slot', 'This board is full', data.message);
+        return;
+      }
+      if (data.reason === 'expired' && /code/i.test(data.message || '')) {
+        fail('This code has expired', 'The board will be showing a new one. Scan that.');
+        return;
+      }
+      again('That didn’t work', data.message || 'Tap Join again, or fill in the form.');
+    }).catch(function (e) {
+      if (e && e.name === 'NotAllowedError') {
+        // Cancelled, or no passkey of ours on this phone.
+        again('No saved details found', 'If you haven’t chosen Remember me before, ' +
+          'fill in the form below.');
+      } else {
+        again('That didn’t work', 'Tap Join again, or fill in the form below.');
+      }
+    });
+  });
+
+  // --- Remember me, on the done screen ---------------------------------------------------
+  var enrolReady = null;
+  var enrolDetails = null;
+
+  function fetchEnrolOptions() {
+    el('remember-me').disabled = true;
+    return post({
+      action: 'enrol_options',
+      code: code,
+      firstName: enrolDetails.firstName,
+      lastName: enrolDetails.lastName
+    }).then(function (res) {
+      var data = res.data || {};
+      if (!data.ok) { throw new Error(data.reason || 'no options'); }
+      enrolReady = data;
+      el('remember-me').disabled = false;
+    });
+  }
+
+  function offerRemember(registered, details) {
+    if (!registered.canRemember) { return; }
+    enrolDetails = details;
+    passkeysUsable().then(function (usable) {
+      if (!usable) { return; }
+      return fetchEnrolOptions().then(function () { el('remember').hidden = false; });
+    }).catch(function () { /* no passkeys here: nothing to offer */ });
+  }
+
+  el('remember-me').addEventListener('click', function () {
+    if (busy || !enrolReady) { return; }
+    var ready = enrolReady;
+    enrolReady = null;
+    busy = true;
+    el('remember-me').disabled = true;
+    el('remember-me').textContent = 'Saving…';
+
+    function again(text) {
+      busy = false;
+      el('remember-me').textContent = 'Remember me';
+      el('remember-after').hidden = false;
+      el('remember-after').textContent = text;
+      fetchEnrolOptions().catch(function () { el('remember').hidden = true; });
+    }
+
+    credentials.create({ publicKey: creationOptions(ready.options) }).then(function (cred) {
+      if (!cred) { throw Object.assign(new Error('none'), { name: 'NotAllowedError' }); }
+      lastRpId = ready.options.rp && ready.options.rp.id;
+      lastCredentialId = toB64u(cred.rawId);
+      return post(Object.assign({
+        action: 'enrol',
+        code: code,
+        challengeId: ready.challengeId,
+        credential: credentialJson(cred),
+        submissionId: submissionId
+      }, enrolDetails));
+    }).then(function (res) {
+      var data = res.data || {};
+      if (!data.ok) {
+        // The phone made a passkey we did not keep. Where it can be told, it drops it.
+        forgetOnPhone(lastRpId, lastCredentialId);
+        again(data.message || 'That didn’t save. Tap Remember me to try again.');
+        return;
+      }
+      busy = false;
+      setRememberedAs(data.firstName || enrolDetails.firstName);
+      el('remember-me').hidden = true;
+      el('remember-body').textContent = 'Saved. Next time, scan the board’s code and tap Join.';
+      if (data.emailKept === false) {
+        el('remember-after').hidden = false;
+        el('remember-after').textContent = 'That email is already saved for someone else, ' +
+          'so we kept everything except it. Joining works just the same.';
+      }
+      offerForget(data.forgetToken);
+    }).catch(function (e) {
+      again(e && e.name === 'NotAllowedError'
+        ? 'Not saved. Tap Remember me to try again.'
+        : 'Your phone couldn’t save it. Tap Remember me to try again.');
     });
   });
 })();
