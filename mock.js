@@ -22,6 +22,19 @@
  *   cardonly      a venue that sells by card alone: no bar button at all (vouchers offered)
  *   voucher       card-only venue with vouchers: RS-TEST-GOOD works once, RS-USED-0000,
  *                 RS-GONE-0000 and anything else are refused
+ *
+ * Split payments -- a card-only venue, 4 players, 30 min, £20.00 (£5.00 a head):
+ *   split         nobody has paid: Pay for everyone / Pay just my share
+ *   splitpartial  £5 of £20 paid: Pay my share / Pay the rest
+ *   splitheld     £5 paid and the other £15 is in somebody's card form right now; the
+ *                 checkout refuses until "They gave up? Pay the rest" is used
+ *   sharepaid     back from paying my £5 share; the rest of the group never pays
+ *   splitdone     back from paying my £5 share; the group finishes, the board starts
+ *   splitwhole    back from a payment that finished the split (everyone, or the rest)
+ *   splitcovered  CHANGE lowered the price below what was already paid: nothing to pay
+ *   splitexpired  £5 of £20 paid, but this phone's code has run out
+ * Add &back=1&s=x to any of them to see Stripe's back link release a held share
+ * (window.lastRelease). Every checkout request is kept on window.checkoutRequests.
  * -------------------------------------------------------------------------- */
 (function () {
   'use strict';
@@ -64,7 +77,108 @@
     return { status: status || 200, data: data };
   }
 
-  function describe() {
+  // ---- split payments -----------------------------------------------------------------
+  var SPLIT_CASES = ['split', 'splitpartial', 'splitheld', 'sharepaid', 'splitdone',
+    'splitwhole', 'splitcovered', 'splitexpired'];
+  var splitPolls = 0;
+  var coveredSettled = false;
+  // What this phone paid, carried through the fake Stripe round trip in the URL.
+  var mineMinor = Number(params.get('mockamt')) || 500;
+
+  function splitDescribe(request) {
+    var base = {
+      ok: true, players: 4, minutes: 30, amountMinor: 2000, currency: 'GBP', kind: 'new',
+      suiteId: '9f2c41ab-0e55-4a71-9c8e-2b3d5f6a7c81', expiresInSeconds: 1524,
+      alreadyPaid: false, approvedBy: null, paidVia: null, fallbackToken: null,
+      cardPayment: true, barPayment: false, splitPayment: true,
+      split: null, share: null, codeExpired: false, boardAcknowledged: false
+    };
+    var partial = { paidMinor: 500, heldMinor: 0, payers: 1, remainingMinor: 1500 };
+
+    if (scenario === 'splitpartial') {
+      base.split = partial;
+    } else if (scenario === 'splitheld') {
+      base.split = { paidMinor: 500, heldMinor: 1500, payers: 1, remainingMinor: 1500 };
+    } else if (scenario === 'splitexpired') {
+      base.split = partial;
+      base.codeExpired = true;
+      base.cardPayment = false;
+      base.expiresInSeconds = 0;
+    } else if (scenario === 'splitcovered') {
+      // The board re-quoted for 2 players after three of the original four had paid £5.
+      base.players = 2;
+      base.amountMinor = 1000;
+      base.split = { paidMinor: 1500, heldMinor: 0, payers: 3, remainingMinor: -500 };
+      if (coveredSettled) {
+        base.alreadyPaid = true;
+        base.paidVia = 'card';
+        base.fallbackToken = '481902';
+        base.boardAcknowledged = acknowledged(true);
+      }
+    } else if (scenario === 'sharepaid' || scenario === 'splitdone' || scenario === 'splitwhole') {
+      splitPolls++;
+      // The webhook lands on the second ask, as it does for a whole card payment.
+      var landed = splitPolls >= 2;
+      base.share = { state: landed ? 'paid' : 'held', amountMinor: mineMinor, heads: 1 };
+      base.split = landed
+        ? { paidMinor: 500, heldMinor: 0, payers: 1, remainingMinor: 1500 }
+        : { paidMinor: 0, heldMinor: mineMinor, payers: 0, remainingMinor: 2000 };
+      // splitdone: the rest of the group pays a few asks later; splitwhole: this payment
+      // was the one that finished it.
+      var complete = (scenario === 'splitdone' && splitPolls >= 5)
+        || (scenario === 'splitwhole' && landed);
+      if (complete) {
+        base.split = { paidMinor: 2000, heldMinor: 0, payers: 4, remainingMinor: 0 };
+        base.alreadyPaid = true;
+        base.paidVia = 'card';
+        base.fallbackToken = '481902';
+        base.cardPayment = false;
+        base.splitPayment = false;
+        base.boardAcknowledged = acknowledged(true);
+      }
+    }
+
+    if (request && !request.share) base.share = null;
+    return later(body(base), 250);
+  }
+
+  window.checkoutRequests = [];
+
+  function splitCheckout(request) {
+    if (request.action === 'release') {
+      window.lastRelease = request;
+      return later(body({ ok: true, released: true }), 200);
+    }
+    if (scenario === 'splitcovered') {
+      coveredSettled = true;
+      return later(body({ ok: true, settled: true }), 500);
+    }
+    if (scenario === 'splitheld' && !request.ignoreHolds) {
+      return later(body({
+        ok: false, reason: 'held_elsewhere', heldMinor: 1500, paidMinor: 500,
+        remainingMinor: 1500,
+        message: 'Someone is paying the rest on another phone right now.'
+      }, 409));
+    }
+
+    var paidAlready = scenario === 'split' ? 0 : 500;
+    var left = 2000 - paidAlready;
+    var amount = Math.min(left, 500 * Math.max(1, request.heads || 4));
+    var back = new URL(window.location.href);
+    back.searchParams.set('paid', '1');
+    back.searchParams.set('s', 'mock-share-' + window.checkoutRequests.length);
+    back.searchParams.set('mockamt', String(amount));
+    back.searchParams.set('case', amount >= left ? 'splitwhole' : 'sharepaid');
+    return later(body({
+      ok: true, url: back.toString(), amountMinor: amount, currency: 'GBP',
+      shareId: 'mock-share-' + window.checkoutRequests.length
+    }), 700);
+  }
+
+  function describe(request) {
+    if (SPLIT_CASES.indexOf(scenario) >= 0) {
+      return splitDescribe(request);
+    }
     if (scenario === 'offline') {
       return later(new Error('Failed to fetch'), 1200);
     }
@@ -144,7 +258,11 @@
    * The card endpoint. Stripe is not involved: a successful "checkout" sends the page back
    * to itself with ?paid=1, which is exactly the shape of the real round trip.
    */
-  function checkout() {
+  function checkout(request) {
+    window.checkoutRequests.push(request);
+    if (SPLIT_CASES.indexOf(scenario) >= 0) {
+      return splitCheckout(request);
+    }
     if (scenario === 'cardoff') {
       return later(body({
         ok: false, reason: 'not_enabled',
@@ -202,7 +320,7 @@
   }
 
   window.PAY_CONFIG.transport = function (request) {
-    return request.action === 'describe' ? describe() : unlock(request);
+    return request.action === 'describe' ? describe(request) : unlock(request);
   };
 
   window.PAY_CONFIG.checkoutTransport = checkout;
@@ -329,6 +447,11 @@
   // not how long it took.
   window.PAY_CONFIG.boardAckTries = 4;
   window.PAY_CONFIG.boardAckPollMs = 400;
+
+  // And for a share payer waiting on the rest of the group: quick asks, and few enough that
+  // `sharepaid` reaches its "Check again" button in about ten seconds.
+  window.PAY_CONFIG.splitPollMs = 700;
+  window.PAY_CONFIG.splitPollTries = 14;
 
   // Obvious on screen, so a mocked run is never mistaken for a real one.
   window.addEventListener('DOMContentLoaded', function () {
