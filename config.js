@@ -50,6 +50,12 @@
     // not decided here -- the describe response says whether this venue sells that way.
     checkoutUrl: project.url ? project.url + '/functions/v1/create-checkout' : '',
 
+    // Where "Have a voucher?" posts: a one-time code the pub handed out, instead of paying.
+    // Its own endpoint, like the card one: it spends a code and unlocks, and checks no staff
+    // password. Whether the box shows at all is asked of the same endpoint (action
+    // 'available'): only for a new session at a venue that has unspent codes.
+    voucherUrl: project.url ? project.url + '/functions/v1/redeem-voucher' : '',
+
     anonKey: project.anonKey,
     environment: project === PROJECTS.prod ? 'prod' : 'dev'
   };
