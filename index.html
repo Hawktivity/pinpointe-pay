@@ -372,13 +372,13 @@ button:focus-visible, input:focus-visible {
 
     <div class="stack" style="margin-top:30px">
       <div>
-        <div class="amount-label">Still to pay</div>
+        <div class="amount-label" id="share-amount-label">Still to pay</div>
         <div class="amount" id="share-remaining">&mdash;</div>
       </div>
 
       <div class="rows">
         <div class="row"><span class="k">You paid</span><span class="v" id="share-mine">&mdash;</span></div>
-        <div class="row"><span class="k">Paid so far</span><span class="v" id="share-progress">&mdash;</span></div>
+        <div class="row" id="share-progress-row"><span class="k">Paid so far</span><span class="v" id="share-progress">&mdash;</span></div>
       </div>
 
       <div>
@@ -632,7 +632,7 @@ button:focus-visible, input:focus-visible {
     // A guest whose own share is in never goes back to a screen that offers to take it.
     if (data.share && data.share.state === 'paid') {
       showShare(data);
-      watchSplit();
+      if (!isRefund(data)) watchSplit();
       return;
     }
 
@@ -930,6 +930,18 @@ button:focus-visible, input:focus-visible {
     var partOfIt = mine !== null && mine !== data.amountMinor;
     el('done-amount-label').textContent = partOfIt ? 'You paid' : 'Paid';
     if (partOfIt) el('done-amount').textContent = money(mine, data.currency);
+
+    // Two phones paid the last share at the same moment, and this was the second: the board
+    // is running on the first, and this phone's money is going back. Saying "You paid £5.00"
+    // here would be true and misleading -- it is the refund they need to hear about.
+    var returned = mine !== null ? (data.share.returnedMinor || 0) : 0;
+    if (returned > 0) {
+      el('done-amount-label').textContent = returned >= mine ? 'Refunded to you' : 'Refunded';
+      el('done-amount').textContent = money(returned, data.currency);
+      el('done-blurb').textContent += ' Your group had already paid, so '
+        + (returned >= mine ? 'your ' : '')
+        + money(returned, data.currency) + ' is going back to your card automatically.';
+    }
     setTimeRow(data);
 
     // "Approved by" names the person who took the money. A card sale had nobody, and
@@ -1386,6 +1398,31 @@ button:focus-visible, input:focus-visible {
     var left = Math.max(0, f.remaining);
 
     el('share-venue').textContent = 'Suite ' + (data.suiteId ? shortSuite(data.suiteId) : '');
+
+    // The group never finished -- an hour went by with nobody else paying, or the board moved
+    // on to another group -- so the board never started and this guest's money is going back.
+    // Said plainly, with nothing to tap: there is nothing left for them to do.
+    if (isRefund(data)) {
+      splitWatch++;
+      var back = data.share.returnedMinor || mine;
+      el('share-amount-label').textContent = 'Going back to your card';
+      el('share-remaining').textContent = money(back, data.currency);
+      el('share-mine').textContent = money(mine, data.currency);
+      el('share-progress-row').hidden = true;
+      el('share-title').textContent = 'Your ' + money(back, data.currency) + ' is on its way back';
+      el('share-blurb').textContent = 'The rest of your group didn’t finish paying, so the '
+        + 'board never started. Your money is going back to your card automatically — it can '
+        + 'take 5 to 10 working days to show. There is nothing you need to do.';
+      el('share-rest').hidden = true;
+      el('share-hint').hidden = true;
+      el('share-refresh').hidden = true;
+      document.title = 'Refund on its way';
+      if (el('view-share').hidden) show('share');
+      return;
+    }
+
+    el('share-amount-label').textContent = 'Still to pay';
+    el('share-progress-row').hidden = false;
     el('share-remaining').textContent = money(left, data.currency);
     el('share-mine').textContent = money(mine, data.currency);
     el('share-progress').textContent =
@@ -1421,6 +1458,11 @@ button:focus-visible, input:focus-visible {
     // they have paid is the wrong thing to find there.
     document.title = 'Your share is paid';
     if (el('view-share').hidden) show('share');
+  }
+
+  /** This phone's share was paid into a split that was closed unfinished, and is going back. */
+  function isRefund(data) {
+    return !!(data.share && data.share.state === 'paid' && data.share.splitState === 'abandoned');
   }
 
   // Bumped whenever a new watch starts, so an older one still waiting on a timer stops
@@ -1578,7 +1620,7 @@ button:focus-visible, input:focus-visible {
         // money is in; what they are waiting for now is everybody else.
         if (data.share && data.share.state === 'paid') {
           showShare(data);
-          watchSplit();
+          if (!isRefund(data)) watchSplit();
           return;
         }
       }

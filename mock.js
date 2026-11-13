@@ -33,6 +33,9 @@
  *   splitwhole    back from a payment that finished the split (everyone, or the rest)
  *   splitcovered  CHANGE lowered the price below what was already paid: nothing to pay
  *   splitexpired  £5 of £20 paid, but this phone's code has run out
+ *   sharerefund   (with &s=x) my £5 is paid but the group never finished: it is going back
+ *   splitrace     (with &s=x) a friend paid the last share at the same moment; the board is
+ *                 running and my £5 is going back
  * Add &back=1&s=x to any of them to see Stripe's back link release a held share
  * (window.lastRelease). Every checkout request is kept on window.checkoutRequests.
  * -------------------------------------------------------------------------- */
@@ -79,7 +82,7 @@
 
   // ---- split payments -----------------------------------------------------------------
   var SPLIT_CASES = ['split', 'splitpartial', 'splitheld', 'sharepaid', 'splitdone',
-    'splitwhole', 'splitcovered', 'splitexpired'];
+    'splitwhole', 'splitcovered', 'splitexpired', 'sharerefund', 'splitrace'];
   var splitPolls = 0;
   var coveredSettled = false;
   // What this phone paid, carried through the fake Stripe round trip in the URL.
@@ -115,6 +118,17 @@
         base.fallbackToken = '481902';
         base.boardAcknowledged = acknowledged(true);
       }
+    } else if (scenario === 'sharerefund') {
+      // The split was closed unfinished; describe reports the share and what is going back.
+      base.share = { state: 'paid', amountMinor: 500, heads: 1, splitState: 'abandoned', returnedMinor: 500 };
+    } else if (scenario === 'splitrace') {
+      base.share = { state: 'paid', amountMinor: 500, heads: 1, splitState: 'complete', returnedMinor: 500 };
+      base.alreadyPaid = true;
+      base.paidVia = 'card';
+      base.fallbackToken = '481902';
+      base.cardPayment = false;
+      base.splitPayment = false;
+      base.boardAcknowledged = acknowledged(true);
     } else if (scenario === 'sharepaid' || scenario === 'splitdone' || scenario === 'splitwhole') {
       splitPolls++;
       // The webhook lands on the second ask, as it does for a whole card payment.
