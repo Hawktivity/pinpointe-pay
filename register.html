@@ -323,10 +323,15 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
         <div class="photo-row">
           <div class="photo-preview" id="photo-preview" aria-hidden="true"></div>
           <div class="photo-actions">
-            <button type="button" id="photo-pick">Add a photo</button>
+            <button type="button" id="photo-camera-pick">Take a selfie</button>
+            <button type="button" id="photo-pick">Choose a photo</button>
             <button type="button" class="quiet" id="photo-remove" hidden>Remove</button>
           </div>
         </div>
+        <!-- Two inputs, because one cannot offer both. Since Android 14, Chrome answers a plain
+             accept="image/*" with the system photo picker, which has no camera in it; capture
+             opens the front camera directly (and is ignored on a computer). -->
+        <input id="photo-camera" type="file" accept="image/*" capture="user" hidden>
         <input id="photo" type="file" accept="image/*" hidden>
       </div>
 
@@ -602,16 +607,22 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
   function clearPhoto() {
     photoBase64 = null;
     el('photo').value = '';
+    el('photo-camera').value = '';
     el('photo-preview').style.backgroundImage = '';
-    el('photo-pick').textContent = 'Add a photo';
+    el('photo-camera-pick').textContent = 'Take a selfie';
+    el('photo-pick').textContent = 'Choose a photo';
     el('photo-remove').hidden = true;
   }
 
+  el('photo-camera-pick').addEventListener('click', function () { el('photo-camera').click(); });
   el('photo-pick').addEventListener('click', function () { el('photo').click(); });
   el('photo-remove').addEventListener('click', clearPhoto);
 
-  el('photo').addEventListener('change', function () {
-    var file = el('photo').files && el('photo').files[0];
+  el('photo-camera').addEventListener('change', function () { usePhoto(el('photo-camera')); });
+  el('photo').addEventListener('change', function () { usePhoto(el('photo')); });
+
+  function usePhoto(input) {
+    var file = input.files && input.files[0];
     if (!file) { return; }
 
     var url = URL.createObjectURL(file);
@@ -629,7 +640,8 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
       var dataUrl = canvas.toDataURL('image/jpeg', 0.82);
       photoBase64 = dataUrl.replace(/^data:image\/jpeg;base64,/, '');
       el('photo-preview').style.backgroundImage = 'url(' + dataUrl + ')';
-      el('photo-pick').textContent = 'Change';
+      el('photo-camera-pick').textContent = 'Retake';
+      el('photo-pick').textContent = 'Choose another';
       el('photo-remove').hidden = false;
     };
     img.onerror = function () {
@@ -638,7 +650,7 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
       notice('form-notice-slot', 'That photo didn’t load', 'Try another, or leave it out.');
     };
     img.src = url;
-  });
+  }
 
   // --- submit ---------------------------------------------------------------
   el('form').addEventListener('submit', function (e) {
