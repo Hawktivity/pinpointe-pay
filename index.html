@@ -222,6 +222,9 @@ button:focus-visible, input:focus-visible {
         <div class="rows">
           <div class="row"><span class="k" id="pay-players-label">Players</span><span class="v" id="pay-players">&mdash;</span></div>
           <div class="row"><span class="k" id="pay-minutes-label">Time</span><span class="v" id="pay-minutes">&mdash;</span></div>
+          <!-- Only once part of the group has paid: the big figure above becomes what is
+               left, and this says what it is left of. -->
+          <div class="row" id="pay-paid-row" hidden><span class="k">Paid so far</span><span class="v" id="pay-paid">&mdash;</span></div>
           <div class="row"><span class="k">This code lasts</span><span class="v" id="pay-expires">&mdash;</span></div>
         </div>
       </div>
@@ -240,8 +243,14 @@ button:focus-visible, input:focus-visible {
         changes what it does: a server taps it dozens of times a night and it is still
         one tap to the password, whether or not a card button appeared above it.
       -->
+      <!--
+        Splitting it: one primary button and at most one quiet one under it. Which two, and
+        for how much, depends on how far the group has got -- see arrangeCardButtons.
+      -->
       <div class="tight">
         <button class="cta" id="pay-card" hidden>Pay by card</button>
+        <button class="ghost" id="pay-share" type="button" hidden>Pay just my share</button>
+        <p class="hint" id="split-hint" hidden>Splitting it? Everyone scans the same code on the board and pays their share.</p>
         <button class="cta" id="to-staff">Paid &mdash; unlock</button>
         <div id="pay-notice-slot" hidden></div>
       </div>
@@ -321,7 +330,7 @@ button:focus-visible, input:focus-visible {
       </div>
 
       <div class="rows">
-        <div class="row"><span class="k">Paid</span><span class="v" id="done-amount">&mdash;</span></div>
+        <div class="row"><span class="k" id="done-amount-label">Paid</span><span class="v" id="done-amount">&mdash;</span></div>
         <div class="row"><span class="k" id="done-minutes-label">Time bought</span><span class="v" id="done-minutes">&mdash;</span></div>
         <div class="row"><span class="k" id="done-by-label">Approved by</span><span class="v" id="done-by">&mdash;</span></div>
       </div>
@@ -348,6 +357,41 @@ button:focus-visible, input:focus-visible {
         We&rsquo;ll nudge this phone ten minutes before the time runs out, in case
         you want longer.
       </p>
+    </div>
+  </section>
+
+  <!-- ============ my share is in, the group's isn't ============ -->
+  <!--
+    A guest who paid their own share and came back from the card page. Their money is in;
+    the board starts only once everybody's is. Nothing here may read as a failure or invite
+    them to pay their share again -- the one thing on offer is paying the REST, for the
+    friend who would rather not wait.
+  -->
+  <section id="view-share" hidden>
+    <div class="venue" id="share-venue">Suite</div>
+
+    <div class="stack" style="margin-top:30px">
+      <div>
+        <div class="amount-label">Still to pay</div>
+        <div class="amount" id="share-remaining">&mdash;</div>
+      </div>
+
+      <div class="rows">
+        <div class="row"><span class="k">You paid</span><span class="v" id="share-mine">&mdash;</span></div>
+        <div class="row"><span class="k">Paid so far</span><span class="v" id="share-progress">&mdash;</span></div>
+      </div>
+
+      <div>
+        <h1 class="small" id="share-title">Your share is paid</h1>
+        <p id="share-blurb">The board starts once it&rsquo;s all in.</p>
+      </div>
+
+      <div class="tight">
+        <button class="ghost" id="share-rest" type="button" hidden>Pay the rest</button>
+        <p class="hint" id="share-hint" hidden></p>
+        <button class="ghost" id="share-refresh" type="button" hidden>Check again</button>
+        <div id="share-notice-slot" hidden></div>
+      </div>
     </div>
   </section>
 
@@ -395,8 +439,15 @@ button:focus-visible, input:focus-visible {
   var BOARD_ACK_TRIES = CONFIG.boardAckTries || 8;
   var BOARD_ACK_POLL_MS = CONFIG.boardAckPollMs || 2000;
 
+  // How often a guest who has paid their own share asks whether the rest of the group has,
+  // and for how long. Generous on purpose: a group at a board can take ten minutes to get
+  // four phones out, and this screen giving up first would leave somebody who has paid
+  // staring at nothing. After that it offers a button rather than polling forever.
+  var SPLIT_POLL_MS = CONFIG.splitPollMs || 3000;
+  var SPLIT_POLL_TRIES = CONFIG.splitPollTries || 200;
+
   var el = function (id) { return document.getElementById(id); };
-  var views = ['loading', 'pay', 'staff', 'done', 'error'];
+  var views = ['loading', 'pay', 'staff', 'done', 'share', 'error'];
 
   function show(name) {
     views.forEach(function (v) { el('view-' + v).hidden = v !== name; });
@@ -462,6 +513,13 @@ button:focus-visible, input:focus-visible {
   // "has the money landed yet".
   var returningFromPayment =
     new URLSearchParams(window.location.search).get('paid') === '1';
+
+  // Which share of a split this phone paid for, or was about to. Stripe hands it back on
+  // both return routes: with paid=1 when the money went through, with back=1 when the guest
+  // used Stripe's own back link instead of paying.
+  var shareId = new URLSearchParams(window.location.search).get('s');
+  var cameBackUnpaid =
+    new URLSearchParams(window.location.search).get('back') === '1';
 
   function call(body) {
     // A local copy can supply its own responder. Never present in a deployed
@@ -533,7 +591,7 @@ button:focus-visible, input:focus-visible {
       return;
     }
 
-    call({ action: 'describe', code: code }).then(function (result) {
+    call({ action: 'describe', code: code, share: shareId || undefined }).then(function (result) {
       var data = result.data || {};
 
       if (!data.ok) {
@@ -545,41 +603,7 @@ button:focus-visible, input:focus-visible {
         return;
       }
 
-      session = data;
-
-      if (data.alreadyPaid) {
-        // Never invite a second payment for the same session.
-        showPaid(data, false);
-        return;
-      }
-
-      el('pay-venue').textContent = 'Suite ' + (data.suiteId ? shortSuite(data.suiteId) : '');
-      el('pay-amount').textContent = money(data.amountMinor, data.currency);
-      el('pay-players').textContent = data.players;
-      el('pay-minutes').textContent = duration(data.minutes);
-      el('pay-expires').textContent = Math.max(1, Math.round(data.expiresInSeconds / 60)) + ' MIN';
-
-      // Every branch on this page used to test for 'ext' and nothing else, so a join -- which
-      // buys ONE SEAT on a session already running and adds no time at all -- was shown the
-      // wording written for a brand new booking. Measured on the board 23 Sep 2026: a joiner's
-      // phone offered "Players 1 / Time 45 min" and said the server's password would "start the
-      // board", which was already running.
-      if (data.kind === 'join') {
-        el('pay-players-label').textContent = 'Joining';
-        el('pay-minutes-label').textContent = 'Time left to play';
-      }
-      el('pay-blurb').textContent = barBlurb(data.kind);
-
-      // Offered after the kind wording above, because it replaces those sentences rather
-      // than adding to them: a screen that tells a guest both to pay here and to show this
-      // at the bar is how one board gets paid for twice.
-      offerCard(data);
-
-      el('staff-amount').textContent = money(data.amountMinor, data.currency) + ' taken?';
-      el('staff-detail').textContent = staffDetail(data);
-
-      show('pay');
-      offerVoucher(data);
+      render(data);
     }).catch(function (error) {
       fail('We can’t reach the till system',
         (error && error.message)
@@ -587,6 +611,79 @@ button:focus-visible, input:focus-visible {
           : 'Check the phone has signal and try again, or ask a member of staff.');
       el('error-retry').hidden = false;
     });
+  }
+
+  var settleTried = false;
+
+  /**
+   * Puts a describe answer on screen. Split out of describe so a refusal from the card
+   * endpoint that carries fresh figures (somebody else is mid-payment) can redraw the
+   * screen without another round trip.
+   */
+  function render(data) {
+    session = data;
+
+    if (data.alreadyPaid) {
+      // Never invite a second payment for the same session.
+      showPaid(data, false);
+      return;
+    }
+
+    // A guest whose own share is in never goes back to a screen that offers to take it.
+    if (data.share && data.share.state === 'paid') {
+      showShare(data);
+      watchSplit();
+      return;
+    }
+
+    var figures = splitFigures(data);
+
+    // The group has already paid at least the price -- CHANGE on the board lowered it after
+    // some of them paid. There is nothing to charge; the sale just needs finishing.
+    if (data.split && figures.remaining <= 0 && !data.codeExpired && !settleTried) {
+      settle(data);
+      return;
+    }
+
+    el('pay-venue').textContent = 'Suite ' + (data.suiteId ? shortSuite(data.suiteId) : '');
+    el('pay-amount').textContent = money(data.amountMinor, data.currency);
+    el('pay-players').textContent = data.players;
+    el('pay-minutes').textContent = duration(data.minutes);
+    el('pay-expires').textContent = data.codeExpired
+      ? 'Expired'
+      : Math.max(1, Math.round(data.expiresInSeconds / 60)) + ' MIN';
+    el('pay-notice-slot').hidden = true;
+
+    // Every branch on this page used to test for 'ext' and nothing else, so a join -- which
+    // buys ONE SEAT on a session already running and adds no time at all -- was shown the
+    // wording written for a brand new booking. Measured on the board 23 Sep 2026: a joiner's
+    // phone offered "Players 1 / Time 45 min" and said the server's password would "start the
+    // board", which was already running.
+    if (data.kind === 'join') {
+      el('pay-players-label').textContent = 'Joining';
+      el('pay-minutes-label').textContent = 'Time left to play';
+    }
+    el('pay-blurb').textContent = barBlurb(data.kind);
+
+    if (data.codeExpired) {
+      // Too old to start a payment, but some of the group have paid into it, so describe
+      // answered rather than refusing. Their money still counts against the board's next
+      // code -- the split belongs to the session, not to this QR.
+      showExpiredSplit(data, figures);
+      show('pay');
+      return;
+    }
+
+    // Offered after the kind wording above, because it replaces those sentences rather
+    // than adding to them: a screen that tells a guest both to pay here and to show this
+    // at the bar is how one board gets paid for twice.
+    offerCard(data);
+
+    el('staff-amount').textContent = money(data.amountMinor, data.currency) + ' taken?';
+    el('staff-detail').textContent = staffDetail(data);
+
+    show('pay');
+    offerVoucher(data);
   }
 
   /**
@@ -810,6 +907,8 @@ button:focus-visible, input:focus-visible {
     el('done-title').textContent = justPaid
       ? (kind === 'join' ? 'You’re in' : 'Board unlocked')
       : 'Already paid';
+    // Otherwise a share payer's tab still says "Your share is paid" over a running board.
+    document.title = el('done-title').textContent;
 
     el('done-blurb').textContent = justPaid
       ? (kind === 'join'
@@ -824,6 +923,13 @@ button:focus-visible, input:focus-visible {
     // A voucher session cost the group nothing; showing the quote's price as "Paid" would
     // read as a charge.
     el('done-amount').textContent = byVoucher ? '£0.00' : money(data.amountMinor, data.currency);
+
+    // A guest who paid a share of a split paid their share, not the session's price. "Paid
+    // £20.00" to somebody whose card was charged £5.00 reads as a charge they did not make.
+    var mine = data.share && data.share.state === 'paid' ? data.share.amountMinor : null;
+    var partOfIt = mine !== null && mine !== data.amountMinor;
+    el('done-amount-label').textContent = partOfIt ? 'You paid' : 'Paid';
+    if (partOfIt) el('done-amount').textContent = money(mine, data.currency);
     setTimeRow(data);
 
     // "Approved by" names the person who took the money. A card sale had nobody, and
@@ -891,18 +997,11 @@ button:focus-visible, input:focus-visible {
       return;
     }
 
-    var kind = kindOf(data);
     // Some venues sell by card alone -- their agreement says so, and unlock-session refuses
     // a bar purchase there whatever this page shows. describe reports it; the page never
     // assumes, because a venue with no setting at all still sells at the bar.
     var barToo = data.barPayment !== false;
-
-    var context = kind === 'ext'
-      ? 'This adds more time to the session you are already playing. '
-      : kind === 'join'
-        ? 'This adds you to the session already running — a seat for the time that is '
-          + 'left, not extra time on the clock. '
-        : '';
+    var context = cardContext(kindOf(data));
 
     el('pay-card').hidden = false;
     el('pay-amount-label').textContent = 'To pay';
@@ -924,6 +1023,172 @@ button:focus-visible, input:focus-visible {
     el('to-staff').hidden = !barToo;
     el('to-staff').className = 'ghost';
     el('to-staff').textContent = 'Paid at the bar — unlock';
+
+    arrangeCardButtons(data);
+  }
+
+  /** What a card purchase is for, said first when it is not simply a new session. */
+  function cardContext(kind) {
+    return kind === 'ext'
+      ? 'This adds more time to the session you are already playing. '
+      : kind === 'join'
+        ? 'This adds you to the session already running — a seat for the time that is '
+          + 'left, not extra time on the clock. '
+        : '';
+  }
+
+  /**
+   * Where a group has got with paying, in the figures every split screen works from.
+   *
+   * The server decides what is charged; these are only what the buttons say. A head's share
+   * rounds UP, as the server's does, so the shares of a group always cover the price and the
+   * last one is the one that comes out a penny short.
+   */
+  function splitFigures(data) {
+    var split = data.split || null;
+    var total = data.amountMinor;
+    var paid = split ? (split.paidMinor || 0) : 0;
+    var held = split ? (split.heldMinor || 0) : 0;
+    var remaining = split && typeof split.remainingMinor === 'number'
+      ? split.remainingMinor
+      : total - paid;
+    var available = remaining - held;
+    var perHead = Math.ceil(total / Math.max(1, Number(data.players) || 1));
+
+    return {
+      total: total,
+      paid: paid,
+      held: held,
+      remaining: remaining,
+      available: available,
+      perHead: perHead,
+      share: Math.min(perHead, available),
+      payers: split ? (split.payers || 0) : 0,
+      started: paid > 0 || held > 0
+    };
+  }
+
+  // What each pay button does when tapped. Kept beside the buttons rather than read back
+  // off their labels, because the same button means "everyone" on one screen and "the
+  // rest" on the next.
+  var buttonAction = {};
+
+  function setButton(id, label, action) {
+    el(id).textContent = label;
+    el(id).disabled = false;
+    buttonAction[id] = action;
+  }
+
+  /**
+   * Which card buttons, saying what.
+   *
+   * Richard's rule for anything a guest sees: one obvious thing to do. So there is always a
+   * single primary button, and at most one quiet one under it:
+   *
+   *   one player, or a join       Pay by card
+   *   nobody has paid yet         Pay for everyone      / Pay just my share
+   *   some of the group have      Pay my share          / Pay the rest
+   *   the rest is mid-payment     (nothing primary)     / They gave up? Pay the rest
+   *
+   * A join is one head and never split; describe says so by leaving splitPayment off.
+   */
+  function arrangeCardButtons(data) {
+    var f = splitFigures(data);
+    var currency = data.currency;
+
+    el('pay-share').hidden = true;
+    el('split-hint').hidden = true;
+    el('pay-paid-row').hidden = true;
+    el('pay-card').hidden = false;
+
+    if (!data.splitPayment && !f.started) {
+      setButton('pay-card', 'Pay by card', { heads: data.players });
+      return;
+    }
+
+    if (f.started) {
+      // The big figure becomes what is left, because that is the number anybody picking
+      // the phone up now needs; the row under it says what it is left of.
+      el('pay-amount-label').textContent = 'Still to pay';
+      el('pay-amount').textContent = money(Math.max(0, f.remaining), currency);
+      el('pay-paid-row').hidden = false;
+      el('pay-paid').textContent = money(f.paid, currency) + ' of ' + money(f.total, currency);
+
+      // Half the group has paid by card; a server taking the whole price at the bar now
+      // would sell the board a second time. Their shares would come back automatically, but
+      // nobody should be steered into that.
+      el('to-staff').hidden = true;
+
+      el('pay-heading').textContent = 'Pay your share';
+      el('pay-blurb').textContent = cardContext(kindOf(data))
+        + (f.payers === 1 ? 'One of your group has paid. ' : f.payers > 1 ? f.payers + ' of your group have paid. ' : '')
+        + 'The board starts on its own once the rest is in.';
+    }
+
+    if (f.available <= 0) {
+      // Everything still owed is on somebody else's phone, in a card form, right now. Usually
+      // they finish in a minute; a hold only goes stale when somebody closes the tab, and
+      // then the group is stuck behind them for half an hour -- hence the way round it.
+      // Said in the heading rather than in a notice box: the box sits under the buttons,
+      // and the explanation has to come before the one thing offered here.
+      el('pay-card').hidden = true;
+      el('pay-heading').textContent = 'Someone’s paying';
+      el('pay-blurb').textContent = 'Someone’s paying on another phone right now — the '
+        + money(f.remaining, currency) + ' still to pay. The board starts as soon as their '
+        + 'payment goes through.';
+      setButton('pay-share', 'They gave up? Pay the rest · ' + money(f.remaining, currency),
+        { heads: data.players, ignoreHolds: true });
+      el('pay-share').hidden = false;
+      return;
+    }
+
+    if (!f.started) {
+      setButton('pay-card', 'Pay for everyone · ' + money(f.available, currency),
+        { heads: data.players });
+      setButton('pay-share', 'Pay just my share · ' + money(f.share, currency), { heads: 1 });
+      el('pay-share').hidden = false;
+      el('split-hint').textContent =
+        'Splitting it? Everyone scans the same code on the board and pays their share.';
+      el('split-hint').hidden = false;
+      return;
+    }
+
+    setButton('pay-card', 'Pay my share · ' + money(f.share, currency), { heads: 1 });
+    if (f.available > f.share) {
+      setButton('pay-share', 'Pay the rest · ' + money(f.available, currency),
+        { heads: data.players });
+      el('pay-share').hidden = false;
+    }
+    if (f.held > 0) {
+      el('split-hint').textContent =
+        money(f.held, currency) + ' is being paid on another phone right now.';
+      el('split-hint').hidden = false;
+    }
+  }
+
+  /**
+   * The code on this phone has run out, but some of the group have already paid into it.
+   *
+   * Not the error screen: that says "this code didn't work", which to somebody whose friend
+   * has just paid reads as "your friend's money is gone". It isn't -- the board's next code
+   * is for the same session, and what was paid counts against it.
+   */
+  function showExpiredSplit(data, f) {
+    el('pay-card').hidden = true;
+    el('pay-share').hidden = true;
+    el('split-hint').hidden = true;
+    el('to-staff').hidden = true;
+    el('voucher-block').hidden = true;
+
+    el('pay-amount-label').textContent = 'Still to pay';
+    el('pay-amount').textContent = money(Math.max(0, f.remaining), data.currency);
+    el('pay-paid-row').hidden = f.paid <= 0;
+    el('pay-paid').textContent = money(f.paid, data.currency) + ' of ' + money(f.total, data.currency);
+
+    el('pay-heading').textContent = 'Scan the board again';
+    el('pay-blurb').textContent = 'The board makes a fresh code every half hour. What your '
+      + 'group has already paid still counts.';
+    notice('pay-notice-slot', 'This code has expired.', 'Scan the code on the board again to pay.');
   }
 
   /**
@@ -937,6 +1202,9 @@ button:focus-visible, input:focus-visible {
    */
   function withdrawCard(data) {
     el('pay-card').hidden = true;
+    el('pay-share').hidden = true;
+    el('split-hint').hidden = true;
+    el('pay-paid-row').hidden = true;
     // Whatever else is true, the bar button comes back when card is not on offer. A venue
     // cannot be configured with neither route -- the database refuses it -- so if there is
     // no card here, there is a bar.
@@ -949,33 +1217,99 @@ button:focus-visible, input:focus-visible {
   }
 
   var startingCheckout = false;
+  var PAY_BUTTONS = ['pay-card', 'pay-share', 'share-rest'];
 
-  function payByCard() {
+  // The phone's own name for one tap. Sent with every checkout request so a retry after a
+  // dropped connection is the SAME share on the server rather than a second hold on the
+  // group's money. Kept only until the server answers: after that, a tap is a new attempt.
+  var pendingAttempt = null;
+
+  // The share a checkout was opened for, remembered in case the guest comes back with the
+  // browser's back button rather than Stripe's own link -- see the pageshow handler.
+  var lastShareId = null;
+
+  function newAttempt() {
+    var bytes = new Uint8Array(8);
+    window.crypto.getRandomValues(bytes);
+    return Array.prototype.map.call(bytes, function (b) {
+      return ('0' + b.toString(16)).slice(-2);
+    }).join('');
+  }
+
+  function payByCard(event) {
+    var button = event.currentTarget;
+    var action = buttonAction[button.id] || { heads: session ? session.players : 1 };
+    startCheckout(button, action,
+      button.id === 'share-rest' ? 'share-notice-slot' : 'pay-notice-slot');
+  }
+
+  function startCheckout(button, action, slotId) {
     if (startingCheckout) return;
     startingCheckout = true;
-    el('pay-card').disabled = true;
-    el('pay-card').textContent = 'Opening…';
-    el('pay-notice-slot').hidden = true;
 
-    callCheckout({ code: code }).then(function (result) {
+    var label = button.textContent;
+    PAY_BUTTONS.forEach(function (id) { el(id).disabled = true; });
+    button.textContent = 'Opening…';
+    el(slotId).hidden = true;
+
+    var key = button.id + ':' + action.heads + ':' + !!action.ignoreHolds;
+    if (!pendingAttempt || pendingAttempt.key !== key) {
+      pendingAttempt = { key: key, id: newAttempt() };
+    }
+
+    var request = { code: code, heads: action.heads, attempt: pendingAttempt.id };
+    if (action.ignoreHolds) request.ignoreHolds = true;
+
+    var putBack = function () {
+      startingCheckout = false;
+      PAY_BUTTONS.forEach(function (id) { el(id).disabled = false; });
+      button.textContent = label;
+    };
+
+    callCheckout(request).then(function (result) {
       var data = result.data || {};
+      // The server has answered this attempt, whatever it said.
+      pendingAttempt = null;
 
       if (data.ok && data.url) {
         // Away to Stripe. Nothing is reset on this path: the button must not become
         // tappable again while the browser is still navigating away.
+        lastShareId = data.shareId || null;
         window.location.href = data.url;
         return;
       }
 
-      startingCheckout = false;
-      el('pay-card').disabled = false;
-      el('pay-card').textContent = 'Pay by card';
+      putBack();
+
+      if (data.ok && data.settled) {
+        // Nothing to charge -- what the group paid already covers it. Wait for the sale the
+        // server has just written to show up, exactly as after a card payment.
+        el('loading-caption').textContent = 'Starting the board';
+        show('loading');
+        awaitPayment(0);
+        return;
+      }
 
       if (data.reason === 'already_paid') {
         // Somebody bought it at the bar while this screen sat open. Ask again rather than
         // explain: describe will put the unlocked screen up.
         show('loading');
         describe();
+        return;
+      }
+
+      if (data.reason === 'held_elsewhere' && session) {
+        // What is left is in somebody else's card form right now. The refusal carries the
+        // figures, so the screen is redrawn from them rather than asked for again.
+        session.split = {
+          paidMinor: data.paidMinor || 0,
+          heldMinor: data.heldMinor || 0,
+          remainingMinor: typeof data.remainingMinor === 'number'
+            ? data.remainingMinor
+            : session.amountMinor - (data.paidMinor || 0),
+          payers: session.split ? session.split.payers : 0
+        };
+        render(session);
         return;
       }
 
@@ -986,16 +1320,156 @@ button:focus-visible, input:focus-visible {
         withdrawCard(session || data);
       }
 
-      notice('pay-notice-slot', 'Card payment isn’t available',
-        (data.message || 'Pay at the bar instead.'), true);
+      notice(slotId,
+        data.reason === 'expired' ? 'This code has expired'
+          : data.reason === 'stale_code' ? 'Scan the board again'
+          : 'Card payment isn’t available',
+        (data.message
+          || (data.reason === 'expired' || data.reason === 'stale_code'
+            ? 'Scan the code on the board again to pay.'
+            : 'Pay at the bar instead.')),
+        true);
     }).catch(function () {
-      startingCheckout = false;
-      el('pay-card').disabled = false;
-      el('pay-card').textContent = 'Pay by card';
-      notice('pay-notice-slot', 'No connection',
-        'Nothing has been charged. Check the phone has signal and try again, or pay at '
-        + 'the bar.', true);
+      // No answer at all, so the attempt is kept: tapping the same button again is the
+      // same request, and cannot hold a second share of the group's money.
+      putBack();
+      notice(slotId, 'No connection',
+        'Nothing has been charged. Check the phone has signal and try again.', true);
     });
+  }
+
+  /**
+   * The price is already covered and only the sale needs finishing: the board's CHANGE
+   * lowered it after part of the group had paid. The card endpoint writes it -- and sends
+   * any excess back -- when asked to take what is owed and finds nothing is.
+   */
+  function settle(data) {
+    settleTried = true;
+    el('loading-caption').textContent = 'Already paid for — starting the board';
+    show('loading');
+
+    callCheckout({ code: code, heads: data.players, attempt: newAttempt() })
+      .then(function (result) {
+        var answer = result.data || {};
+        if (answer.ok && answer.settled) {
+          awaitPayment(0);
+          return;
+        }
+        if (answer.ok && answer.url) {
+          // The server found something still owed after all. Its figure wins.
+          lastShareId = answer.shareId || null;
+          window.location.href = answer.url;
+          return;
+        }
+        if (answer.reason === 'already_paid') {
+          describe();
+          return;
+        }
+        // The group has paid at least the price. Whatever went wrong finishing it, the one
+        // thing this phone must not do is offer to take more.
+        paymentStillPending();
+      })
+      .catch(function () { paymentStillPending(); });
+  }
+
+  // ---- 3a. my share is in --------------------------------------------------
+
+  /**
+   * The screen for a guest whose own share is paid while the rest of the group's is not.
+   *
+   * Redrawn on every poll, so it only scrolls to the top when it first appears -- jumping
+   * back up every three seconds under somebody's thumb is how a button gets mis-tapped.
+   */
+  function showShare(data) {
+    var f = splitFigures(data);
+    var mine = data.share ? data.share.amountMinor : 0;
+    var left = Math.max(0, f.remaining);
+
+    el('share-venue').textContent = 'Suite ' + (data.suiteId ? shortSuite(data.suiteId) : '');
+    el('share-remaining').textContent = money(left, data.currency);
+    el('share-mine').textContent = money(mine, data.currency);
+    el('share-progress').textContent =
+      money(f.paid, data.currency) + ' of ' + money(f.total, data.currency);
+
+    el('share-title').textContent = 'Your share is paid';
+    el('share-blurb').textContent = left > 0
+      ? 'Your ' + money(mine, data.currency) + ' is paid. ' + money(left, data.currency)
+        + ' still to pay — the board starts once it’s all in. Everyone else scans the code '
+        + 'on the board and pays theirs.'
+      : 'Your ' + money(mine, data.currency) + ' is paid, and so is everyone else’s. '
+        + 'Starting the board.';
+
+    // The one thing on offer here is paying what is LEFT, for whoever would rather not wait.
+    // Never this guest's own share again, and nothing at all with an expired code.
+    var canPay = !data.codeExpired && !!data.cardPayment && f.available > 0;
+    el('share-rest').hidden = !canPay;
+    if (canPay) {
+      setButton('share-rest', 'Pay the rest · ' + money(f.available, data.currency),
+        { heads: data.players });
+    }
+
+    var hint = '';
+    if (left > 0 && f.available <= 0 && f.held > 0) {
+      hint = 'Someone’s paying the rest on another phone right now.';
+    } else if (data.codeExpired && left > 0) {
+      hint = 'To pay the rest, scan the code on the board again.';
+    }
+    el('share-hint').textContent = hint;
+    el('share-hint').hidden = !hint;
+
+    // The tab title follows a guest into their tab list; "Pay at the bar" on a screen saying
+    // they have paid is the wrong thing to find there.
+    document.title = 'Your share is paid';
+    if (el('view-share').hidden) show('share');
+  }
+
+  // Bumped whenever a new watch starts, so an older one still waiting on a timer stops
+  // rather than running beside it.
+  var splitWatch = 0;
+
+  /**
+   * Keeps asking whether the rest of the group has paid, and moves to the unlocked screen
+   * the moment the sale is complete. Asks through failures: a phone in a pub drops a
+   * request and comes back, and that is not news worth showing somebody who has paid.
+   */
+  function watchSplit() {
+    var mine = ++splitWatch;
+    var triesLeft = SPLIT_POLL_TRIES;
+    el('share-refresh').hidden = true;
+
+    function ask() {
+      if (mine !== splitWatch) return;
+      if (triesLeft-- <= 0) {
+        // Ten minutes. Still not news of a failure -- just stop polling and let them ask.
+        el('share-refresh').hidden = false;
+        return;
+      }
+
+      call({ action: 'describe', code: code, share: shareId || undefined })
+        .then(function (result) {
+          if (mine !== splitWatch) return;
+          var data = result.data || {};
+          if (data.ok) {
+            session = data;
+            if (data.alreadyPaid) {
+              splitWatch++;
+              showPaid(data, true);
+              return;
+            }
+            // Not mid-tap: redrawing would put the button's label back under "Opening…".
+            if (!startingCheckout && data.share && data.share.state === 'paid') {
+              showShare(data);
+            }
+          }
+          window.setTimeout(ask, SPLIT_POLL_MS);
+        })
+        .catch(function () {
+          if (mine !== splitWatch) return;
+          window.setTimeout(ask, SPLIT_POLL_MS);
+        });
+    }
+
+    window.setTimeout(ask, SPLIT_POLL_MS);
   }
 
   // ---- 3b. a voucher -------------------------------------------------------
@@ -1006,6 +1480,9 @@ button:focus-visible, input:focus-visible {
   function offerVoucher(data) {
     el('voucher-block').hidden = true;
     if (kindOf(data) !== 'new') return;
+    // Once part of the group has paid by card, a voucher would pay for the whole session
+    // over the top of them -- and their shares would then have to go back. Not offered.
+    if (data.codeExpired || (data.split && data.split.paidMinor > 0)) return;
 
     callVoucher({ action: 'available', code: code }).then(function (result) {
       var answer = result.data || {};
@@ -1088,13 +1565,20 @@ button:focus-visible, input:focus-visible {
       window.setTimeout(function () { awaitPayment(attempt + 1); }, PAYMENT_POLL_MS);
     };
 
-    call({ action: 'describe', code: code }).then(function (result) {
+    call({ action: 'describe', code: code, share: shareId || undefined }).then(function (result) {
       var data = result.data || {};
 
       if (data.ok) {
         session = data;
         if (data.alreadyPaid) {
           showPaid(data, true);
+          return;
+        }
+        // This phone paid its share of a split and the rest of the group has not. Their
+        // money is in; what they are waiting for now is everybody else.
+        if (data.share && data.share.state === 'paid') {
+          showShare(data);
+          watchSplit();
           return;
         }
       }
@@ -1148,6 +1632,25 @@ button:focus-visible, input:focus-visible {
   });
 
   el('pay-card').addEventListener('click', payByCard);
+  el('pay-share').addEventListener('click', payByCard);
+  el('share-rest').addEventListener('click', payByCard);
+  el('share-refresh').addEventListener('click', watchSplit);
+
+  // Back from Stripe with the browser's own back button rather than Stripe's link. The page
+  // is restored exactly as it was left -- "Opening…" and every button disabled -- and the
+  // share it opened is still held, so this phone would read its own abandoned payment as
+  // somebody else's. Let the hold go and ask again.
+  window.addEventListener('pageshow', function (event) {
+    if (!event.persisted || !startingCheckout) return;
+    startingCheckout = false;
+    var held = lastShareId;
+    lastShareId = null;
+    show('loading');
+    (held
+      ? callCheckout({ action: 'release', code: code, share: held }).catch(function () {})
+      : Promise.resolve()
+    ).then(describe);
+  });
 
   el('voucher-open').addEventListener('click', function () {
     el('voucher-open').hidden = true;
@@ -1177,6 +1680,28 @@ button:focus-visible, input:focus-visible {
       awaitPayment(0);
       return;
     }
+
+    if (cameBackUnpaid && shareId) {
+      // Stripe's own back link: this guest opened a card form for a share and left it. Let
+      // the hold go first, so the screen does not count their abandoned share as somebody
+      // else's payment in progress. Dropped from the address too, so a reload does not
+      // release anything again or keep asking about a share nobody paid.
+      var held = shareId;
+      shareId = null;
+      cameBackUnpaid = false;
+      try {
+        var clean = new URL(window.location.href);
+        clean.searchParams.delete('back');
+        clean.searchParams.delete('s');
+        window.history.replaceState(null, '', clean.toString());
+      } catch (e) { /* the address is cosmetic; the release below is what matters */ }
+
+      callCheckout({ action: 'release', code: code, share: held })
+        .catch(function () { /* a hold that is not released simply runs out */ })
+        .then(describe);
+      return;
+    }
+
     describe();
   }
 
