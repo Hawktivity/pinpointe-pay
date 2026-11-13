@@ -111,6 +111,13 @@ button {
   height: 52px; font-size: 18px; margin-top: 12px;
 }
 .ghost:active { border-color: #5a5a66; }
+/* "Have a voucher?" -- a quiet text link: most guests pay, and it must not compete. */
+.link {
+  background: none; padding: 10px 0; color: #b9b9c2;
+  font: 500 15px/1.4 var(--body); text-decoration: underline; text-underline-offset: 3px;
+}
+#voucher-form .field { margin-top: 8px; }
+#voucher-form .field input { text-transform: uppercase; letter-spacing: .08em; }
 button:focus-visible, input:focus-visible {
   outline: 3px solid var(--brick-lit); outline-offset: 2px;
 }
@@ -238,6 +245,25 @@ button:focus-visible, input:focus-visible {
         <button class="cta" id="to-staff">Paid &mdash; unlock</button>
         <div id="pay-notice-slot" hidden></div>
       </div>
+
+      <!--
+        A one-time code from the pub, instead of paying. Hidden unless the venue has unspent
+        codes and this is a new session; quiet until tapped, because most guests pay.
+      -->
+      <div class="tight" id="voucher-block" hidden>
+        <button class="link" id="voucher-open" type="button">Have a voucher?</button>
+        <div id="voucher-form" hidden>
+          <label class="amount-label" for="voucher-code">Voucher code</label>
+          <div class="field" id="voucher-field">
+            <input id="voucher-code" type="text" inputmode="text" autocomplete="off"
+                   autocapitalize="characters" spellcheck="false" maxlength="20"
+                   placeholder="e.g. RS-7KQ4-M9TX">
+          </div>
+          <button class="ghost" id="voucher-use" type="button">Use voucher</button>
+          <p class="hint" id="voucher-hint">One voucher covers one session of up to 60 minutes, for any number of players.</p>
+          <div id="voucher-notice-slot" hidden></div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -356,6 +382,7 @@ button:focus-visible, input:focus-visible {
   var CONFIG = window.PAY_CONFIG || {};
   var FUNCTION_URL = CONFIG.functionUrl || '';
   var CHECKOUT_URL = CONFIG.checkoutUrl || '';
+  var VOUCHER_URL = CONFIG.voucherUrl || '';
   var ANON_KEY = CONFIG.anonKey || '';
 
   // How long to let the board answer before offering the six digits instead.
@@ -468,6 +495,20 @@ button:focus-visible, input:focus-visible {
     return post(CHECKOUT_URL, body);
   }
 
+  /** The voucher endpoint: asks whether to offer the box, and spends a code. */
+  function callVoucher(body) {
+    if (typeof CONFIG.voucherTransport === 'function') {
+      return Promise.resolve(CONFIG.voucherTransport(body));
+    }
+
+    if (!VOUCHER_URL || !ANON_KEY) {
+      return Promise.reject(new Error(
+        'This page has not been configured with a Supabase project yet.'));
+    }
+
+    return post(VOUCHER_URL, body);
+  }
+
   function post(url, body) {
     return fetch(url, {
       method: 'POST',
@@ -538,6 +579,7 @@ button:focus-visible, input:focus-visible {
       el('staff-detail').textContent = staffDetail(data);
 
       show('pay');
+      offerVoucher(data);
     }).catch(function (error) {
       fail('We can’t reach the till system',
         (error && error.message)
@@ -763,6 +805,7 @@ button:focus-visible, input:focus-visible {
   function showPaid(data, justPaid) {
     var kind = kindOf(data);
     var byCard = data.paidVia === 'card';
+    var byVoucher = data.paidVia === 'voucher';
 
     el('done-title').textContent = justPaid
       ? (kind === 'join' ? 'You’re in' : 'Board unlocked')
@@ -778,14 +821,18 @@ button:focus-visible, input:focus-visible {
           ? 'This seat has already been paid for.'
           : 'This session has been unlocked.');
 
-    el('done-amount').textContent = money(data.amountMinor, data.currency);
+    // A voucher session cost the group nothing; showing the quote's price as "Paid" would
+    // read as a charge.
+    el('done-amount').textContent = byVoucher ? '£0.00' : money(data.amountMinor, data.currency);
     setTimeRow(data);
 
     // "Approved by" names the person who took the money. A card sale had nobody, and
     // writing "Staff" there would be a small lie in the one place a guest looks to work
-    // out who to go and ask.
-    el('done-by-label').textContent = byCard ? 'Paid by' : 'Approved by';
-    el('done-by').textContent = byCard ? 'CARD' : (data.approvedBy || 'Staff').toUpperCase();
+    // out who to go and ask. Nor did a voucher.
+    el('done-by-label').textContent = (byCard || byVoucher) ? 'Paid by' : 'Approved by';
+    el('done-by').textContent = byCard ? 'CARD'
+      : byVoucher ? 'VOUCHER'
+      : (data.approvedBy || 'Staff').toUpperCase();
 
     if (!justPaid) {
       el('done-hint').textContent =
@@ -951,6 +998,78 @@ button:focus-visible, input:focus-visible {
     });
   }
 
+  // ---- 3b. a voucher -------------------------------------------------------
+  //
+  // A one-time code the pub handed out. One covers one NEW session of up to 60 minutes,
+  // any number of players. The box only appears where the venue has unspent codes, and
+  // asking costs the guest nothing: a failed lookup just leaves it hidden.
+  function offerVoucher(data) {
+    el('voucher-block').hidden = true;
+    if (kindOf(data) !== 'new') return;
+
+    callVoucher({ action: 'available', code: code }).then(function (result) {
+      var answer = result.data || {};
+      if (answer.ok && answer.available) {
+        el('voucher-block').hidden = false;
+      }
+    }).catch(function () { /* no box is the safe answer */ });
+  }
+
+  var redeeming = false;
+
+  function useVoucher() {
+    if (redeeming) return;
+
+    var typed = el('voucher-code').value.trim();
+    if (!typed) {
+      notice('voucher-notice-slot', 'Enter the voucher code',
+        'It’s printed on the voucher, e.g. RS-7KQ4-M9TX.');
+      el('voucher-code').focus();
+      return;
+    }
+
+    redeeming = true;
+    el('voucher-use').disabled = true;
+    el('voucher-use').textContent = 'Checking…';
+    el('voucher-notice-slot').hidden = true;
+    el('voucher-field').classList.remove('bad');
+
+    callVoucher({ code: code, voucher: typed }).then(function (result) {
+      var data = result.data || {};
+      redeeming = false;
+      el('voucher-use').disabled = false;
+      el('voucher-use').textContent = 'Use voucher';
+
+      if (data.ok) {
+        session = data;
+        showPaid(data, true);
+        return;
+      }
+
+      if (data.reason === 'already_paid') {
+        show('loading');
+        describe();
+        return;
+      }
+
+      el('voucher-field').classList.add('bad');
+      notice('voucher-notice-slot',
+        data.reason === 'used' ? 'Already used'
+          : data.reason === 'revoked' ? 'Voucher not valid'
+          : data.reason === 'too_long' ? 'Too long for a voucher'
+          : data.reason === 'expired' ? 'This code has expired'
+          : 'That didn’t work',
+        data.message || 'Check the code and try again.', data.reason !== 'unknown');
+      el('voucher-code').select();
+    }).catch(function () {
+      redeeming = false;
+      el('voucher-use').disabled = false;
+      el('voucher-use').textContent = 'Use voucher';
+      notice('voucher-notice-slot', 'No connection',
+        'The voucher has not been used. Check the phone has signal and try again.', true);
+    });
+  }
+
   // ---- 4. back from the card page ------------------------------------------
   //
   // Stripe only sends a guest here once their payment went through, but the board is
@@ -1029,6 +1148,16 @@ button:focus-visible, input:focus-visible {
   });
 
   el('pay-card').addEventListener('click', payByCard);
+
+  el('voucher-open').addEventListener('click', function () {
+    el('voucher-open').hidden = true;
+    el('voucher-form').hidden = false;
+    el('voucher-code').focus();
+  });
+  el('voucher-use').addEventListener('click', useVoucher);
+  el('voucher-code').addEventListener('keydown', function (event) {
+    if (event.key === 'Enter') { event.preventDefault(); useVoucher(); }
+  });
 
   el('error-retry').addEventListener('click', function () {
     show('loading');

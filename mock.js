@@ -19,7 +19,9 @@
  *   cardreturn    back from the card page; the row lands on the third ask
  *   cardpending   back from the card page and the row never lands
  *   cardoff       the button shows but checkout refuses it
- *   cardonly      a venue that sells by card alone: no bar button at all
+ *   cardonly      a venue that sells by card alone: no bar button at all (vouchers offered)
+ *   voucher       card-only venue with vouchers: RS-TEST-GOOD works once, RS-USED-0000,
+ *                 RS-GONE-0000 and anything else are refused
  * -------------------------------------------------------------------------- */
 (function () {
   'use strict';
@@ -130,9 +132,10 @@
       expiresInSeconds: 1524,
       alreadyPaid: false,
       approvedBy: null,
-      cardPayment: scenario === 'card' || scenario === 'cardoff' || scenario === 'cardonly',
+      cardPayment: scenario === 'card' || scenario === 'cardoff' || scenario === 'cardonly'
+        || scenario === 'voucher',
       // Only ever false where a venue has withdrawn the bar route. Absent means bar.
-      barPayment: scenario !== 'cardonly',
+      barPayment: scenario !== 'cardonly' && scenario !== 'voucher',
       boardAcknowledged: acknowledged(false)
     }));
   }
@@ -203,6 +206,35 @@
   };
 
   window.PAY_CONFIG.checkoutTransport = checkout;
+
+  // Vouchers, offered in the `voucher` and `cardonly` cases. RS-TEST-GOOD works once; then
+  // "already used". RS-USED-0000 is used, RS-GONE-0000 revoked; anything else is unknown.
+  var voucherSpent = false;
+  window.PAY_CONFIG.voucherTransport = function (request) {
+    var offered = scenario === 'voucher' || scenario === 'cardonly';
+    if (request.action === 'available') {
+      return later(body({ ok: true, available: offered && scenario !== 'ext', maxMinutes: 60 }), 200);
+    }
+    var typed = String(request.voucher || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (typed === 'RSTESTGOOD' && !voucherSpent) {
+      voucherSpent = true;
+      unlocked = true;
+      return later(body({
+        ok: true, players: 7, minutes: 60, amountMinor: 7000, currency: 'GBP', kind: 'new',
+        paidVia: 'voucher', fallbackToken: '481902'
+      }), 800);
+    }
+    if (typed === 'RSTESTGOOD' || typed === 'RSUSED0000') {
+      return later(body({ ok: false, reason: 'used', message: 'That voucher has already been used.' }, 409));
+    }
+    if (typed === 'RSGONE0000') {
+      return later(body({ ok: false, reason: 'revoked', message: 'That voucher is no longer valid.' }, 410));
+    }
+    return later(body({
+      ok: false, reason: 'unknown',
+      message: 'That voucher code wasn’t recognised. Check it and try again.'
+    }, 404));
+  };
 
   // register.html. Says whether the registration was for an under-18, from the date of
   // birth, the way the real endpoint does, so both done screens can be seen. Records the
