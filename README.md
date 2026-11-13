@@ -58,8 +58,26 @@ Then open a scenario — the mock only loads from localhost, and only with `?moc
 | `localhost:8080/?mock&c=x&case=altered` | a forged payload |
 | `localhost:8080/?mock&c=x&case=nostaff` | nobody set up to unlock |
 | `localhost:8080/?mock&c=x&case=offline` | no network |
+| `localhost:8080/?mock&c=x&case=split` | 4 players, £20: pay for everyone or just my share |
+| `localhost:8080/?mock&c=x&case=splitpartial` | £5 of £20 paid: my share, or the rest |
+| `localhost:8080/?mock&c=x&case=splitheld` | the rest is mid-payment on another phone |
+| `localhost:8080/?mock&c=x&case=sharepaid&paid=1&s=x` | my share is in, the group's never is |
+| `localhost:8080/?mock&c=x&case=splitdone&paid=1&s=x` | my share is in, then the group finishes |
+| `localhost:8080/?mock&c=x&case=splitcovered` | already covered after CHANGE lowered the price |
+| `localhost:8080/?mock&c=x&case=splitexpired` | part paid, this phone's code has run out |
 
-Typing the wrong password five times reaches the lockout screen.
+Typing the wrong password five times reaches the lockout screen. The full list of
+cases, including the card and voucher ones, is at the top of `mock.js`.
+
+## Splitting a payment
+
+At a venue that takes cards, a group of two or more can pay together or each pay their
+own share. Every phone scans the same code on the board. The page asks the card endpoint
+for a number of *heads* (everyone, the rest, or one), the server works out the amount and
+holds that share while its card form is open, and the board starts only once the shares
+cover the price. Somebody who has paid their share waits on a screen that says so and
+never offers to take it again; anything a group pays that does not end up as a session
+is refunded automatically.
 
 ## Deploying
 
