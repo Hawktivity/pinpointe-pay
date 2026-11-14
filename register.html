@@ -307,6 +307,12 @@ button.link {
   color: var(--dim);
 }
 
+.saved .field { margin: 0 0 .8rem; }
+.saved .step { margin: .9rem 0 0; }
+.saved button.second { background: var(--ink-3); border: 1px solid var(--line); }
+.saved .after.warn { color: var(--paper); }
+input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
+
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -330,6 +336,31 @@ button.link {
       <h2>Played here before?</h2>
       <p id="returning-body">If you chose Remember me last time, you don't need the form.</p>
       <button type="button" id="join-saved" disabled>Join with Face ID or fingerprint</button>
+
+      <!-- A new phone has no passkey yet: the email gets the saved details back. -->
+      <p class="after" id="recover-start-wrap" hidden>
+        <button type="button" class="link" id="recover-start">New phone? Get your saved details back</button>
+      </p>
+      <div class="step" id="recover" hidden>
+        <p>Put in the email you saved your details with, and we'll send it a code.</p>
+        <div class="field">
+          <label for="recover-email">Email</label>
+          <input id="recover-email" type="email" autocomplete="email" inputmode="email" maxlength="120">
+        </div>
+        <button type="button" class="second" id="recover-send">Send code</button>
+        <div class="step" id="recover-code-step" hidden>
+          <div class="field">
+            <label for="recover-code">Code from the email</label>
+            <input id="recover-code" class="code" type="text" inputmode="numeric"
+                   autocomplete="one-time-code" maxlength="7">
+          </div>
+          <button type="button" class="second" id="recover-confirm">Confirm</button>
+        </div>
+        <div class="step" id="recover-save-step" hidden>
+          <button type="button" id="recover-save">Save on this phone and join</button>
+        </div>
+        <p class="after" id="recover-after" hidden></p>
+      </div>
     </div>
     <p class="or" id="returning-or" hidden>or sign up</p>
 
@@ -390,6 +421,8 @@ button.link {
         <label for="email">Email <span class="opt">optional</span></label>
         <input id="email" name="email" type="email" autocomplete="email"
                inputmode="email" enterkeyhint="next" maxlength="120">
+        <p class="hint" id="email-hint">Leave it blank and you still play. Put it in if you
+          want to keep your scores and history, and get your replay clips by email.</p>
       </div>
 
       <div class="field">
@@ -419,9 +452,9 @@ button.link {
       Your name, and your photo if you add one, go to the board so people can see
       who's playing. We ask your date of birth so under-18s get a parent's consent.
       Everything you put in is kept only for this session and cleared when it ends
-      &mdash; unless you choose Remember me afterwards. We don't build a profile and we
-      won't market to you. Leave the optional fields blank and the board still works
-      exactly the same.
+      &mdash; unless you choose Remember me afterwards, which keeps your details and your
+      scores against your email. We won't market to you. Leave the optional fields blank and
+      the board still works exactly the same.
     </p>
   </section>
 
@@ -439,6 +472,24 @@ button.link {
         your name, date of birth, contact details and photo, and your phone keeps a passkey
         (Face ID, fingerprint or your phone's PIN) that only works for you. If we don't see you
         for two years, we delete them.</p>
+
+      <!-- Where the backend can send codes: the email is proved before anything is saved. -->
+      <div id="remember-verify" hidden>
+        <div class="field">
+          <label for="remember-email">Your email</label>
+          <input id="remember-email" type="email" autocomplete="email" inputmode="email" maxlength="120">
+        </div>
+        <button type="button" class="second" id="remember-send">Send me a code</button>
+        <div class="step" id="remember-code-step" hidden>
+          <div class="field">
+            <label for="remember-code">Code from the email</label>
+            <input id="remember-code" class="code" type="text" inputmode="numeric"
+                   autocomplete="one-time-code" maxlength="7">
+          </div>
+          <button type="button" class="second" id="remember-confirm">Confirm</button>
+        </div>
+      </div>
+
       <button type="button" id="remember-me" disabled>Remember me</button>
       <p class="after" id="remember-after" hidden></p>
     </div>
@@ -484,6 +535,10 @@ button.link {
   })();
 
   var busy = false;
+
+  // Whether the backend can email a code. Where it can, Remember me needs a proved email and
+  // a new phone can get saved details back; where it can't, the page is as it was before.
+  var emailCodes = false;
 
   function el(id) { return document.getElementById(id); }
 
@@ -553,6 +608,7 @@ button.link {
     }
 
     if (data.suiteName) { el('suite-name').textContent = data.suiteName; }
+    emailCodes = data.emailCodes === true;
 
     if (data.full) {
       notice('form-notice-slot', 'This board is full',
@@ -952,6 +1008,18 @@ button.link {
   // --- Join, above the form ----------------------------------------------------------
   var joinReady = null;
 
+  function welcomeBack(data) {
+    setRememberedAs(data.firstName || '');
+    el('done-heading').textContent = (data.alreadyOn ? 'Already on, ' : 'Welcome back, ') +
+      (data.firstName || '');
+    el('done-body').textContent = data.alreadyOn
+      ? 'You’re already on this board — look up, your name is there.'
+      : 'Look up at the board — your name is on it. Someone at the board taps you in ' +
+        'when you’re ready to play.';
+    offerForget(data.forgetToken);
+    show('done');
+  }
+
   function fetchJoinOptions() {
     el('join-saved').disabled = true;
     return post({ action: 'join_options', code: code }).then(function (res) {
@@ -975,6 +1043,7 @@ button.link {
           : 'If you chose Remember me last time, you don’t need the form.';
         el('returning').hidden = false;
         el('returning-or').hidden = false;
+        el('recover-start-wrap').hidden = !emailCodes;
       });
     }).catch(function () { /* no passkeys here: the form is all there is */ });
   }
@@ -1010,15 +1079,7 @@ button.link {
       var data = res.data || {};
       if (data.ok) {
         busy = false;
-        setRememberedAs(data.firstName || '');
-        el('done-heading').textContent = (data.alreadyOn ? 'Already on, ' : 'Welcome back, ') +
-          (data.firstName || '');
-        el('done-body').textContent = data.alreadyOn
-          ? 'You’re already on this board — look up, your name is there.'
-          : 'Look up at the board — your name is on it. Someone at the board taps you in ' +
-            'when you’re ready to play.';
-        offerForget(data.forgetToken);
-        show('done');
+        welcomeBack(data);
         return;
       }
       if (data.reason === 'unknown_passkey') {
@@ -1044,17 +1105,199 @@ button.link {
     }).catch(function (e) {
       if (e && e.name === 'NotAllowedError') {
         // Cancelled, or no passkey of ours on this phone.
-        again('No saved details found', 'If you haven’t chosen Remember me before, ' +
-          'fill in the form below.');
+        again('No saved details found', emailCodes
+          ? 'New phone? Tap “Get your saved details back” above. Otherwise, fill in the form below.'
+          : 'If you haven’t chosen Remember me before, fill in the form below.');
       } else {
         again('That didn’t work', 'Tap Join again, or fill in the form below.');
       }
     });
   });
 
+  // --- proving an email: a six-digit code, then a single-use ticket -----------------------
+  // Used by Remember me (the email is checked before anything is saved) and by a new phone
+  // getting saved details back. The ticket goes to the action that needs a proved email.
+  function codeFlow(o) {
+    var sentTo = null;
+
+    function say(text) {
+      o.after.hidden = !text;
+      o.after.textContent = text || '';
+    }
+
+    function send() {
+      if (busy) { return; }
+      var email = o.email.value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        say('Check your email address.');
+        o.email.focus();
+        return;
+      }
+      busy = true;
+      o.send.disabled = true;
+      say('');
+      post({ action: 'email_code', code: code, email: email, purpose: o.purpose,
+             submissionId: submissionId }).then(function (res) {
+        busy = false;
+        o.send.disabled = false;
+        var data = res.data || {};
+        if (!data.ok) { say(data.message || 'That didn’t send. Try again.'); return; }
+        sentTo = email;
+        o.codeStep.hidden = false;
+        o.send.textContent = 'Send a new code';
+        o.code.value = '';
+        // A recovery request is answered the same whether or not the email is saved, so the
+        // page cannot be used to find out who plays here.
+        say((o.purpose === 'recover'
+          ? 'If that email is saved, a code is on its way. Check your inbox and spam.'
+          : 'We’ve sent a code to ' + email + '. Check your inbox and spam.') +
+          // Only a development backend hands the code back; production never does.
+          (data.devCode ? ' (Test system — the code is ' + data.devCode + '.)' : ''));
+        o.code.focus();
+      }).catch(function () {
+        busy = false;
+        o.send.disabled = false;
+        say('No connection. Try again.');
+      });
+    }
+
+    function confirm() {
+      if (busy || !sentTo) { return; }
+      var typed = o.code.value.replace(/\D/g, '');
+      if (typed.length !== 6) { say('The code is six digits.'); o.code.focus(); return; }
+      busy = true;
+      o.confirm.disabled = true;
+      post({ action: 'verify_email', code: code, email: sentTo, purpose: o.purpose,
+             emailCode: typed }).then(function (res) {
+        busy = false;
+        o.confirm.disabled = false;
+        var data = res.data || {};
+        if (!data.ok) { say(data.message || 'That’s not the code.'); return; }
+        say('');
+        o.onTicket(data.emailTicket, sentTo);
+      }).catch(function () {
+        busy = false;
+        o.confirm.disabled = false;
+        say('No connection. Try again.');
+      });
+    }
+
+    o.send.addEventListener('click', send);
+    o.confirm.addEventListener('click', confirm);
+    // Six digits typed (or filled in from the email by the phone) is the same as Confirm.
+    o.code.addEventListener('input', function () {
+      if (o.code.value.replace(/\D/g, '').length === 6) { confirm(); }
+    });
+    // A different address needs its own code.
+    o.email.addEventListener('input', function () {
+      if (sentTo && o.email.value.trim() !== sentTo) {
+        sentTo = null;
+        o.codeStep.hidden = true;
+        o.send.textContent = 'Send code';
+      }
+    });
+  }
+
+  // --- a new phone: the email gets the saved details back -----------------------------------
+  var recoverReady = null;
+
+  el('recover-start').addEventListener('click', function () {
+    el('recover-start-wrap').hidden = true;
+    el('recover').hidden = false;
+    el('recover-email').focus();
+  });
+
+  codeFlow({
+    purpose: 'recover',
+    email: el('recover-email'),
+    send: el('recover-send'),
+    codeStep: el('recover-code-step'),
+    code: el('recover-code'),
+    confirm: el('recover-confirm'),
+    after: el('recover-after'),
+    onTicket: function (ticket) {
+      busy = true;
+      post({ action: 'recover_options', code: code, emailTicket: ticket }).then(function (res) {
+        busy = false;
+        var data = res.data || {};
+        el('recover-after').hidden = false;
+        if (!data.ok) {
+          el('recover-after').textContent = data.message || 'That didn’t work. Send a new code.';
+          return;
+        }
+        recoverReady = data;
+        el('recover-code-step').hidden = true;
+        el('recover-send').hidden = true;
+        el('recover-email').disabled = true;
+        el('recover-after').textContent = 'Found you, ' + (data.firstName || '') +
+          '. Save your details on this phone with Face ID, fingerprint or your PIN.';
+        el('recover-save-step').hidden = false;
+      }).catch(function () {
+        busy = false;
+        el('recover-after').hidden = false;
+        el('recover-after').textContent = 'No connection. Send a new code and try again.';
+      });
+    }
+  });
+
+  el('recover-save').addEventListener('click', function () {
+    if (busy || !recoverReady) { return; }
+    var ready = recoverReady;
+    recoverReady = null;
+    busy = true;
+    el('recover-save').disabled = true;
+    el('recover-save').textContent = 'Saving…';
+
+    // The challenge is used once, so any failure means proving the email again.
+    function startAgain(text) {
+      busy = false;
+      el('recover-save').disabled = false;
+      el('recover-save').textContent = 'Save on this phone and join';
+      el('recover-save-step').hidden = true;
+      el('recover-email').disabled = false;
+      el('recover-send').hidden = false;
+      el('recover-send').textContent = 'Send a new code';
+      el('recover-after').hidden = false;
+      el('recover-after').textContent = text;
+    }
+
+    credentials.create({ publicKey: creationOptions(ready.options) }).then(function (cred) {
+      if (!cred) { throw Object.assign(new Error('none'), { name: 'NotAllowedError' }); }
+      lastRpId = ready.options.rp && ready.options.rp.id;
+      lastCredentialId = toB64u(cred.rawId);
+      return post({
+        action: 'recover',
+        code: code,
+        challengeId: ready.challengeId,
+        credential: credentialJson(cred),
+        submissionId: submissionId
+      });
+    }).then(function (res) {
+      var data = res.data || {};
+      if (data.ok) {
+        busy = false;
+        welcomeBack(data);
+        return;
+      }
+      forgetOnPhone(lastRpId, lastCredentialId);
+      if (data.reason === 'full') {
+        startAgain(data.message);
+        return;
+      }
+      startAgain((data.message || 'That didn’t save.') + ' Send a new code to try again.');
+    }).catch(function (e) {
+      startAgain(e && e.name === 'NotAllowedError'
+        ? 'Not saved. Send a new code to try again.'
+        : 'Your phone couldn’t save it. Send a new code to try again.');
+    });
+  });
+
   // --- Remember me, on the done screen ---------------------------------------------------
   var enrolReady = null;
   var enrolDetails = null;
+  var emailTicket = null;
+
+  function rememberLabel() { return emailCodes ? 'Save with Face ID' : 'Remember me'; }
 
   function fetchEnrolOptions() {
     el('remember-me').disabled = true;
@@ -1076,9 +1319,46 @@ button.link {
     enrolDetails = details;
     passkeysUsable().then(function (usable) {
       if (!usable) { return; }
+      if (emailCodes) {
+        // The email first. The passkey's options are fetched once it is proved, so the tap on
+        // Save goes straight to Face ID, and they cannot run out while the guest finds the email.
+        el('remember-body').textContent = 'Next time, scan the board’s code and tap Join — ' +
+          'no form. Your scores and history are kept against your email, and that’s where ' +
+          'your replay clips will come. We’ll send a code to check it’s yours. We keep your ' +
+          'name, date of birth, contact details and photo, and your phone keeps a passkey ' +
+          '(Face ID, fingerprint or your phone’s PIN) that only works for you. If we don’t ' +
+          'see you for two years, we delete them.';
+        el('remember-email').value = details.email || '';
+        el('remember-verify').hidden = false;
+        el('remember-me').hidden = true;
+        el('remember').hidden = false;
+        return;
+      }
       return fetchEnrolOptions().then(function () { el('remember').hidden = false; });
     }).catch(function () { /* no passkeys here: nothing to offer */ });
   }
+
+  codeFlow({
+    purpose: 'remember',
+    email: el('remember-email'),
+    send: el('remember-send'),
+    codeStep: el('remember-code-step'),
+    code: el('remember-code'),
+    confirm: el('remember-confirm'),
+    after: el('remember-after'),
+    onTicket: function (ticket, email) {
+      emailTicket = ticket;
+      enrolDetails.email = email;
+      el('remember-verify').hidden = true;
+      el('remember-after').hidden = false;
+      el('remember-after').textContent = 'Email confirmed: ' + email + '. Now save it on this phone.';
+      el('remember-me').textContent = rememberLabel();
+      el('remember-me').hidden = false;
+      fetchEnrolOptions().catch(function () {
+        el('remember-after').textContent = 'That didn’t work. Close this page and scan the code again.';
+      });
+    }
+  });
 
   el('remember-me').addEventListener('click', function () {
     if (busy || !enrolReady) { return; }
@@ -1090,7 +1370,7 @@ button.link {
 
     function again(text) {
       busy = false;
-      el('remember-me').textContent = 'Remember me';
+      el('remember-me').textContent = rememberLabel();
       el('remember-after').hidden = false;
       el('remember-after').textContent = text;
       fetchEnrolOptions().catch(function () { el('remember').hidden = true; });
@@ -1105,20 +1385,37 @@ button.link {
         code: code,
         challengeId: ready.challengeId,
         credential: credentialJson(cred),
-        submissionId: submissionId
+        submissionId: submissionId,
+        emailTicket: emailTicket
       }, enrolDetails));
     }).then(function (res) {
       var data = res.data || {};
       if (!data.ok) {
         // The phone made a passkey we did not keep. Where it can be told, it drops it.
         forgetOnPhone(lastRpId, lastCredentialId);
-        again(data.message || 'That didn’t save. Tap Remember me to try again.');
+        if (data.reason === 'email_unverified') {
+          // The ticket ran out: prove the email again.
+          busy = false;
+          emailTicket = null;
+          el('remember-me').hidden = true;
+          el('remember-verify').hidden = false;
+          el('remember-code-step').hidden = true;
+          el('remember-send').textContent = 'Send me a code';
+          el('remember-after').hidden = false;
+          el('remember-after').textContent = data.message;
+          return;
+        }
+        again(data.message || 'That didn’t save. Tap ' + rememberLabel() + ' to try again.');
         return;
       }
       busy = false;
       setRememberedAs(data.firstName || enrolDetails.firstName);
       el('remember-me').hidden = true;
-      el('remember-body').textContent = 'Saved. Next time, scan the board’s code and tap Join.';
+      el('remember-after').hidden = true;
+      el('remember-body').textContent = data.merged
+        ? 'Saved. You were already remembered with that email, so this phone is added and your ' +
+          'history carries on. Next time, scan the board’s code and tap Join.'
+        : 'Saved. Next time, scan the board’s code and tap Join.';
       if (data.emailKept === false) {
         el('remember-after').hidden = false;
         el('remember-after').textContent = 'That email is already saved for someone else, ' +
@@ -1127,8 +1424,8 @@ button.link {
       offerForget(data.forgetToken);
     }).catch(function (e) {
       again(e && e.name === 'NotAllowedError'
-        ? 'Not saved. Tap Remember me to try again.'
-        : 'Your phone couldn’t save it. Tap Remember me to try again.');
+        ? 'Not saved. Tap ' + rememberLabel() + ' to try again.'
+        : 'Your phone couldn’t save it. Tap ' + rememberLabel() + ' to try again.');
     });
   });
 })();
