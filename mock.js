@@ -377,7 +377,11 @@
   //   nopasskeys   a backend that doesn't offer them: the page looks as it always did
   //   unknown      Join's passkey was forgotten on our side
   //   cancel       the guest cancels Face ID, on Join and on Remember me
-  //   sameemail    Remember me keeps everything but the email
+  //   sameemail    Remember me keeps everything but the email (only with nocodes)
+  //   nocodes      a backend that can't email codes: Remember me as before 14 Nov
+  //   merged       Remember me with an email already saved: the phone is added
+  //   norecover    a new phone's email has no saved details
+  // Email codes are on unless nocodes/nopasskeys; the code is always 123456.
   // The phone's passkey store is faked too (PAY_CONFIG.passkeys), so no real Face ID or
   // Windows Hello prompt ever appears.
   function fakeCredential(kind) {
@@ -409,7 +413,31 @@
   window.PAY_CONFIG.registerTransport = function (request) {
     if (request.action === 'describe') {
       return later(body({ ok: true, suiteName: 'Suite 1', expiresInSeconds: 1500, registered: 0, full: false,
-                          remember: scenario !== 'nopasskeys' }));
+                          remember: scenario !== 'nopasskeys',
+                          emailCodes: scenario !== 'nopasskeys' && scenario !== 'nocodes' }));
+    }
+    if (request.action === 'email_code') {
+      window.lastEmailCode = request;
+      return later(body({ ok: true }), 500);
+    }
+    if (request.action === 'verify_email') {
+      return later(body(request.emailCode === '123456'
+        ? { ok: true, emailTicket: 'mock-ticket-' + request.purpose + '-00000000000000' }
+        : { ok: false, reason: 'wrong', message: 'That’s not the code. Check the email and try again.' },
+        request.emailCode === '123456' ? 200 : 400), 300);
+    }
+    if (request.action === 'recover_options') {
+      if (scenario === 'norecover') {
+        return later(body({ ok: false, reason: 'not_found',
+          message: 'We don’t have saved details for that email. Fill in the form, then choose Remember me.' }, 404));
+      }
+      return later(body({ ok: true, firstName: 'Sam', challengeId: '00000000-0000-4000-8000-000000000003',
+                          options: mockOptions.create }), 300);
+    }
+    if (request.action === 'recover') {
+      window.lastRecover = request;
+      return later(body({ ok: true, firstName: 'Sam', suiteName: 'Suite 1', alreadyOn: false,
+                          photoKept: true, forgetToken: 'mock-forget-token-0000000000' }));
     }
     if (request.action === 'join_options') {
       return later(body({ ok: true, challengeId: '00000000-0000-4000-8000-000000000001', options: mockOptions.get }), 300);
@@ -428,7 +456,13 @@
     }
     if (request.action === 'enrol') {
       window.lastEnrol = request;
+      var codes = scenario !== 'nopasskeys' && scenario !== 'nocodes';
+      if (codes && !request.emailTicket) {
+        return later(body({ ok: false, reason: 'email_unverified',
+          message: 'Confirm your email with the code we sent, then tap Remember me.' }, 400));
+      }
       return later(body({ ok: true, firstName: request.firstName, emailKept: scenario !== 'sameemail',
+                          emailVerified: codes, merged: scenario === 'merged',
                           forgetToken: 'mock-forget-token-0000000000' }));
     }
     if (request.action === 'forget') {
