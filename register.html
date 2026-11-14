@@ -342,10 +342,16 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
         <button type="button" class="link" id="recover-start">New phone? Get your saved details back</button>
       </p>
       <div class="step" id="recover" hidden>
-        <p>Put in the email you saved your details with, and we'll send it a code.</p>
+        <p>Put in the email and date of birth you saved your details with, and we'll email
+          you a code.</p>
         <div class="field">
           <label for="recover-email">Email</label>
           <input id="recover-email" type="email" autocomplete="email" inputmode="email" maxlength="120">
+        </div>
+        <div class="field">
+          <label for="recover-dob">Date of birth</label>
+          <input id="recover-dob" type="text" inputmode="numeric" autocomplete="bday"
+                 placeholder="DD/MM/YYYY" maxlength="10">
         </div>
         <button type="button" class="second" id="recover-send">Send code</button>
         <div class="step" id="recover-code-step" hidden>
@@ -468,27 +474,11 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
     <!-- Adults only, and only where this phone can save a passkey. -->
     <div class="saved" id="remember" hidden>
       <h2>Remember me on this phone</h2>
-      <p id="remember-body">Next time, scan the board's code and tap Join &mdash; no form. We keep
+      <p id="remember-body">Next time, scan the board's code and tap Join &mdash; no form &mdash;
+        and your scores are kept for you. We keep
         your name, date of birth, contact details and photo, and your phone keeps a passkey
         (Face ID, fingerprint or your phone's PIN) that only works for you. If we don't see you
         for two years, we delete them.</p>
-
-      <!-- Where the backend can send codes: the email is proved before anything is saved. -->
-      <div id="remember-verify" hidden>
-        <div class="field">
-          <label for="remember-email">Your email</label>
-          <input id="remember-email" type="email" autocomplete="email" inputmode="email" maxlength="120">
-        </div>
-        <button type="button" class="second" id="remember-send">Send me a code</button>
-        <div class="step" id="remember-code-step" hidden>
-          <div class="field">
-            <label for="remember-code">Code from the email</label>
-            <input id="remember-code" class="code" type="text" inputmode="numeric"
-                   autocomplete="one-time-code" maxlength="7">
-          </div>
-          <button type="button" class="second" id="remember-confirm">Confirm</button>
-        </div>
-      </div>
 
       <button type="button" id="remember-me" disabled>Remember me</button>
       <p class="after" id="remember-after" hidden></p>
@@ -1127,6 +1117,10 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
 
     function send() {
       if (busy) { return; }
+      if (o.check) {
+        var problem = o.check();
+        if (problem) { say(problem); return; }
+      }
       var email = o.email.value.trim();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         say('Check your email address.');
@@ -1201,6 +1195,21 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
   // --- a new phone: the email gets the saved details back -----------------------------------
   var recoverReady = null;
 
+  // Asked as well as the email: Remember me keeps an email as typed, unproved, so somebody
+  // may have saved an address that is not theirs. The owner proving that inbox must not be
+  // handed the stranger's details, and the date of birth on the record stops that.
+  function recoverBirthDate() {
+    var field = el('recover-dob');
+    var tidy = tidyBirthDate(field.value);
+    if (tidy !== field.value) { field.value = tidy; }
+    var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(field.value);
+    if (!m) { return ''; }
+    var date = new Date(+m[3], +m[2] - 1, +m[1]);
+    if (date.getFullYear() !== +m[3] || date.getMonth() !== +m[2] - 1 || date.getDate() !== +m[1]) { return ''; }
+    return m[3] + '-' + m[2] + '-' + m[1];
+  }
+  el('recover-dob').addEventListener('input', recoverBirthDate);
+
   el('recover-start').addEventListener('click', function () {
     el('recover-start-wrap').hidden = true;
     el('recover').hidden = false;
@@ -1215,9 +1224,13 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
     code: el('recover-code'),
     confirm: el('recover-confirm'),
     after: el('recover-after'),
+    check: function () {
+      return recoverBirthDate() ? '' : 'Put in your date of birth as day, month and year, like 25/12/1990.';
+    },
     onTicket: function (ticket) {
       busy = true;
-      post({ action: 'recover_options', code: code, emailTicket: ticket }).then(function (res) {
+      post({ action: 'recover_options', code: code, emailTicket: ticket,
+             dateOfBirth: recoverBirthDate() }).then(function (res) {
         busy = false;
         var data = res.data || {};
         el('recover-after').hidden = false;
@@ -1229,6 +1242,7 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
         el('recover-code-step').hidden = true;
         el('recover-send').hidden = true;
         el('recover-email').disabled = true;
+        el('recover-dob').disabled = true;
         el('recover-after').textContent = 'Found you, ' + (data.firstName || '') +
           '. Save your details on this phone with Face ID, fingerprint or your PIN.';
         el('recover-save-step').hidden = false;
@@ -1255,6 +1269,7 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
       el('recover-save').textContent = 'Save on this phone and join';
       el('recover-save-step').hidden = true;
       el('recover-email').disabled = false;
+      el('recover-dob').disabled = false;
       el('recover-send').hidden = false;
       el('recover-send').textContent = 'Send a new code';
       el('recover-after').hidden = false;
@@ -1295,9 +1310,8 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
   // --- Remember me, on the done screen ---------------------------------------------------
   var enrolReady = null;
   var enrolDetails = null;
-  var emailTicket = null;
 
-  function rememberLabel() { return emailCodes ? 'Save with Face ID' : 'Remember me'; }
+  function rememberLabel() { return 'Remember me'; }
 
   function fetchEnrolOptions() {
     el('remember-me').disabled = true;
@@ -1319,46 +1333,10 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
     enrolDetails = details;
     passkeysUsable().then(function (usable) {
       if (!usable) { return; }
-      if (emailCodes) {
-        // The email first. The passkey's options are fetched once it is proved, so the tap on
-        // Save goes straight to Face ID, and they cannot run out while the guest finds the email.
-        el('remember-body').textContent = 'Next time, scan the board’s code and tap Join — ' +
-          'no form. Your scores and history are kept against your email, and replay clips by ' +
-          'email are coming soon. We’ll send a code to check it’s yours. We keep your ' +
-          'name, date of birth, contact details and photo, and your phone keeps a passkey ' +
-          '(Face ID, fingerprint or your phone’s PIN) that only works for you. If we don’t ' +
-          'see you for two years, we delete them.';
-        el('remember-email').value = details.email || '';
-        el('remember-verify').hidden = false;
-        el('remember-me').hidden = true;
-        el('remember').hidden = false;
-        return;
-      }
       return fetchEnrolOptions().then(function () { el('remember').hidden = false; });
     }).catch(function () { /* no passkeys here: nothing to offer */ });
   }
 
-  codeFlow({
-    purpose: 'remember',
-    email: el('remember-email'),
-    send: el('remember-send'),
-    codeStep: el('remember-code-step'),
-    code: el('remember-code'),
-    confirm: el('remember-confirm'),
-    after: el('remember-after'),
-    onTicket: function (ticket, email) {
-      emailTicket = ticket;
-      enrolDetails.email = email;
-      el('remember-verify').hidden = true;
-      el('remember-after').hidden = false;
-      el('remember-after').textContent = 'Email confirmed: ' + email + '. Now save it on this phone.';
-      el('remember-me').textContent = rememberLabel();
-      el('remember-me').hidden = false;
-      fetchEnrolOptions().catch(function () {
-        el('remember-after').textContent = 'That didn’t work. Close this page and scan the code again.';
-      });
-    }
-  });
 
   el('remember-me').addEventListener('click', function () {
     if (busy || !enrolReady) { return; }
@@ -1385,26 +1363,13 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
         code: code,
         challengeId: ready.challengeId,
         credential: credentialJson(cred),
-        submissionId: submissionId,
-        emailTicket: emailTicket
+        submissionId: submissionId
       }, enrolDetails));
     }).then(function (res) {
       var data = res.data || {};
       if (!data.ok) {
         // The phone made a passkey we did not keep. Where it can be told, it drops it.
         forgetOnPhone(lastRpId, lastCredentialId);
-        if (data.reason === 'email_unverified') {
-          // The ticket ran out: prove the email again.
-          busy = false;
-          emailTicket = null;
-          el('remember-me').hidden = true;
-          el('remember-verify').hidden = false;
-          el('remember-code-step').hidden = true;
-          el('remember-send').textContent = 'Send me a code';
-          el('remember-after').hidden = false;
-          el('remember-after').textContent = data.message;
-          return;
-        }
         again(data.message || 'That didn’t save. Tap ' + rememberLabel() + ' to try again.');
         return;
       }
@@ -1412,10 +1377,7 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
       setRememberedAs(data.firstName || enrolDetails.firstName);
       el('remember-me').hidden = true;
       el('remember-after').hidden = true;
-      el('remember-body').textContent = data.merged
-        ? 'Saved. You were already remembered with that email, so this phone is added and your ' +
-          'history carries on. Next time, scan the board’s code and tap Join.'
-        : 'Saved. Next time, scan the board’s code and tap Join.';
+      el('remember-body').textContent = 'Saved. Next time, scan the board’s code and tap Join.';
       if (data.emailKept === false) {
         el('remember-after').hidden = false;
         el('remember-after').textContent = 'That email is already saved for someone else, ' +

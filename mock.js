@@ -377,11 +377,10 @@
   //   nopasskeys   a backend that doesn't offer them: the page looks as it always did
   //   unknown      Join's passkey was forgotten on our side
   //   cancel       the guest cancels Face ID, on Join and on Remember me
-  //   sameemail    Remember me keeps everything but the email (only with nocodes)
-  //   nocodes      a backend that can't email codes: Remember me as before 14 Nov
-  //   merged       Remember me with an email already saved: the phone is added
+  //   sameemail    Remember me keeps everything but the email
+  //   nocodes      a backend that can't email codes: no new-phone route
   //   norecover    a new phone's email has no saved details
-  // Email codes are on unless nocodes/nopasskeys; the code is always 123456.
+  // New phone: the code is always 123456 and the date of birth 17/05/1990.
   // The phone's passkey store is faked too (PAY_CONFIG.passkeys), so no real Face ID or
   // Windows Hello prompt ever appears.
   function fakeCredential(kind) {
@@ -427,9 +426,9 @@
         request.emailCode === '123456' ? 200 : 400), 300);
     }
     if (request.action === 'recover_options') {
-      if (scenario === 'norecover') {
+      if (scenario === 'norecover' || request.dateOfBirth !== '1990-05-17') {
         return later(body({ ok: false, reason: 'not_found',
-          message: 'We don’t have saved details for that email. Fill in the form, then choose Remember me.' }, 404));
+          message: 'We couldn’t find saved details for that email and date of birth. Fill in the form, then choose Remember me.' }, 404));
       }
       return later(body({ ok: true, firstName: 'Sam', challengeId: '00000000-0000-4000-8000-000000000003',
                           options: mockOptions.create }), 300);
@@ -456,13 +455,7 @@
     }
     if (request.action === 'enrol') {
       window.lastEnrol = request;
-      var codes = scenario !== 'nopasskeys' && scenario !== 'nocodes';
-      if (codes && !request.emailTicket) {
-        return later(body({ ok: false, reason: 'email_unverified',
-          message: 'Confirm your email with the code we sent, then tap Remember me.' }, 400));
-      }
       return later(body({ ok: true, firstName: request.firstName, emailKept: scenario !== 'sameemail',
-                          emailVerified: codes, merged: scenario === 'merged',
                           forgetToken: 'mock-forget-token-0000000000' }));
     }
     if (request.action === 'forget') {
