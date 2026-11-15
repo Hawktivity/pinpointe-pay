@@ -56,6 +56,10 @@
     // 'available'): only for a new session at a venue that has unspent codes.
     voucherUrl: project.url ? project.url + '/functions/v1/redeem-voucher' : '',
 
+    // Where story.html fetches a guest's night from. The link in the email carries the token
+    // after the #, and this is the only place the page sends it.
+    storyUrl: project.url ? project.url + '/functions/v1/get-story' : '',
+
     anonKey: project.anonKey,
     environment: project === PROJECTS.prod ? 'prod' : 'dev'
   };
