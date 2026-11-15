@@ -138,6 +138,7 @@ Everything in the repository root is served publicly, this file included, so
 nothing here may carry a product brand: the payment flow is unbranded on
 purpose. Keep it that way in new files too.
 
-If the page is down a group cannot pay through it; the board's typed six-digit
-token is the way through that, the same fallback that covers the board losing
-its own network.
+If the page is down a group cannot pay at all, by card or by voucher, and
+nothing on the board gets round that. The six-digit token is no help here: it
+exists only once a payment has gone through, and it covers the other failure,
+a paid session the board never hears about.
