@@ -40,6 +40,18 @@ second.
 | `config.js` | which Supabase project to talk to, chosen by hostname |
 | `mock.js` | a fake endpoint for walking the screens on a laptop |
 | `.nojekyll` | stops GitHub Pages running the files through Jekyll |
+| `staff/rising-sun.html` | the Rising Sun's free 15-minute voucher codes, for bar staff, behind a password |
+| `staff/seal-codes.mjs` | encrypts a batch's codes into a staff page under its password |
+
+### Staff voucher pages
+
+`pay.hawktivity.com/staff/rising-sun` lists a venue's voucher codes for its staff to hand
+out. This repository is public, so the codes are in the page only as AES-GCM ciphertext
+under a key derived from the staff password; the browser decrypts them once the password
+is typed. Every 30 seconds the page sends the SHA-256 of each code to the
+`vouchers_spent` database function and drops whichever come back used or revoked. To
+reseal a page with a new batch or password, run `staff/seal-codes.mjs` (usage at its top)
+with the CSV that `create_voucher_batch()` produced.
 
 ## Running it locally
 
