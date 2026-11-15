@@ -1216,10 +1216,18 @@ button:focus-visible, input:focus-visible {
       // Closed because it got too late (15 Nov 2026): the board closes before the pub does, and
       // the game would have run past it. Blaming the rest of the group there would be untrue.
       var tooLate = data.share.splitReason === 'past_closing';
+      // The group paid in full, but the board had already gone on to another game -- CANCEL and
+      // a new group, usually -- so it never took this one (15 Nov 2026). Nobody failed to pay.
+      // quote_changed is the rarer close of the same kind: the board changed the game while a
+      // second payment for it was already open.
+      var movedOn = data.share.splitReason === 'board_never_started'
+        || data.share.splitReason === 'quote_changed';
       el('share-blurb').textContent = (tooLate
           ? 'It got too late: the board closes at ' + (data.share.latestEndLocal || 'closing time')
             + ' and your game would have run past it, so the board never started.'
-          : 'The rest of your group didn’t finish paying, so the board never started.')
+          : movedOn
+            ? 'The board had already moved on to another game, so it never started yours.'
+            : 'The rest of your group didn’t finish paying, so the board never started.')
         + ' Your money is going back to your card automatically — it can '
         + 'take 5 to 10 working days to show. There is nothing you need to do.';
       el('share-rest').hidden = true;

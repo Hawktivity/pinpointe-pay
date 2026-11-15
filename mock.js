@@ -42,6 +42,8 @@
  *   splitlate     too late tonight: the checkout refuses, the board closes at 22:50
  *   sharelate     (with &s=x) my £5 landed after closing time: the board never started and
  *                 it is going back
+ *   sharemovedon  (with &s=x) the whole group paid, but the board had already gone on to
+ *                 another game (CANCEL, then a new group): it is all going back
  * In the voucher case, RS-LATE-0000 is refused as too late tonight.
  * Add &back=1&s=x to any of them to see Stripe's back link release a held share
  * (window.lastRelease). Every checkout request is kept on window.checkoutRequests.
@@ -95,7 +97,7 @@
   // ---- split payments -----------------------------------------------------------------
   var SPLIT_CASES = ['split', 'splitpartial', 'splitheld', 'sharepaid', 'splitdone',
     'splitwhole', 'splitcovered', 'splitexpired', 'sharerefund', 'splitrace',
-    'splitlate', 'sharelate'];
+    'splitlate', 'sharelate', 'sharemovedon'];
   var splitPolls = 0;
   var coveredSettled = false;
   // What this phone paid, carried through the fake Stripe round trip in the URL.
@@ -138,6 +140,11 @@
       // Closed because the money landed too late to start the clock before closing time.
       base.share = { state: 'paid', amountMinor: 500, heads: 1, splitState: 'abandoned', returnedMinor: 500,
         splitReason: 'past_closing', latestEndLocal: '22:50' };
+    } else if (scenario === 'sharemovedon') {
+      // Every share was paid, but the board was already on another game and never took it
+      // (backend 20261115190000, board_never_started).
+      base.share = { state: 'paid', amountMinor: 500, heads: 1, splitState: 'abandoned', returnedMinor: 500,
+        splitReason: 'board_never_started' };
     } else if (scenario === 'splitrace') {
       base.share = { state: 'paid', amountMinor: 500, heads: 1, splitState: 'complete', returnedMinor: 500 };
       base.alreadyPaid = true;
