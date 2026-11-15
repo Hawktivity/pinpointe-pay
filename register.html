@@ -167,6 +167,19 @@ input:focus-visible {
 }
 .tick span { font-size: .95rem; }
 
+/* The social-media opt-in: its own question, set apart from the rules above and the rules
+   tick below, in quieter type. */
+.tick.social {
+  margin-top: .9rem;
+  padding: .8rem 0 .2rem;
+  border-top: 1px solid var(--line);
+}
+.tick.social span { font-size: .92rem; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: 1.4; }
+.tick.social + .tick {
+  border-top: 1px solid var(--line);
+  margin-top: .6rem;
+}
+
 /* --- buttons ----------------------------------------------------------- */
 button {
   width: 100%;
@@ -445,6 +458,15 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
           <li>Darts are sharp. Collect yours yourself, and carry them point down.</li>
           <li>Play sensibly. Staff can end a session that stops being safe.</li>
         </ul>
+        <!-- The social-media opt-in. Unticked by default, separate from the rules tick, never
+             required, and hidden (and cleared) for an under-18. The board shows the same words
+             in the same place (QuickSignup.SocialConsentText). -->
+        <label class="tick social" for="marketingConsent" id="social-field">
+          <input id="marketingConsent" type="checkbox">
+          <span>Happy for Hawktivity to share clips and photos of me on social media and in
+            adverts. You can change your mind any time by emailing
+            darts@hawktivity.com.</span>
+        </label>
         <label class="tick" for="disclaimer">
           <input id="disclaimer" type="checkbox">
           <span>I've read these and I'll play by them.</span>
@@ -459,7 +481,9 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
       who's playing. We ask your date of birth so under-18s get a parent's consent.
       Everything you put in is kept only for this session and cleared when it ends
       &mdash; unless you choose Remember me afterwards, which keeps your details and your
-      scores against your email. We won't market to you. Leave the optional fields blank and
+      scores against your email. If you tick the social media box, we keep that answer and
+      when you gave it, so we know we may share clips of you; email darts@hawktivity.com to
+      change it. We won't market to you. Leave the optional fields blank and
       the board still works exactly the same.
     </p>
   </section>
@@ -636,7 +660,9 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
     var minor = isMinor();
     el('minor-note').hidden = !minor;
     el('photo-field').hidden = minor;
-    if (minor) { clearPhoto(); }
+    // Never asked of an under-18; the server refuses it for one as well.
+    el('social-field').hidden = minor;
+    if (minor) { clearPhoto(); el('marketingConsent').checked = false; }
   }
 
   // --- date of birth: typed as DD/MM/YYYY, sent as YYYY-MM-DD ------------------
@@ -812,6 +838,8 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
       mobileNumber: el('mobileNumber').value.trim(),
       dateOfBirth: birthDateIso(),
       acceptedDisclaimer: true,
+      // Their own tick, separate from the rules. Exactly true or false; a minor is always false.
+      marketingConsent: !isMinor() && el('marketingConsent').checked === true,
       photo: isMinor() ? null : photoBase64
     };
 
