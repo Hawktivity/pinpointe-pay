@@ -85,7 +85,9 @@ button { font: inherit; color: inherit; }
 
 /* Clips */
 .clip { background: var(--ink-2); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
-.clip video, .clip .noclip { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; object-fit: cover; }
+/* Highlight clips are portrait (1080 x 1920), made to fill a phone; capped so one is never
+   taller than the screen it is watched on. */
+.clip video, .clip .noclip { display: block; width: 100%; aspect-ratio: 9 / 16; max-height: 78vh; background: #000; object-fit: contain; }
 .clip .noclip { display: grid; place-items: center; color: var(--dimmer); font-size: .85rem; }
 .clip .cap { padding: .75rem .9rem .85rem; }
 .clip .who { font-weight: 700; }
@@ -363,11 +365,41 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
   }
 
-  /** Share the file itself, so it plays wherever it is sent, with its context burned in. */
-  async function share(url, filename, text, button) {
+  /**
+   * The group photo as it leaves the page: the photo with a band under it naming the brand,
+   * the pub and the day, so a shared copy says where it was taken. Drawn here rather than on
+   * the board because the page already has the fonts; the clips have theirs burned in.
+   */
+  async function brandedPhoto(url, filename) {
+    var response = await fetch(url);
+    if (!response.ok) throw new Error('fetch ' + response.status);
+    var img = await createImageBitmap(await response.blob());
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    var w = img.width, band = Math.round(w * 0.16), pad = Math.round(w * 0.045);
+    var canvas = el('canvas', { width: String(w), height: String(img.height + band) });
+    var g = canvas.getContext('2d');
+    g.drawImage(img, 0, 0);
+    g.fillStyle = '#14141a';
+    g.fillRect(0, img.height, w, band);
+    g.textBaseline = 'alphabetic';
+    g.fillStyle = '#c0504b';
+    g.font = Math.round(band * 0.36) + 'px Anton, Impact, sans-serif';
+    g.fillText('HAWKTIVITY DARTS', pad, img.height + band * 0.47);
+    g.fillStyle = '#f0f0f2';
+    g.font = '600 ' + Math.round(band * 0.19) + 'px Montserrat, sans-serif';
+    g.fillText((story.venue + ' · ' + shortDate(story.startedAt)).toUpperCase(), pad, img.height + band * 0.8);
+    var blob = await new Promise(function (resolve) { canvas.toBlob(resolve, 'image/jpeg', 0.9); });
+    return new File([blob], filename, { type: 'image/jpeg' });
+  }
+
+  /**
+   * Share the file itself -- one tap opens the phone's own list of apps, a second picks one --
+   * so it plays wherever it is sent and never expires, with the pub and the brand in it.
+   */
+  async function share(makeFile, text, button) {
     button.disabled = true;
     try {
-      var file = await fileFrom(url, filename);
+      var file = await makeFile();
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], text: text });
       } else {
@@ -381,23 +413,28 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
     }
   }
 
-  async function save(url, filename, button) {
+  async function save(makeFile, fallbackUrl, button) {
     button.disabled = true;
     try {
-      saveBlob(await fileFrom(url, filename));
+      saveBlob(await makeFile());
     } catch (e) {
-      window.open(url, '_blank', 'noopener');
+      window.open(fallbackUrl, '_blank', 'noopener');
     } finally {
       button.disabled = false;
     }
   }
 
-  function mediaButtons(url, filename, shareText) {
+  /** What a share says alongside the file: always the pub and the brand. */
+  function shareText(what) {
+    return what + ' at ' + story.venue + ' · Hawktivity Darts';
+  }
+
+  function mediaButtons(url, makeFile, text) {
     var row = el('div', { class: 'actions' });
     var saveBtn = el('button', { class: 'btn', type: 'button', text: 'Save' });
     var shareBtn = el('button', { class: 'btn primary', type: 'button', text: 'Share' });
-    saveBtn.addEventListener('click', function () { save(url, filename, saveBtn); });
-    shareBtn.addEventListener('click', function () { share(url, filename, shareText, shareBtn); });
+    saveBtn.addEventListener('click', function () { save(makeFile, url, saveBtn); });
+    shareBtn.addEventListener('click', function () { share(makeFile, text, shareBtn); });
     row.appendChild(saveBtn);
     row.appendChild(shareBtn);
     return row;
@@ -423,8 +460,9 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
       el('div', { class: 'where', text: [h.gameName, story.venue].filter(Boolean).join(' · ') })
     ]);
     if (h.video) {
-      cap.appendChild(mediaButtons(h.video, slug(who + ' ' + h.label) + '.mp4',
-        who + ' – ' + h.label + ' at ' + story.venue));
+      var clipName = slug(story.venue + ' ' + who + ' ' + h.label) + '.mp4';
+      cap.appendChild(mediaButtons(h.video, function () { return fileFrom(h.video, clipName); },
+        shareText(who + ' – ' + h.label)));
     }
     card.appendChild(cap);
     return card;
@@ -626,7 +664,9 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
       $('photo').src = story.selfie;
       var pa = $('photo-actions');
       clear(pa);
-      var row = mediaButtons(story.selfie, slug(story.venue) + '-group.jpg', 'Our night at ' + story.venue);
+      var photoName = slug(story.venue) + '-group.jpg';
+      var row = mediaButtons(story.selfie, function () { return brandedPhoto(story.selfie, photoName); },
+        shareText('Our night of darts'));
       while (row.firstChild) pa.appendChild(row.firstChild);
     }
 
@@ -740,6 +780,9 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
     $('loading').classList.add('hidden');
     $('story').classList.remove('hidden');
   }
+
+  // A local copy exposes the photo branding for checking by hand. A deployed copy does not.
+  if (isLocal) window.__storyTest = { brandedPhoto: brandedPhoto };
 
   $('retry').addEventListener('click', load);
   // A second link opened in the same tab changes only the #token, which browsers treat as the
