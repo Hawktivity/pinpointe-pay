@@ -465,6 +465,7 @@
     return later(body({
       ok: true, firstName: request.firstName, suiteName: 'Suite 1',
       underEighteen: minor, photoKept: !minor && !!request.photo,
+      marketingConsent: !minor && request.marketingConsent === true,
       canRemember: !minor && scenario !== 'nopasskeys'
     }));
   };
