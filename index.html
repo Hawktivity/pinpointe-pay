@@ -1119,9 +1119,12 @@ button:focus-visible, input:focus-visible {
       // written when paying staff in person was the fallback, and a copy still running from
       // before 14 Nov 2026 sends a guest to that route -- which no longer exists. The page
       // and the endpoints deploy separately, so it does not wait for them to agree.
+      // past_closing (15 Nov 2026): the server's own sentence names the closing time and the
+      // longest game that still fits, so it is shown as sent, under this heading.
       var title = data.reason === 'expired' ? 'This code has expired'
         : data.reason === 'stale_code' ? 'Scan the board again'
         : data.reason === 'stripe_error' ? 'Card payment didn’t start'
+        : data.reason === 'past_closing' ? 'Too late tonight'
         : 'Card payment isn’t available';
       var detail;
       if (noRoute) {
@@ -1210,8 +1213,14 @@ button:focus-visible, input:focus-visible {
       el('share-mine').textContent = money(mine, data.currency);
       el('share-progress-row').hidden = true;
       el('share-title').textContent = 'Your ' + money(back, data.currency) + ' is on its way back';
-      el('share-blurb').textContent = 'The rest of your group didn’t finish paying, so the '
-        + 'board never started. Your money is going back to your card automatically — it can '
+      // Closed because it got too late (15 Nov 2026): the board closes before the pub does, and
+      // the game would have run past it. Blaming the rest of the group there would be untrue.
+      var tooLate = data.share.splitReason === 'past_closing';
+      el('share-blurb').textContent = (tooLate
+          ? 'It got too late: the board closes at ' + (data.share.latestEndLocal || 'closing time')
+            + ' and your game would have run past it, so the board never started.'
+          : 'The rest of your group didn’t finish paying, so the board never started.')
+        + ' Your money is going back to your card automatically — it can '
         + 'take 5 to 10 working days to show. There is nothing you need to do.';
       el('share-rest').hidden = true;
       el('share-hint').hidden = true;
@@ -1376,6 +1385,7 @@ button:focus-visible, input:focus-visible {
         data.reason === 'used' ? 'Already used'
           : data.reason === 'revoked' ? 'Voucher not valid'
           : data.reason === 'too_long' ? 'Too long for a voucher'
+          : data.reason === 'past_closing' ? 'Too late tonight'
           : data.reason === 'expired' ? 'This code has expired'
           : 'That didn’t work',
         data.message || 'Check the code and try again.', data.reason !== 'unknown');

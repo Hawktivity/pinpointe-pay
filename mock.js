@@ -39,6 +39,10 @@
  *   sharerefund   (with &s=x) my £5 is paid but the group never finished: it is going back
  *   splitrace     (with &s=x) a friend paid the last share at the same moment; the board is
  *                 running and my £5 is going back
+ *   splitlate     too late tonight: the checkout refuses, the board closes at 22:50
+ *   sharelate     (with &s=x) my £5 landed after closing time: the board never started and
+ *                 it is going back
+ * In the voucher case, RS-LATE-0000 is refused as too late tonight.
  * Add &back=1&s=x to any of them to see Stripe's back link release a held share
  * (window.lastRelease). Every checkout request is kept on window.checkoutRequests.
  *
@@ -90,7 +94,8 @@
 
   // ---- split payments -----------------------------------------------------------------
   var SPLIT_CASES = ['split', 'splitpartial', 'splitheld', 'sharepaid', 'splitdone',
-    'splitwhole', 'splitcovered', 'splitexpired', 'sharerefund', 'splitrace'];
+    'splitwhole', 'splitcovered', 'splitexpired', 'sharerefund', 'splitrace',
+    'splitlate', 'sharelate'];
   var splitPolls = 0;
   var coveredSettled = false;
   // What this phone paid, carried through the fake Stripe round trip in the URL.
@@ -129,6 +134,10 @@
     } else if (scenario === 'sharerefund') {
       // The split was closed unfinished; describe reports the share and what is going back.
       base.share = { state: 'paid', amountMinor: 500, heads: 1, splitState: 'abandoned', returnedMinor: 500 };
+    } else if (scenario === 'sharelate') {
+      // Closed because the money landed too late to start the clock before closing time.
+      base.share = { state: 'paid', amountMinor: 500, heads: 1, splitState: 'abandoned', returnedMinor: 500,
+        splitReason: 'past_closing', latestEndLocal: '22:50' };
     } else if (scenario === 'splitrace') {
       base.share = { state: 'paid', amountMinor: 500, heads: 1, splitState: 'complete', returnedMinor: 500 };
       base.alreadyPaid = true;
@@ -170,6 +179,13 @@
     if (request.action === 'release') {
       window.lastRelease = request;
       return later(body({ ok: true, released: true }), 200);
+    }
+    if (scenario === 'splitlate') {
+      return later(body({
+        ok: false, reason: 'past_closing', latestEndLocal: '22:50', longestFitting: 15,
+        message: 'Too late for 30 minutes tonight: the last game has to finish by 22:50. '
+          + 'Go back to the board and choose 15 minutes or less.'
+      }, 409));
     }
     if (scenario === 'splitcovered') {
       coveredSettled = true;
@@ -350,6 +366,12 @@
     }
     if (typed === 'RSTESTGOOD' || typed === 'RSUSED0000') {
       return later(body({ ok: false, reason: 'used', message: 'That voucher has already been used.' }, 409));
+    }
+    if (typed === 'RSLATE0000') {
+      return later(body({
+        ok: false, reason: 'past_closing', latestEndLocal: '22:50', longestFitting: null,
+        message: 'Darts have finished for tonight. The last game has to finish by 22:50.'
+      }, 409));
     }
     if (typed === 'RSGONE0000') {
       return later(body({ ok: false, reason: 'revoked', message: 'That voucher is no longer valid.' }, 410));
