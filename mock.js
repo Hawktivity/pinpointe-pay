@@ -1,27 +1,30 @@
 /* -----------------------------------------------------------------------------
- * A fake unlock endpoint, for walking the page's screens on a laptop.
+ * Fake endpoints, for walking the page's screens on a laptop.
  *
  * Loaded only from a localhost copy, and only with ?mock in the URL -- config.js
  * is what enforces both, so a deployed copy never fetches this file.
  *
- * Scenarios, chosen with &case=:
- *   (default)     a £70 session, correct password is "pub"
+ * Card (and a voucher) is the only way to pay, so every case starts from the card
+ * button. Scenarios, chosen with &case=:
+ *   (default)     a £70 session for 7: Pay by card "pays" and comes back as cardreturn
  *   ext           an extension to a session already running
  *   join          one more player buying a seat on a session already running
- *   paid          a code that has already been redeemed
+ *   paid          a code already paid for by card
+ *   paidbar       a code a member of staff unlocked before that was retired (14 Nov 2026):
+ *                 the done screen still names who approved it
  *   expired       a code past its half hour
  *   altered       a forged payload
- *   nostaff       a venue with nobody set up to unlock
  *   offline       the network is down
- *   fallback      unlock succeeds but the board never answers -- with cardpending,
- *                 the only way to see the six digits at all
- *   card          a venue that takes cards: the button shows and "pays"
+ *   fallback      the card payment lands but the board never answers -- the only way to
+ *                 see the six digits at all
  *   cardreturn    back from the card page; the row lands on the third ask
  *   cardpending   back from the card page and the row never lands
- *   cardoff       the button shows but checkout refuses it
- *   cardonly      a venue that sells by card alone: no bar button at all (vouchers offered)
- *   voucher       card-only venue with vouchers: RS-TEST-GOOD works once, RS-USED-0000,
- *                 RS-GONE-0000 and anything else are refused
+ *   cardoff       the button shows but checkout refuses the venue: nothing can take payment
+ *   nocard        describe says card is not on offer for an unpaid code: nothing can take
+ *                 payment, and the page says so
+ *   voucher       vouchers offered: RS-TEST-GOOD works once, RS-USED-0000, RS-GONE-0000
+ *                 and anything else are refused
+ *   cardonly      the same as voucher (kept so old links still work)
  *
  * Split payments -- a card-only venue, 4 players, 30 min, £20.00 (£5.00 a head):
  *   split         nobody has paid: Pay for everyone / Pay just my share
@@ -38,18 +41,23 @@
  *                 running and my £5 is going back
  * Add &back=1&s=x to any of them to see Stripe's back link release a held share
  * (window.lastRelease). Every checkout request is kept on window.checkoutRequests.
+ *
+ * Staff passwords are retired: anything sent to unlock-session other than describe
+ * gets the real endpoint's 410 bar_retired, and is kept on window.unlockRequests --
+ * which the page should leave empty.
  * -------------------------------------------------------------------------- */
 (function () {
   'use strict';
 
   var params = new URLSearchParams(window.location.search);
   var scenario = params.get('case') || 'new';
-  var PASSWORD = 'pub';
-  var failures = 0;
+  // Back from the (fake) card page: Stripe's success link carries paid=1.
+  var returning = params.get('paid') === '1';
   var polls = 0;
   var ackPolls = 0;
+  // Set once a voucher has been spent, so describe starts reporting that the board picked
+  // the session up.
   var unlocked = false;
-  var LIMIT = 5;
 
   /**
    * Whether the board has said it applied this activation.
@@ -208,11 +216,17 @@
         message: 'This code has been changed since the suite made it.'
       }, 400));
     }
-    if (scenario === 'paid') {
+    // An old code re-scanned after it was paid for. `paidbar` is a sale a member of staff
+    // took in person before that was retired: describe still names them, and the page must
+    // cope with that without offering the route.
+    if (scenario === 'paid' || scenario === 'paidbar') {
       return later(body({
         ok: true, players: 7, minutes: 60, amountMinor: 7000, currency: 'GBP',
         kind: 'new', suiteId: '9f2c41ab-0e55-4a71-9c8e-2b3d5f6a7c81',
-        expiresInSeconds: 900, alreadyPaid: true, approvedBy: 'Dani', paidVia: 'bar',
+        expiresInSeconds: 900, alreadyPaid: true,
+        approvedBy: scenario === 'paidbar' ? 'Dani' : null,
+        paidVia: scenario === 'paidbar' ? 'bar' : 'card',
+        cardPayment: false, barPayment: false,
         fallbackToken: '481902',
         boardAcknowledged: acknowledged(true)
       }));
@@ -221,10 +235,12 @@
     // Back from the card page. The row is written by the webhook, not by the redirect, so
     // the page asks again every couple of seconds until it appears -- here on the third
     // ask, which is roughly what a real one looks like. `cardpending` never answers yes,
-    // so the "do not pay again" screen can be seen without breaking anything.
-    if (scenario === 'cardreturn' || scenario === 'cardpending') {
+    // so the "do not pay again" screen can be seen without breaking anything; `fallback`
+    // lands, but its board never says it has the session.
+    if (scenario === 'cardreturn' || scenario === 'cardpending'
+        || (scenario === 'fallback' && returning)) {
       polls++;
-      var landed = scenario === 'cardreturn' && polls >= 3;
+      var landed = scenario !== 'cardpending' && polls >= 3;
       return later(body({
         ok: true, players: 7, minutes: 60, amountMinor: 7000, currency: 'GBP',
         kind: 'new', suiteId: '9f2c41ab-0e55-4a71-9c8e-2b3d5f6a7c81',
@@ -233,6 +249,7 @@
         approvedBy: null,
         paidVia: landed ? 'card' : null,
         cardPayment: false,
+        barPayment: false,
         fallbackToken: landed ? '481902' : null,
         boardAcknowledged: acknowledged(landed)
       }), 250);
@@ -245,6 +262,7 @@
         ok: true, players: 1, minutes: 45, amountMinor: 750, currency: 'GBP',
         kind: 'join', suiteId: '9f2c41ab-0e55-4a71-9c8e-2b3d5f6a7c81',
         expiresInSeconds: 1524, alreadyPaid: false, approvedBy: null,
+        cardPayment: true, barPayment: false,
         boardAcknowledged: acknowledged(false)
       }));
     }
@@ -260,10 +278,12 @@
       expiresInSeconds: 1524,
       alreadyPaid: false,
       approvedBy: null,
-      cardPayment: scenario === 'card' || scenario === 'cardoff' || scenario === 'cardonly'
-        || scenario === 'voucher',
-      // Only ever false where a venue has withdrawn the bar route. Absent means bar.
-      barPayment: scenario !== 'cardonly' && scenario !== 'voucher',
+      // Every code that is unpaid and in date is payable by card -- the real endpoint says
+      // so even for a venue with no settings row. `nocard` is the one that does not, to show
+      // the page copes rather than offering a route that is gone.
+      cardPayment: scenario !== 'nocard',
+      // Always false since 14 Nov 2026; the page no longer reads it.
+      barPayment: false,
       boardAcknowledged: acknowledged(false)
     }));
   }
@@ -278,63 +298,35 @@
       return splitCheckout(request);
     }
     if (scenario === 'cardoff') {
+      // The page writes its own words for this refusal whatever the endpoint says; this is
+      // the endpoint's current wording.
       return later(body({
         ok: false, reason: 'not_enabled',
-        message: 'This venue takes payment at the bar. Show this screen to your server.'
+        message: 'This board is not taking payment right now. Ask a member of staff.'
       }, 403));
     }
 
     var back = new URL(window.location.href);
     back.searchParams.set('paid', '1');
-    back.searchParams.set('case', 'cardreturn');
+    back.searchParams.set('case', scenario === 'fallback' ? 'fallback' : 'cardreturn');
     return later(body({ ok: true, url: back.toString(), amountMinor: 7000, currency: 'GBP' }), 700);
   }
 
-  function unlock(request) {
-    if (scenario === 'offline') {
-      return later(new Error('Failed to fetch'), 1200);
-    }
-    if (scenario === 'nostaff') {
-      return later(body({
-        ok: false, reason: 'no_staff',
-        message: 'No staff passwords have been set up for this venue.'
-      }, 403));
-    }
+  // The staff-password unlock, retired 14 Nov 2026. The real endpoint now refuses anything
+  // but describe with this, and the page must never send it -- window.unlockRequests is
+  // there to prove that.
+  window.unlockRequests = [];
 
-    if (request.password !== PASSWORD) {
-      failures++;
-      if (failures >= LIMIT) {
-        return later(body({
-          ok: false, reason: 'locked', retryAfterSeconds: 180,
-          attemptsRemaining: 0
-        }, 429));
-      }
-      return later(body({
-        ok: false, reason: 'wrong_password',
-        attemptsRemaining: LIMIT - failures
-      }, 403));
-    }
-
-    // The bar rail has now put a row in front of the board, so describe should start
-    // reporting that the board picked it up -- otherwise the default walkthrough ends on
-    // the six digits, which is the behaviour this whole change exists to remove.
-    unlocked = true;
-
-    // No kind here, deliberately: the real endpoint does not send one either, so this is what
-    // keeps the page honest about reading it from the describe response instead.
+  function retiredUnlock(request) {
+    window.unlockRequests.push(request);
     return later(body({
-      ok: true,
-      approvedBy: 'Dani',
-      minutes: scenario === 'join' ? 45 : scenario === 'ext' ? 30 : 60,
-      players: scenario === 'join' ? 1 : 7,
-      amountMinor: scenario === 'join' ? 750 : scenario === 'ext' ? 3500 : 7000,
-      currency: 'GBP',
-      fallbackToken: '481902'
-    }), 900);
+      ok: false, reason: 'bar_retired',
+      message: 'Staff passwords no longer unlock a board. Pay on this page to start it.'
+    }, 410));
   }
 
   window.PAY_CONFIG.transport = function (request) {
-    return request.action === 'describe' ? describe(request) : unlock(request);
+    return request.action === 'describe' ? describe(request) : retiredUnlock(request);
   };
 
   window.PAY_CONFIG.checkoutTransport = checkout;
@@ -497,7 +489,7 @@
   // Obvious on screen, so a mocked run is never mistaken for a real one.
   window.addEventListener('DOMContentLoaded', function () {
     var flag = document.createElement('div');
-    flag.textContent = 'MOCK · password "pub" · case=' + scenario;
+    flag.textContent = 'MOCK · case=' + scenario;
     flag.style.cssText =
       'position:fixed;left:0;right:0;bottom:0;z-index:99;background:#d08a2c;' +
       'color:#1a1206;font:600 10px/1 Montserrat,sans-serif;letter-spacing:.16em;' +

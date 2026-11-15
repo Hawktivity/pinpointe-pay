@@ -1,44 +1,78 @@
-# Pay at the bar
+# Pay for the board
 
 The page a guest lands on after scanning the QR code on a dart board. It shows
-what the venue is charging, and then takes a member of staff's own password to unlock the board once they have been paid at the bar.
+what the venue is charging and takes the payment on the guest's own phone: by
+card through Stripe Checkout, the whole group at once or one share each, or with
+a one-time voucher code the venue handed out.
 
 Public repository on purpose: it holds a static page and a publishable Supabase
 key, and nothing else. There is no secret here to leak.
 
-## How a session gets unlocked
+## How a board gets paid for
 
 1. The suite quotes a price, signs it with the venue's key, and puts
    `https://pay.hawktivity.com/?c=<signed payload>` in a QR code on screen.
-2. A guest scans it and walks to the bar with their phone.
-3. This page calls the `unlock-session` Edge Function with `action: "describe"`.
-   The function checks the signature **before** returning any figure, so the
-   amount on screen is the venue's own price and not whatever the URL claimed.
-4. The server takes the money, taps **Paid — unlock**, and types their own
-   password. The phone is handed over the bar for this, and the field is masked.
-5. The function checks the password against `staff_credentials`, records the
-   activation against that member of staff by name, and returns a six-digit
-   fallback token.
-6. The board hears the activation over Supabase Realtime and starts on its own.
-   The six digits appear on the phone only if it has not done so within twelve
-   seconds — a paid session must never be stuck behind a network problem the
-   guest cannot see or fix.
+2. A guest scans it. This page calls the `unlock-session` Edge Function with
+   `action: "describe"`. The function checks the signature **before** returning
+   any figure, so the amount on screen is the venue's own price and not whatever
+   the URL claimed. It also says whether the code is already paid for, whether it
+   can be paid by card (`cardPayment`), and how far a split has got.
+3. The guest taps **Pay by card**. The page asks `create-checkout` for a Stripe
+   Checkout Session and sends the phone there. The charge is worked out on the
+   server from the signed payload, never from anything the page sends.
+4. Stripe sends the phone back with `?paid=1`. The board is started by Stripe's
+   webhook, not by that redirect, so the page asks `describe` every couple of
+   seconds until the sale appears, then shows the unlocked screen. If it never
+   appears, the page says the payment went through and that the guest must not
+   pay again.
+5. The board hears the activation over Supabase Realtime, starts on its own, and
+   records that it did. The page keeps asking `describe` whether the board has
+   acknowledged the session. Only if it has not after about sixteen seconds does
+   the page show a **six-digit fallback token** to type on the touchscreen, so a
+   paid session is never stuck behind a network problem the guest cannot see or
+   fix.
+
+If `describe` says a code that is unpaid and in date cannot be paid by card, or
+`create-checkout` refuses the venue, the page says the board can't take payment
+right now and to ask a member of staff. There is no other route to offer.
+
+Staff passwords no longer unlock a board. That route was retired on 14 Nov 2026:
+`unlock-session` refuses anything but `describe` with HTTP 410 `bar_retired`, and
+this page never sends it. A code paid that way before then can still be
+re-scanned; the unlocked screen still shows who approved it.
+
+## Splitting a payment
+
+A group of two or more can pay together or each pay their own share. Every phone
+scans the same code on the board. The page asks the card endpoint for a number of
+*heads* (everyone, the rest, or one), the server works out the amount and holds
+that share while its card form is open, and the board starts only once the shares
+cover the price. Somebody who has paid their share waits on a screen that says so
+and never offers to take it again; anything a group pays that does not end up as a
+session is refunded automatically.
+
+## Vouchers
+
+A venue can hand out one-time codes. Where it has unspent ones, a quiet **Have a
+voucher?** link appears under the card button for a new session. The code goes to
+`redeem-voucher`, which spends it and starts the board for one session, up to the
+time printed on the voucher, for any number of players. It is not offered once
+part of a group has paid by card.
 
 ## Why the amount is not read from the URL
 
-An earlier draft displayed `amt` straight out of the payload. That is exploitable:
-a guest can craft a link claiming £2.00, show it to a server who takes £2 and
-types their password, and only then does the function reject it. The venue has
-already taken the wrong money. Hence `describe` — signature first, figures
-second.
+An earlier draft displayed `amt` straight out of the payload. A guest could craft
+a link claiming £2.00 and the page would agree with them. Hence `describe`:
+signature first, figures second.
 
 ## Files
 
 | File | |
 | --- | --- |
 | `index.html` | the whole page: five screens, no framework, no build step |
+| `register.html` | the separate page for adding a player to the board from a phone |
 | `config.js` | which Supabase project to talk to, chosen by hostname |
-| `mock.js` | a fake endpoint for walking the screens on a laptop |
+| `mock.js` | fake endpoints for walking the screens on a laptop |
 | `.nojekyll` | stops GitHub Pages running the files through Jekyll |
 | `staff/rising-sun.html` | the Rising Sun's free 15-minute voucher codes, for bar staff, behind a password |
 | `staff/seal-codes.mjs` | encrypts a batch's codes into a staff page under its password |
@@ -59,16 +93,21 @@ with the CSV that `create_voucher_batch()` produced.
 python -m http.server 8080
 ```
 
-Then open a scenario — the mock only loads from localhost, and only with `?mock`:
+Then open a scenario. The mock only loads from localhost, and only with `?mock`:
 
 | URL | |
 | --- | --- |
-| `localhost:8080/?mock&c=x` | a £70 session; the password is `pub` |
+| `localhost:8080/?mock&c=x` | a £70 session; Pay by card comes back paid |
 | `localhost:8080/?mock&c=x&case=ext` | buying more time mid-session |
-| `localhost:8080/?mock&c=x&case=paid` | a code already redeemed |
+| `localhost:8080/?mock&c=x&case=join` | one more player joining a running session |
+| `localhost:8080/?mock&c=x&case=paid` | a code already paid for |
+| `localhost:8080/?mock&c=x&case=fallback` | paid, but the board never answers: the six digits |
+| `localhost:8080/?mock&c=x&case=cardpending&paid=1` | back from the card page; the sale never lands |
+| `localhost:8080/?mock&c=x&case=cardoff` | the card endpoint refuses the venue |
+| `localhost:8080/?mock&c=x&case=nocard` | describe says this code can't be paid by card |
+| `localhost:8080/?mock&c=x&case=voucher` | vouchers offered; `RS-TEST-GOOD` works once |
 | `localhost:8080/?mock&c=x&case=expired` | past its half hour |
 | `localhost:8080/?mock&c=x&case=altered` | a forged payload |
-| `localhost:8080/?mock&c=x&case=nostaff` | nobody set up to unlock |
 | `localhost:8080/?mock&c=x&case=offline` | no network |
 | `localhost:8080/?mock&c=x&case=split` | 4 players, £20: pay for everyone or just my share |
 | `localhost:8080/?mock&c=x&case=splitpartial` | £5 of £20 paid: my share, or the rest |
@@ -78,18 +117,7 @@ Then open a scenario — the mock only loads from localhost, and only with `?moc
 | `localhost:8080/?mock&c=x&case=splitcovered` | already covered after CHANGE lowered the price |
 | `localhost:8080/?mock&c=x&case=splitexpired` | part paid, this phone's code has run out |
 
-Typing the wrong password five times reaches the lockout screen. The full list of
-cases, including the card and voucher ones, is at the top of `mock.js`.
-
-## Splitting a payment
-
-At a venue that takes cards, a group of two or more can pay together or each pay their
-own share. Every phone scans the same code on the board. The page asks the card endpoint
-for a number of *heads* (everyone, the rest, or one), the server works out the amount and
-holds that share while its card form is open, and the board starts only once the shares
-cover the price. Somebody who has paid their share waits on a screen that says so and
-never offers to take it again; anything a group pays that does not end up as a session
-is refunded automatically.
+The full list of cases, including the refund ones, is at the top of `mock.js`.
 
 ## Deploying
 
