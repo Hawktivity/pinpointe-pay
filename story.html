@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#14141a">
+<title>Your night of darts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@400;500;600;700&display=swap">
+<style>
+/* ---------------------------------------------------------------------------
+   One guest's night, told from their side. Same palette and type as the pay and
+   sign-up pages, because it is the same product. Single dark theme, like them.
+
+   Layout: one column for a phone. The guest's own story comes first -- best clip,
+   title, numbers, board, games, rival -- and the group's after it: every clip, the
+   photo, the leaderboard.
+--------------------------------------------------------------------------- */
+:root {
+  --ink: #14141a;
+  --ink-2: #1b1b22;
+  --ink-3: #24242c;
+  --line: #2c2c34;
+  --brick: #a8433f;
+  --brick-lit: #c0504b;
+  --go: #3e9b4f;
+  --gold: #d9a441;
+  --silver: #b9bcc4;
+  --bronze: #b27445;
+  --paper: #f0f0f2;
+  --dim: #9b9ba4;
+  --dimmer: #74747e;
+  --display: 'Anton', 'Arial Narrow', Impact, sans-serif;
+  --body: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background: linear-gradient(168deg, #17171d 0%, #101015 100%);
+  background-attachment: fixed;
+  color: var(--paper);
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+.wrap { max-width: 34rem; margin: 0 auto; padding: 1.25rem 1rem calc(3rem + env(safe-area-inset-bottom)); }
+h1, h2, .display { font-family: var(--display); font-weight: 400; letter-spacing: .01em; text-transform: uppercase; }
+h2 { font-size: 1.55rem; line-height: 1.1; margin: 2.6rem 0 .9rem; }
+h2 small { display: block; font-family: var(--body); text-transform: none; font-size: .8rem; font-weight: 500; color: var(--dim); letter-spacing: 0; margin-top: .3rem; }
+p { margin: 0 0 .8rem; }
+a { color: var(--paper); }
+button { font: inherit; color: inherit; }
+.muted { color: var(--dim); }
+.hidden { display: none !important; }
+
+/* Top bar */
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: 1.2rem; }
+.brand { font-family: var(--display); letter-spacing: .12em; font-size: .85rem; color: var(--brick-lit); text-transform: uppercase; }
+.switch { position: relative; }
+.switch select {
+  appearance: none; -webkit-appearance: none; background: var(--ink-3); color: var(--paper);
+  border: 1px solid var(--line); border-radius: 999px; padding: .45rem 2rem .45rem .9rem; font: 600 .8rem var(--body);
+}
+.switch::after { content: '\25BE'; position: absolute; right: .8rem; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--dim); font-size: .8rem; }
+
+/* Hero */
+.hero { padding: .2rem 0 .4rem; }
+.hero h1 { font-size: clamp(2.8rem, 15vw, 4.6rem); line-height: .95; margin: 0 0 .7rem; overflow-wrap: anywhere; }
+.hero .when { color: var(--dim); font-weight: 600; font-size: .95rem; margin: 0; }
+.viewing { background: var(--ink-3); border: 1px solid var(--line); border-radius: 12px; padding: .7rem .9rem; font-size: .9rem; margin: 0 0 1rem; }
+.viewing button { background: none; border: 0; padding: 0; text-decoration: underline; font-weight: 600; cursor: pointer; }
+
+.title-card {
+  margin-top: 1.3rem; border-radius: 16px; padding: 1.1rem 1.15rem;
+  background: linear-gradient(135deg, var(--brick) 0%, #6f2a28 100%);
+}
+.title-card .eyebrow { font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; font-weight: 700; opacity: .85; }
+.title-card .name { font-family: var(--display); font-size: 2.1rem; line-height: 1.05; text-transform: uppercase; margin: .15rem 0 .25rem; }
+.title-card .why { font-weight: 500; margin: 0; }
+
+/* Clips */
+.clip { background: var(--ink-2); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+/* Highlight clips are portrait (1080 x 1920), made to fill a phone; capped so one is never
+   taller than the screen it is watched on. */
+.clip video, .clip .noclip { display: block; width: 100%; aspect-ratio: 9 / 16; max-height: 78vh; background: #000; object-fit: contain; }
+.clip .noclip { display: grid; place-items: center; color: var(--dimmer); font-size: .85rem; }
+.clip .cap { padding: .75rem .9rem .85rem; }
+.clip .who { font-weight: 700; }
+.clip .what { font-family: var(--display); text-transform: uppercase; font-size: 1.25rem; line-height: 1.1; margin: .1rem 0 .2rem; }
+.clip .where { color: var(--dim); font-size: .82rem; }
+.actions { display: flex; gap: .5rem; margin-top: .7rem; }
+.btn {
+  border: 1px solid var(--line); background: var(--ink-3); border-radius: 999px; padding: .5rem .95rem;
+  font-weight: 600; font-size: .85rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: .35rem;
+}
+.btn.primary { background: var(--brick); border-color: var(--brick); }
+.btn:disabled { opacity: .55; }
+
+.chips { display: flex; gap: .45rem; overflow-x: auto; padding-bottom: .4rem; margin: 0 -1rem .7rem; padding-left: 1rem; padding-right: 1rem; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; border: 1px solid var(--line); background: var(--ink-2); border-radius: 999px; padding: .4rem .85rem; font-size: .85rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.chip[aria-pressed="true"] { background: var(--paper); color: var(--ink); border-color: var(--paper); }
+.reel { display: grid; grid-auto-flow: column; grid-auto-columns: 86%; gap: .8rem; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -1rem; padding: 0 1rem .4rem; scrollbar-width: none; }
+.reel::-webkit-scrollbar { display: none; }
+.reel > * { scroll-snap-align: center; }
+
+/* Numbers */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .55rem; }
+.stat { background: var(--ink-2); border: 1px solid var(--line); border-radius: 14px; padding: .75rem .6rem .7rem; text-align: center; }
+.stat .v { font-family: var(--display); font-size: 1.9rem; line-height: 1; }
+.stat .k { color: var(--dim); font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-top: .35rem; }
+
+/* Board */
+.board-card { background: var(--ink-2); border: 1px solid var(--line); border-radius: 16px; padding: .9rem; }
+.board-card svg { display: block; width: 100%; height: auto; max-width: 26rem; margin: 0 auto; }
+.toggle { display: flex; align-items: center; justify-content: center; gap: .5rem; font-size: .85rem; color: var(--dim); margin-top: .5rem; }
+
+/* Games */
+.games { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.game { display: flex; align-items: center; gap: .8rem; background: var(--ink-2); border: 1px solid var(--line); border-radius: 14px; padding: .7rem .85rem; }
+.medal { flex: none; width: 2.3rem; height: 2.3rem; border-radius: 50%; display: grid; place-items: center; font-family: var(--display); font-size: 1.05rem; color: var(--ink); background: var(--ink-3); }
+.medal.r1 { background: var(--gold); } .medal.r2 { background: var(--silver); } .medal.r3 { background: var(--bronze); }
+.medal.rn { color: var(--paper); border: 1px solid var(--line); font-size: .8rem; }
+.game .gname { font-weight: 700; }
+.game .gsub { color: var(--dim); font-size: .82rem; }
+
+/* Rival */
+.rival { background: var(--ink-2); border: 1px solid var(--line); border-radius: 16px; padding: 1rem 1.1rem; }
+.rival .vs { font-family: var(--display); font-size: 2rem; text-transform: uppercase; line-height: 1.05; margin-bottom: .3rem; }
+.score-line { display: flex; gap: .4rem; margin-top: .6rem; }
+.score-line span { flex: 1; text-align: center; border-radius: 10px; padding: .45rem 0; font-weight: 700; background: var(--ink-3); }
+.score-line .won { background: var(--go); }
+.score-line .lost { background: var(--brick); }
+
+/* Achievements */
+.badges { display: grid; gap: .55rem; }
+.badge { display: flex; gap: .8rem; align-items: center; background: var(--ink-2); border: 1px solid var(--line); border-radius: 14px; padding: .7rem .85rem; }
+.crest { flex: none; width: 3rem; height: 3rem; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #e4bc63, #8f6420); display: grid; place-items: center; font-family: var(--display); color: var(--ink); font-size: 1.05rem; }
+.badge .bname { font-weight: 700; }
+.badge .bdesc { color: var(--dim); font-size: .85rem; }
+
+/* Photo */
+.photo { border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--ink-2); }
+.photo img { display: block; width: 100%; height: auto; }
+.photo .actions { padding: .7rem .9rem .85rem; margin: 0; }
+
+/* Leaderboard */
+.board-list { list-style: none; margin: 0; padding: 0; background: var(--ink-2); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.row { display: flex; align-items: center; gap: .8rem; padding: .7rem .9rem; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.row.me { background: rgba(192, 80, 75, .16); }
+.row .pos { width: 1.6rem; font-family: var(--display); font-size: 1.3rem; text-align: center; }
+.row .pname { flex: 1; font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.row .pts { font-family: var(--display); font-size: 1.3rem; }
+.row .pts small { font-family: var(--body); font-size: .7rem; color: var(--dim); margin-left: .2rem; }
+.you-pill { display: inline-block; margin-left: .4rem; font-size: .65rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; background: var(--brick); border-radius: 999px; padding: .1rem .45rem; vertical-align: .15em; }
+.dots { display: inline-flex; gap: .2rem; margin-left: .35rem; vertical-align: middle; }
+.dots i { width: .55rem; height: .55rem; border-radius: 50%; display: inline-block; }
+
+.review { margin-top: 2.6rem; text-align: center; background: var(--ink-2); border: 1px solid var(--line); border-radius: 16px; padding: 1.3rem 1rem; }
+.review .display { font-size: 1.5rem; margin-bottom: .3rem; }
+
+footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align: center; }
+
+/* States */
+.state { text-align: center; padding: 4.5rem 0 2rem; }
+.state h1 { font-size: 2.4rem; margin: 0 0 .7rem; }
+.spinner { width: 2.4rem; height: 2.4rem; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--brick-lit); margin: 0 auto 1rem; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } .reel { scroll-behavior: auto; } }
+.toast { position: fixed; left: 50%; bottom: calc(1.2rem + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--paper); color: var(--ink); font-weight: 600; font-size: .85rem; border-radius: 999px; padding: .55rem 1rem; box-shadow: 0 6px 24px rgba(0,0,0,.4); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="loading" class="state">
+    <div class="spinner" aria-hidden="true"></div>
+    <p class="muted">Getting your night&hellip;</p>
+  </div>
+
+  <div id="problem" class="state hidden" role="alert">
+    <h1 id="problem-title" class="display"></h1>
+    <p id="problem-text" class="muted"></p>
+    <button id="retry" class="btn hidden" type="button">Try again</button>
+  </div>
+
+  <main id="story" class="hidden">
+    <div class="topbar">
+      <span class="brand">Hawktivity Darts</span>
+      <label class="switch">
+        <span class="hidden" id="switch-label">See the night as</span>
+        <select id="switch" aria-labelledby="switch-label"></select>
+      </label>
+    </div>
+
+    <p id="viewing" class="viewing hidden"></p>
+
+    <section class="hero">
+      <h1 id="hero-name"></h1>
+      <p id="hero-when" class="when"></p>
+      <div class="title-card">
+        <div class="eyebrow" id="title-eyebrow">Your title tonight</div>
+        <div class="name" id="title-name"></div>
+        <p class="why" id="title-why"></p>
+      </div>
+    </section>
+
+    <section id="best" class="hidden">
+      <h2 id="best-h"></h2>
+      <div id="best-clip"></div>
+    </section>
+
+    <section>
+      <h2 id="numbers-h"></h2>
+      <div id="stats" class="stats"></div>
+    </section>
+
+    <section id="heat" class="hidden">
+      <h2><span id="heat-title"></span><small id="heat-sub"></small></h2>
+      <div class="board-card">
+        <div id="board"></div>
+        <label class="toggle"><input type="checkbox" id="heat-all"> Show everyone&rsquo;s darts too</label>
+      </div>
+    </section>
+
+    <section id="games-sec" class="hidden">
+      <h2 id="games-h"></h2>
+      <ul id="games" class="games"></ul>
+    </section>
+
+    <section id="rival-sec" class="hidden">
+      <h2 id="rival-h"></h2>
+      <div id="rival" class="rival"></div>
+    </section>
+
+    <section id="ach-sec" class="hidden">
+      <h2 id="ach-h"></h2>
+      <div id="badges" class="badges"></div>
+    </section>
+
+    <section id="reel-sec" class="hidden">
+      <h2>Every highlight<small>Tap a name to see their moments.</small></h2>
+      <div id="chips" class="chips" role="group" aria-label="Whose highlights"></div>
+      <div id="reel" class="reel"></div>
+    </section>
+
+    <section id="photo-sec" class="hidden">
+      <h2>The group</h2>
+      <div class="photo">
+        <img id="photo" alt="The group photo taken at the board">
+        <div class="actions" id="photo-actions"></div>
+      </div>
+    </section>
+
+    <section id="lb-sec" class="hidden">
+      <h2>The leaderboard<small>Points for every place in every game, so last still scores.</small></h2>
+      <ol id="leaderboard" class="board-list"></ol>
+    </section>
+
+    <div id="review" class="review hidden">
+      <div class="display" id="review-h">Good night?</div>
+      <p class="muted" id="review-text"></p>
+      <a id="review-link" class="btn primary" target="_blank" rel="noopener noreferrer">Leave a review</a>
+    </div>
+
+    <footer>
+      <p id="expiry"></p>
+      <p>Hawktivity Darts</p>
+    </footer>
+  </main>
+</div>
+
+<script src="config.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var cfg = window.PAY_CONFIG || {};
+  var host = window.location.hostname;
+  var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '' || host === '[::1]' || /\.local$/.test(host);
+  var token = window.location.hash.replace(/^#/, '');
+  var story = null;
+  var view = null;   // the player whose side the page is telling
+  var filter = null; // whose clips the reel shows
+
+  var NUMBER_ORDER = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
+  // Ring edges in mm over the double ring's outer edge (170 mm), as the sensor draws them.
+  var RING = { bullIn: 6.35 / 170, bullOut: 15.9 / 170, trebleIn: 99 / 170, trebleOut: 107 / 170, doubleIn: 162 / 170 };
+
+  // ------------------------------------------------------------------ helpers
+
+  function $(id) { return document.getElementById(id); }
+
+  /** An element with text set as text, never as markup: every name here was typed by a guest. */
+  function el(tag, attrs, children) {
+    var node = document.createElement(tag);
+    if (attrs) {
+      Object.keys(attrs).forEach(function (k) {
+        if (k === 'text') node.textContent = attrs[k];
+        else if (k === 'class') node.className = attrs[k];
+        else node.setAttribute(k, attrs[k]);
+      });
+    }
+    (children || []).forEach(function (c) { if (c) node.appendChild(c); });
+    return node;
+  }
+
+  function svg(tag, attrs) {
+    var node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.keys(attrs || {}).forEach(function (k) { node.setAttribute(k, attrs[k]); });
+    return node;
+  }
+
+  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+
+  function player(key) {
+    for (var i = 0; i < story.players.length; i++) if (story.players[i].key === key) return story.players[i];
+    return null;
+  }
+
+  function nameOf(key) { var p = player(key); return p ? p.name : 'Someone'; }
+
+  function possessive(name) { return name + '’s'; }
+
+  function ordinal(n) {
+    var s = ['th', 'st', 'nd', 'rd'], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  function longDay(iso) {
+    if (!iso) return '';
+    return new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London' }).format(new Date(iso));
+  }
+
+  function shortDate(iso) {
+    return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/London' }).format(new Date(iso));
+  }
+
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); }
+
+  function toast(text) {
+    var t = el('div', { class: 'toast', role: 'status', text: text });
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 2600);
+  }
+
+  function slug(text) { return String(text || 'clip').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'clip'; }
+
+  async function fileFrom(url, filename) {
+    var response = await fetch(url);
+    if (!response.ok) throw new Error('fetch ' + response.status);
+    var blob = await response.blob();
+    return new File([blob], filename, { type: blob.type || (filename.endsWith('.jpg') ? 'image/jpeg' : 'video/mp4') });
+  }
+
+  function saveBlob(file) {
+    var a = el('a', { href: URL.createObjectURL(file), download: file.name });
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+  }
+
+  /**
+   * The group photo as it leaves the page: the photo with a band under it naming the brand,
+   * the pub and the day, so a shared copy says where it was taken. Drawn here rather than on
+   * the board because the page already has the fonts; the clips have theirs burned in.
+   */
+  async function brandedPhoto(url, filename) {
+    var response = await fetch(url);
+    if (!response.ok) throw new Error('fetch ' + response.status);
+    var img = await createImageBitmap(await response.blob());
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    var w = img.width, band = Math.round(w * 0.16), pad = Math.round(w * 0.045);
+    var canvas = el('canvas', { width: String(w), height: String(img.height + band) });
+    var g = canvas.getContext('2d');
+    g.drawImage(img, 0, 0);
+    g.fillStyle = '#14141a';
+    g.fillRect(0, img.height, w, band);
+    g.textBaseline = 'alphabetic';
+    g.fillStyle = '#c0504b';
+    g.font = Math.round(band * 0.36) + 'px Anton, Impact, sans-serif';
+    g.fillText('HAWKTIVITY DARTS', pad, img.height + band * 0.47);
+    g.fillStyle = '#f0f0f2';
+    g.font = '600 ' + Math.round(band * 0.19) + 'px Montserrat, sans-serif';
+    g.fillText((story.venue + ' · ' + shortDate(story.startedAt)).toUpperCase(), pad, img.height + band * 0.8);
+    var blob = await new Promise(function (resolve) { canvas.toBlob(resolve, 'image/jpeg', 0.9); });
+    return new File([blob], filename, { type: 'image/jpeg' });
+  }
+
+  /**
+   * Share the file itself -- one tap opens the phone's own list of apps, a second picks one --
+   * so it plays wherever it is sent and never expires, with the pub and the brand in it.
+   */
+  async function share(makeFile, text, button) {
+    button.disabled = true;
+    try {
+      var file = await makeFile();
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text: text });
+      } else {
+        saveBlob(file);
+        toast('Saved. Share it from your downloads.');
+      }
+    } catch (e) {
+      if (!e || e.name !== 'AbortError') toast('That didn’t work. Try Save instead.');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function save(makeFile, fallbackUrl, button) {
+    button.disabled = true;
+    try {
+      saveBlob(await makeFile());
+    } catch (e) {
+      window.open(fallbackUrl, '_blank', 'noopener');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  /** What a share says alongside the file: always the pub and the brand. */
+  function shareText(what) {
+    return what + ' at ' + story.venue + ' · Hawktivity Darts';
+  }
+
+  function mediaButtons(url, makeFile, text) {
+    var row = el('div', { class: 'actions' });
+    var saveBtn = el('button', { class: 'btn', type: 'button', text: 'Save' });
+    var shareBtn = el('button', { class: 'btn primary', type: 'button', text: 'Share' });
+    saveBtn.addEventListener('click', function () { save(makeFile, url, saveBtn); });
+    shareBtn.addEventListener('click', function () { share(makeFile, text, shareBtn); });
+    row.appendChild(saveBtn);
+    row.appendChild(shareBtn);
+    return row;
+  }
+
+  // ------------------------------------------------------------------ pieces
+
+  function clipCard(h, opts) {
+    var card = el('article', { class: 'clip' });
+    if (h.video) {
+      var v = el('video', { controls: '', playsinline: '', preload: opts && opts.eager ? 'metadata' : 'none' });
+      if (h.thumbnail) v.setAttribute('poster', h.thumbnail);
+      if (opts && opts.eager) { v.muted = true; v.setAttribute('muted', ''); }
+      v.src = h.video;
+      card.appendChild(v);
+    } else {
+      card.appendChild(el('div', { class: 'noclip', text: 'This clip is no longer available' }));
+    }
+    var who = nameOf(h.player);
+    var cap = el('div', { class: 'cap' }, [
+      el('div', { class: 'who', text: who }),
+      el('div', { class: 'what', text: h.label }),
+      el('div', { class: 'where', text: [h.gameName, story.venue].filter(Boolean).join(' · ') })
+    ]);
+    if (h.video) {
+      var clipName = slug(story.venue + ' ' + who + ' ' + h.label) + '.mp4';
+      cap.appendChild(mediaButtons(h.video, function () { return fileFrom(h.video, clipName); },
+        shareText(who + ' – ' + h.label)));
+    }
+    card.appendChild(cap);
+    return card;
+  }
+
+  function stat(value, label) {
+    return el('div', { class: 'stat' }, [el('div', { class: 'v', text: String(value) }), el('div', { class: 'k', text: label })]);
+  }
+
+  function drawBoard(me, everyone) {
+    var host = $('board');
+    clear(host);
+    var s = svg('svg', { viewBox: '-1.2 -1.2 2.4 2.4', role: 'img', 'aria-label': 'A dartboard with a dot where each dart landed' });
+
+    function wedge(r0, r1, a0, a1, fill) {
+      var rad = function (d) { return (d - 90) * Math.PI / 180; };
+      var p = function (r, a) { return (r * Math.cos(rad(a))).toFixed(4) + ' ' + (r * Math.sin(rad(a))).toFixed(4); };
+      var d = 'M' + p(r0, a0) + ' L' + p(r1, a0) + ' A' + r1 + ' ' + r1 + ' 0 0 1 ' + p(r1, a1) +
+              ' L' + p(r0, a1) + ' A' + r0 + ' ' + r0 + ' 0 0 0 ' + p(r0, a0) + ' Z';
+      s.appendChild(svg('path', { d: d, fill: fill }));
+    }
+
+    s.appendChild(svg('circle', { cx: 0, cy: 0, r: 1.13, fill: '#0e0e12' }));
+    for (var i = 0; i < 20; i++) {
+      var a0 = i * 18 - 9, a1 = a0 + 18, dark = i % 2 === 0;
+      wedge(RING.bullOut, RING.trebleIn, a0, a1, dark ? '#1d1d24' : '#2b2b33');
+      wedge(RING.trebleIn, RING.trebleOut, a0, a1, dark ? '#5b2725' : '#24432c');
+      wedge(RING.trebleOut, RING.doubleIn, a0, a1, dark ? '#1d1d24' : '#2b2b33');
+      wedge(RING.doubleIn, 1, a0, a1, dark ? '#5b2725' : '#24432c');
+      var t = (i * 18 - 90) * Math.PI / 180;
+      var label = svg('text', {
+        x: (1.075 * Math.cos(t)).toFixed(3), y: (1.075 * Math.sin(t)).toFixed(3),
+        'text-anchor': 'middle', 'dominant-baseline': 'central', fill: '#9b9ba4',
+        'font-size': '0.09', 'font-family': 'Montserrat, sans-serif', 'font-weight': '600'
+      });
+      label.textContent = NUMBER_ORDER[i];
+      s.appendChild(label);
+    }
+    s.appendChild(svg('circle', { cx: 0, cy: 0, r: RING.bullOut, fill: '#24432c' }));
+    s.appendChild(svg('circle', { cx: 0, cy: 0, r: RING.bullIn, fill: '#5b2725' }));
+
+    (everyone || []).forEach(function (pt) {
+      s.appendChild(svg('circle', { cx: pt[0], cy: pt[1], r: 0.018, fill: '#9b9ba4', 'fill-opacity': '0.45' }));
+    });
+    me.forEach(function (pt) {
+      s.appendChild(svg('circle', { cx: pt[0], cy: pt[1], r: 0.026, fill: '#f0f0f2', 'fill-opacity': '0.9', stroke: '#c0504b', 'stroke-width': '0.008' }));
+    });
+    host.appendChild(s);
+  }
+
+  // ------------------------------------------------------------------ render
+
+  function render() {
+    var me = player(view);
+    var mine = view === story.you;
+    var their = mine ? 'Your' : possessive(me.name);
+    document.title = possessive(me.name) + ' night at ' + story.venue;
+
+    // Switcher: everyone in the group, the link's owner first.
+    var sel = $('switch');
+    clear(sel);
+    story.players.slice().sort(function (a, b) { return (b.key === story.you) - (a.key === story.you); }).forEach(function (p) {
+      var o = el('option', { value: p.key, text: p.key === story.you ? p.name + ' (you)' : p.name });
+      if (p.key === view) o.selected = true;
+      sel.appendChild(o);
+    });
+
+    var viewing = $('viewing');
+    clear(viewing);
+    if (!mine) {
+      viewing.appendChild(document.createTextNode('You’re looking at ' + possessive(me.name) + ' night. '));
+      var back = el('button', { type: 'button', text: 'Back to yours' });
+      back.addEventListener('click', function () { setView(story.you); });
+      viewing.appendChild(back);
+      viewing.classList.remove('hidden');
+    } else {
+      viewing.classList.add('hidden');
+    }
+
+    // Hero
+    $('hero-name').textContent = possessive(me.name) + ' night';
+    var gamesPlayed = story.games.filter(function (g) { return g.completed; }).length;
+    $('hero-when').textContent = [story.venue, longDay(story.startedAt),
+      plural(story.players.length, 'player'), plural(gamesPlayed, 'game')].filter(Boolean).join(' · ');
+    $('title-eyebrow').textContent = (mine ? 'Your' : possessive(me.name)) + ' title tonight';
+    $('title-name').textContent = me.title.name;
+    $('title-why').textContent = me.title.why;
+
+    // Best moment
+    var best = me.bestMoment && story.highlights.filter(function (h) { return h.id === me.bestMoment; })[0];
+    $('best').classList.toggle('hidden', !best);
+    if (best) {
+      $('best-h').textContent = their + ' best moment';
+      var bc = $('best-clip');
+      clear(bc);
+      bc.appendChild(clipCard(best, { eager: true }));
+    }
+
+    // Numbers: the six that say most, misses left out.
+    $('numbers-h').textContent = their + ' numbers';
+    var st = me.stats, tiles = $('stats');
+    clear(tiles);
+    tiles.appendChild(stat(st.wins + '/' + st.finished, st.wins === 1 ? 'Win' : 'Wins'));
+    tiles.appendChild(stat(st.threeDartAverage != null ? st.threeDartAverage : '–', '3-dart avg'));
+    tiles.appendChild(stat(st.bestVisit, 'Best visit'));
+    if (st.oneEighties > 0) tiles.appendChild(stat(st.oneEighties, '180s'));
+    tiles.appendChild(stat(st.bulls, st.bulls === 1 ? 'Bull' : 'Bulls'));
+    tiles.appendChild(stat(st.trebles, st.trebles === 1 ? 'Treble' : 'Trebles'));
+    if (st.oneEighties === 0) tiles.appendChild(stat(st.tons, st.tons === 1 ? 'Ton+' : 'Tons+'));
+    tiles.appendChild(stat(st.darts, 'Darts'));
+    tiles.appendChild(stat(st.favouriteNumber ? st.favouriteNumber.label : '–', 'Favourite'));
+
+    // Board
+    $('heat').classList.toggle('hidden', me.heat.length === 0);
+    if (me.heat.length) {
+      $('heat-title').textContent = 'Where ' + (mine ? 'your' : possessive(me.name)) + ' darts landed';
+      $('heat-sub').textContent = st.favouriteNumber
+        ? 'Most hit: ' + st.favouriteNumber.label + ' (' + plural(st.favouriteNumber.hits, 'dart') + ')'
+        : '';
+      var others = $('heat-all').checked
+        ? story.players.filter(function (p) { return p.key !== view; }).reduce(function (a, p) { return a.concat(p.heat); }, [])
+        : null;
+      drawBoard(me.heat, others);
+    }
+
+    // Games
+    var gl = $('games');
+    clear(gl);
+    $('games-h').textContent = their + ' games';
+    // Finished games only: one abandoned halfway has no result worth a row.
+    var finished = me.games.filter(function (pg) {
+      return story.games.some(function (x) { return x.key === pg.game && x.completed; });
+    });
+    finished.forEach(function (pg) {
+      var g = story.games.filter(function (x) { return x.key === pg.game; })[0];
+      var medal = el('div', { class: 'medal' + (pg.rank && pg.rank <= 3 ? ' r' + pg.rank : ' rn'),
+        text: pg.rank ? (pg.rank <= 3 ? String(pg.rank) : ordinal(pg.rank)) : '–' });
+      var winners = g.winners.map(nameOf);
+      var sub = !g.completed ? 'Not finished'
+        : pg.rank === 1 ? (winners.length > 1 ? 'Won, with ' + winners.filter(function (n) { return n !== me.name; }).join(' & ') : (mine ? 'You won' : me.name + ' won'))
+        : pg.rank ? ordinal(pg.rank) + ' of ' + pg.of + (winners.length ? ' · won by ' + winners.join(' & ') : '')
+        : 'Played';
+      if (g.durationMinutes) sub += ' · ' + plural(g.durationMinutes, 'min');
+      gl.appendChild(el('li', { class: 'game' }, [medal, el('div', null, [
+        el('div', { class: 'gname', text: g.name }), el('div', { class: 'gsub', text: sub })
+      ])]));
+    });
+    $('games-sec').classList.toggle('hidden', finished.length === 0);
+
+    // Rival
+    var rv = me.rival;
+    $('rival-sec').classList.toggle('hidden', !rv);
+    if (rv) {
+      $('rival-h').textContent = their + ' rival';
+      var box = $('rival');
+      clear(box);
+      var rn = nameOf(rv.player);
+      var line = rv.beat === rv.lost
+        ? 'All square: ' + plural(rv.beat, 'game') + ' each, from ' + plural(rv.played, 'game') + ' together.'
+        : rv.beat > rv.lost
+          ? (mine ? 'You' : me.name) + ' finished ahead in ' + rv.beat + ' of ' + plural(rv.played, 'game') + '.'
+          : rn + ' finished ahead in ' + rv.lost + ' of ' + plural(rv.played, 'game') + '. Rematch?';
+      box.appendChild(el('div', { class: 'vs', text: (mine ? 'You' : me.name) + ' v ' + rn }));
+      box.appendChild(el('p', { class: 'muted', text: line }));
+      var bar = el('div', { class: 'score-line', 'aria-hidden': 'true' });
+      for (var i = 0; i < rv.played; i++) {
+        bar.appendChild(el('span', { class: i < rv.beat ? 'won' : i < rv.beat + rv.lost ? 'lost' : '', text: i < rv.beat ? 'W' : i < rv.beat + rv.lost ? 'L' : '=' }));
+      }
+      if (rv.played <= 12) box.appendChild(bar);
+    }
+
+    // Achievements
+    var badges = $('badges');
+    clear(badges);
+    $('ach-h').textContent = their + ' achievements';
+    me.achievements.forEach(function (a) {
+      var gameNames = [];
+      a.games.forEach(function (gk) {
+        var g = story.games.filter(function (x) { return x.key === gk; })[0];
+        if (g && gameNames.indexOf(g.name) < 0) gameNames.push(g.name);
+      });
+      var name = el('div', { class: 'bname', text: a.name });
+      if (a.count > 1) name.appendChild(el('span', { class: 'muted', text: ' ×' + a.count }));
+      badges.appendChild(el('div', { class: 'badge' }, [
+        el('div', { class: 'crest', 'aria-hidden': 'true', text: a.name.split(/[\s,]+/).filter(Boolean).slice(0, 2).map(function (w) { return w[0]; }).join('') }),
+        el('div', null, [
+          name,
+          el('div', { class: 'bdesc', text: [a.description, gameNames.join(', ')].filter(Boolean).join(' · ') })
+        ])
+      ]));
+    });
+    $('ach-sec').classList.toggle('hidden', me.achievements.length === 0);
+
+    renderReel();
+
+    // Group photo
+    $('photo-sec').classList.toggle('hidden', !story.selfie);
+    if (story.selfie) {
+      $('photo').src = story.selfie;
+      var pa = $('photo-actions');
+      clear(pa);
+      var photoName = slug(story.venue) + '-group.jpg';
+      var row = mediaButtons(story.selfie, function () { return brandedPhoto(story.selfie, photoName); },
+        shareText('Our night of darts'));
+      while (row.firstChild) pa.appendChild(row.firstChild);
+    }
+
+    // Leaderboard
+    var lb = $('leaderboard');
+    clear(lb);
+    story.leaderboard.forEach(function (r) {
+      var p = player(r.player);
+      var name = el('div', { class: 'pname', text: p.name });
+      if (r.player === view) name.appendChild(el('span', { class: 'you-pill', text: mine ? 'You' : 'Viewing' }));
+      var dots = el('span', { class: 'dots', 'aria-label': plural(r.gold, 'win') });
+      for (var g = 0; g < r.gold; g++) dots.appendChild(el('i', { style: 'background: var(--gold)' }));
+      for (var sv = 0; sv < r.silver; sv++) dots.appendChild(el('i', { style: 'background: var(--silver)' }));
+      for (var b = 0; b < r.bronze; b++) dots.appendChild(el('i', { style: 'background: var(--bronze)' }));
+      if (dots.childNodes.length) name.appendChild(dots);
+      var pts = el('div', { class: 'pts', text: String(r.points) });
+      pts.appendChild(el('small', { text: 'pts' }));
+      lb.appendChild(el('li', { class: 'row' + (r.player === view ? ' me' : '') }, [
+        el('div', { class: 'pos', text: String(r.position) }), name, pts
+      ]));
+    });
+    $('lb-sec').classList.toggle('hidden', story.leaderboard.length < 2);
+
+    // Review
+    $('review').classList.toggle('hidden', !story.reviewUrl);
+    if (story.reviewUrl) {
+      $('review-text').textContent = 'Tell people what a night at ' + story.venue + ' is like.';
+      $('review-link').href = story.reviewUrl;
+    }
+
+    $('expiry').textContent = story.expiresAt
+      ? 'This page, its clips and the photo are deleted on ' + shortDate(story.expiresAt) + '.'
+      : '';
+  }
+
+  function renderReel() {
+    var chips = $('chips'), reel = $('reel');
+    clear(chips);
+    clear(reel);
+    if (story.highlights.length === 0) { $('reel-sec').classList.add('hidden'); return; }
+    $('reel-sec').classList.remove('hidden');
+
+    var options = [{ key: 'all', label: 'Everyone' }];
+    story.players.forEach(function (p) {
+      var n = story.highlights.filter(function (h) { return h.player === p.key; }).length;
+      if (n > 0) options.push({ key: p.key, label: (p.key === story.you ? 'You' : p.name) + ' ' + n });
+    });
+    // Mine first.
+    options.sort(function (a, b) { return (b.key === view) - (a.key === view); });
+    if (!filter || !options.some(function (o) { return o.key === filter; })) {
+      filter = options.some(function (o) { return o.key === view; }) ? view : 'all';
+    }
+    options.forEach(function (o) {
+      var c = el('button', { class: 'chip', type: 'button', 'aria-pressed': String(o.key === filter), text: o.label });
+      c.addEventListener('click', function () { filter = o.key; renderReel(); });
+      chips.appendChild(c);
+    });
+    story.highlights
+      .filter(function (h) { return filter === 'all' || h.player === filter; })
+      .forEach(function (h) { reel.appendChild(clipCard(h)); });
+  }
+
+  function setView(key) {
+    view = key;
+    filter = null;
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ------------------------------------------------------------------ load
+
+  function problem(title, text, canRetry) {
+    $('loading').classList.add('hidden');
+    $('story').classList.add('hidden');
+    $('problem').classList.remove('hidden');
+    $('problem-title').textContent = title;
+    $('problem-text').textContent = text;
+    $('retry').classList.toggle('hidden', !canRetry);
+  }
+
+  async function load() {
+    $('problem').classList.add('hidden');
+    $('loading').classList.remove('hidden');
+
+    if (isLocal && window.STORY_DEMO) {
+      story = window.STORY_DEMO;
+    } else {
+      if (!/^[A-Za-z0-9_-]{43}$/.test(token)) {
+        problem('Link not recognised', 'This link doesn’t open anything. Check you used the whole link from the email.');
+        return;
+      }
+      try {
+        var response = await fetch(cfg.storyUrl, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', apikey: cfg.anonKey, authorization: 'Bearer ' + cfg.anonKey },
+          body: JSON.stringify({ token: token })
+        });
+        var body = await response.json().catch(function () { return {}; });
+        if (response.status === 404) { problem('Link not recognised', 'This link doesn’t open anything. Check you used the whole link from the email.'); return; }
+        if (response.status === 410) { problem('These highlights have gone', 'Clips and photos are kept for 30 days after a game, then deleted for good.'); return; }
+        if (!response.ok) throw new Error(body.error || response.status);
+        story = body;
+      } catch (e) {
+        problem('Couldn’t load your night', 'Something went wrong getting it just now. Try again in a minute.', true);
+        return;
+      }
+    }
+
+    view = story.you;
+    render();
+    $('loading').classList.add('hidden');
+    $('story').classList.remove('hidden');
+  }
+
+  // A local copy exposes the photo branding for checking by hand. A deployed copy does not.
+  if (isLocal) window.__storyTest = { brandedPhoto: brandedPhoto };
+
+  $('retry').addEventListener('click', load);
+  // A second link opened in the same tab changes only the #token, which browsers treat as the
+  // same page: without this it would go on showing the first link's night.
+  window.addEventListener('hashchange', function () { window.location.reload(); });
+  $('switch').addEventListener('change', function (e) { setView(e.target.value); });
+  $('heat-all').addEventListener('change', render);
+
+  // A local copy can be walked through with made-up data: story.html?demo on localhost.
+  if (isLocal && new URLSearchParams(window.location.search).has('demo')) {
+    var s = document.createElement('script');
+    s.src = 'story-demo.js';
+    s.onload = load;
+    s.onerror = function () { problem('No demo data', 'story-demo.js did not load.'); };
+    document.body.appendChild(s);
+  } else {
+    load();
+  }
+})();
+</script>
+</body>
+</html>
