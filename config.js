@@ -3,11 +3,9 @@
  *
  * Both values here are meant to be public. The anon key is a publishable key:
  * on its own it grants nothing, because every table the suite touches is behind
- * row-level security scoped to that suite's own auth user, and the two tables
- * that matter here -- staff_credentials and unlock_attempts -- have no policy at
- * all, so nothing outside the unlock Edge Function can read them. The endpoint
- * itself is useless without a payload signed by a venue's own key and a real
- * staff password.
+ * row-level security scoped to that suite's own auth user. The Edge Functions
+ * below are useless without a payload signed by a venue's own key, and none of
+ * them takes money: card payments happen on Stripe's own page.
  *
  * Chosen by hostname rather than baked in, so the same commit can serve the
  * production domain and a preview without a build step.
@@ -37,22 +35,25 @@
   var project = host === 'pay.hawktivity.com' ? PROJECTS.prod : PROJECTS.dev;
 
   window.PAY_CONFIG = {
+    // Despite its name, the page only ever asks this one to `describe` a code: what it
+    // costs, whether it is paid for, whether the board has picked it up. The unlock a
+    // member of staff used to do with it was retired on 14 Nov 2026 and now answers 410.
     functionUrl: project.url ? project.url + '/functions/v1/unlock-session' : '',
 
     // Where register.html posts. Separate endpoint because it is a different act:
-    // registering costs nothing and needs no staff password, so it must not sit
-    // behind -- or anywhere near -- the one that takes money.
+    // registering costs nothing, so it must not sit behind -- or anywhere near --
+    // the ones that deal in payments.
     registerUrl: project.url ? project.url + '/functions/v1/register-player' : '',
 
-    // Where "pay by card" posts. A third endpoint for the same reason as the second:
-    // it starts a payment and unlocks nothing, so it has no business sharing a door
-    // with the one that checks a staff password. Whether the button appears at all is
-    // not decided here -- the describe response says whether this venue sells that way.
+    // Where "pay by card" posts. Its own endpoint: it starts a payment and unlocks
+    // nothing itself -- the board starts when Stripe's webhook records the sale. Whether
+    // the button appears at all is not decided here -- the describe response says
+    // whether this code can be paid for.
     checkoutUrl: project.url ? project.url + '/functions/v1/create-checkout' : '',
 
     // Where "Have a voucher?" posts: a one-time code the pub handed out, instead of paying.
-    // Its own endpoint, like the card one: it spends a code and unlocks, and checks no staff
-    // password. Whether the box shows at all is asked of the same endpoint (action
+    // Its own endpoint, like the card one: it spends a code and unlocks the board. Whether
+    // the box shows at all is asked of the same endpoint (action
     // 'available'): only for a new session at a venue that has unspent codes.
     voucherUrl: project.url ? project.url + '/functions/v1/redeem-voucher' : '',
 
@@ -64,8 +65,8 @@
     environment: project === PROJECTS.prod ? 'prod' : 'dev'
   };
 
-  // A local copy is driven from a fake so the five screens can be walked through
-  // without a Supabase project or a real staff password. Deliberately gated on
+  // A local copy is driven from a fake so the screens can be walked through
+  // without a Supabase project, Stripe or a real voucher. Deliberately gated on
   // the hostname: a deployed copy has no route to this code at all.
   if (isLocal && new URLSearchParams(window.location.search).has('mock')) {
     document.write('<script src="mock.js"><\/script>');

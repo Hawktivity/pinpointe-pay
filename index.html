@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#14141a">
 <meta name="robots" content="noindex, nofollow">
-<title>Pay at the bar</title>
+<title>Pay for the board</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -122,14 +122,7 @@ button:focus-visible, input:focus-visible {
   outline: 3px solid var(--brick-lit); outline-offset: 2px;
 }
 
-/* ---- the staff bar ---------------------------------------------------- */
-.staff-bar {
-  background: var(--brick); color: #fff; text-align: center;
-  font: 600 11px/1 var(--body); letter-spacing: .24em; text-transform: uppercase;
-  padding: 14px 12px; margin: -22px -24px 24px;
-}
-
-/* ---- the password field ---------------------------------------------- */
+/* ---- the voucher field ----------------------------------------------- */
 .field {
   display: flex; align-items: center; gap: 10px;
   height: 62px; border: 2px solid #3d3d47; border-radius: 8px; background: #1d1d24;
@@ -143,11 +136,6 @@ button:focus-visible, input:focus-visible {
 }
 .field input::placeholder { color: #6f6f79; letter-spacing: normal; font-size: 15px; }
 .field input:focus { outline: none; }
-.reveal {
-  flex: 0 0 auto; width: 46px; height: 46px; border-radius: 6px;
-  background: none; display: grid; place-items: center; opacity: .6;
-}
-.reveal svg { width: 22px; height: 22px; display: block; }
 .hint { font: 500 12px/1.5 var(--body); color: var(--dimmer); margin-top: 10px; }
 
 /* ---- notices ---------------------------------------------------------- */
@@ -192,10 +180,6 @@ button:focus-visible, input:focus-visible {
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
 
 [hidden] { display: none !important; }
-.sr {
-  position: absolute; width: 1px; height: 1px; overflow: hidden;
-  clip: rect(0 0 0 0); white-space: nowrap;
-}
 </style>
 </head>
 <body>
@@ -214,7 +198,7 @@ button:focus-visible, input:focus-visible {
 
     <div class="stack" style="margin-top:30px">
       <div>
-        <div class="amount-label" id="pay-amount-label">To pay at the bar</div>
+        <div class="amount-label" id="pay-amount-label">To pay</div>
         <div class="amount" id="pay-amount">&mdash;</div>
       </div>
 
@@ -230,28 +214,20 @@ button:focus-visible, input:focus-visible {
       </div>
 
       <div>
-        <h1 id="pay-heading">Show this at the bar</h1>
-        <p id="pay-blurb">
-          Your server takes the payment, then taps below and enters their own
-          password to start the board.
-        </p>
+        <h1 id="pay-heading">Pay to start the board</h1>
+        <p id="pay-blurb">Pay by card here and the board starts on its own.</p>
       </div>
 
       <!--
-        Two ways to buy the same thing. The card button is hidden unless the describe
-        response says this venue sells that way, and the bar button never moves or
-        changes what it does: a server taps it dozens of times a night and it is still
-        one tap to the password, whether or not a card button appeared above it.
-      -->
-      <!--
-        Splitting it: one primary button and at most one quiet one under it. Which two, and
-        for how much, depends on how far the group has got -- see arrangeCardButtons.
+        Card is the only way to pay (a voucher, below, is the other way in). One primary
+        button and at most one quiet one under it. Which two, and for how much, depends on
+        how far the group has got -- see arrangeCardButtons. Hidden until describe has said
+        this code can be paid for; see offerCard and cannotTakePayment.
       -->
       <div class="tight">
         <button class="cta" id="pay-card" hidden>Pay by card</button>
         <button class="ghost" id="pay-share" type="button" hidden>Pay just my share</button>
         <p class="hint" id="split-hint" hidden>Splitting it? Everyone scans the same code on the board and pays their share.</p>
-        <button class="cta" id="to-staff">Paid &mdash; unlock</button>
         <div id="pay-notice-slot" hidden></div>
       </div>
 
@@ -276,45 +252,6 @@ button:focus-visible, input:focus-visible {
     </div>
   </section>
 
-  <!-- ============ staff: password ============ -->
-  <section id="view-staff" hidden>
-    <div class="staff-bar">Staff &mdash; your password</div>
-
-    <div class="stack">
-      <div>
-        <h1 class="small" id="staff-amount">&mdash; taken?</h1>
-        <p id="staff-detail">&mdash;</p>
-      </div>
-
-      <div>
-        <label class="sr" for="password">Your staff password</label>
-        <div class="field" id="password-field">
-          <input id="password" type="password" inputmode="text" autocomplete="off"
-                 autocapitalize="none" autocorrect="off" spellcheck="false"
-                 enterkeyhint="go" placeholder="Password">
-          <button class="reveal" id="reveal" type="button"
-                  aria-label="Show password" aria-pressed="false">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#c9c9d1" stroke-width="1.7">
-              <path d="M1.8 12S5.4 5.5 12 5.5 22.2 12 22.2 12 18.6 18.5 12 18.5 1.8 12 1.8 12Z"/>
-              <circle cx="12" cy="12" r="3.2"/>
-            </svg>
-          </button>
-        </div>
-        <p class="hint">
-          Your own password, not the guest&rsquo;s. Every unlock is recorded against
-          your name.
-        </p>
-      </div>
-
-      <div id="staff-notice-slot" hidden></div>
-
-      <div class="tight">
-        <button class="cta" id="unlock">Unlock the board</button>
-        <button class="ghost" id="staff-back">Not paid &mdash; go back</button>
-      </div>
-    </div>
-  </section>
-
   <!-- ============ unlocked ============ -->
   <section id="view-done" hidden>
     <div class="stack" style="margin-top:40px">
@@ -332,7 +269,7 @@ button:focus-visible, input:focus-visible {
       <div class="rows">
         <div class="row"><span class="k" id="done-amount-label">Paid</span><span class="v" id="done-amount">&mdash;</span></div>
         <div class="row"><span class="k" id="done-minutes-label">Time bought</span><span class="v" id="done-minutes">&mdash;</span></div>
-        <div class="row"><span class="k" id="done-by-label">Approved by</span><span class="v" id="done-by">&mdash;</span></div>
+        <div class="row"><span class="k" id="done-by-label">Paid by</span><span class="v" id="done-by">&mdash;</span></div>
       </div>
 
       <!--
@@ -421,7 +358,12 @@ button:focus-visible, input:focus-visible {
   // ---------------------------------------------------------------------------
   // Where to ask. Both values are publishable by design: the anon key grants
   // nothing on its own, because every table is behind row-level security scoped
-  // to a suite's own auth user, and staff password hashes have no policy at all.
+  // to a suite's own auth user.
+  //
+  // FUNCTION_URL is unlock-session, and this page only ever asks it to `describe` a
+  // code. The unlock a member of staff used to do from this phone was retired on
+  // 14 Nov 2026 -- card, a share by card, and a voucher are the only ways in now --
+  // and the endpoint refuses it with 410 `bar_retired`.
   // ---------------------------------------------------------------------------
   var CONFIG = window.PAY_CONFIG || {};
   var FUNCTION_URL = CONFIG.functionUrl || '';
@@ -447,7 +389,7 @@ button:focus-visible, input:focus-visible {
   var SPLIT_POLL_TRIES = CONFIG.splitPollTries || 200;
 
   var el = function (id) { return document.getElementById(id); };
-  var views = ['loading', 'pay', 'staff', 'done', 'share', 'error'];
+  var views = ['loading', 'pay', 'done', 'share', 'error'];
 
   function show(name) {
     views.forEach(function (v) { el('view-' + v).hidden = v !== name; });
@@ -478,8 +420,8 @@ button:focus-visible, input:focus-visible {
     box.appendChild(document.createTextNode(body));
     slot.appendChild(box);
     slot.hidden = false;
-    // Announced, because a server who has just tapped Unlock is looking at the
-    // button, not at the space above it.
+    // Announced, because a guest who has just tapped a button is looking at the
+    // button, not at the space around it.
     box.setAttribute('role', 'alert');
   }
 
@@ -493,8 +435,8 @@ button:focus-visible, input:focus-visible {
   // ---------------------------------------------------------------------------
   // The code arrives in the URL. It is never trusted for anything shown on
   // screen: the amount comes back from `describe`, which checks the signature
-  // first. A forged link claiming two pounds would otherwise have a server take
-  // two pounds before anybody validated it.
+  // first. A forged link claiming two pounds would otherwise have this page agree
+  // with it before anybody validated it.
   // ---------------------------------------------------------------------------
   function codeFromUrl() {
     var params = new URLSearchParams(window.location.search);
@@ -538,7 +480,7 @@ button:focus-visible, input:focus-visible {
 
   /**
    * The card endpoint. A different door on purpose: it starts a payment and unlocks
-   * nothing, so it does not share one with the call that checks a staff password.
+   * nothing itself -- the board starts when Stripe's webhook records the sale.
    */
   function callCheckout(body) {
     if (typeof CONFIG.checkoutTransport === 'function') {
@@ -657,13 +599,12 @@ button:focus-visible, input:focus-visible {
     // Every branch on this page used to test for 'ext' and nothing else, so a join -- which
     // buys ONE SEAT on a session already running and adds no time at all -- was shown the
     // wording written for a brand new booking. Measured on the board 23 Sep 2026: a joiner's
-    // phone offered "Players 1 / Time 45 min" and said the server's password would "start the
-    // board", which was already running.
+    // phone offered "Players 1 / Time 45 min" and promised to "start the board", which was
+    // already running.
     if (data.kind === 'join') {
       el('pay-players-label').textContent = 'Joining';
       el('pay-minutes-label').textContent = 'Time left to play';
     }
-    el('pay-blurb').textContent = barBlurb(data.kind);
 
     if (data.codeExpired) {
       // Too old to start a payment, but some of the group have paid into it, so describe
@@ -674,13 +615,9 @@ button:focus-visible, input:focus-visible {
       return;
     }
 
-    // Offered after the kind wording above, because it replaces those sentences rather
-    // than adding to them: a screen that tells a guest both to pay here and to show this
-    // at the bar is how one board gets paid for twice.
+    // Writes the heading and the blurb as well as the buttons: what they say depends on
+    // whether this code can be paid for here at all.
     offerCard(data);
-
-    el('staff-amount').textContent = money(data.amountMinor, data.currency) + ' taken?';
-    el('staff-detail').textContent = staffDetail(data);
 
     show('pay');
     offerVoucher(data);
@@ -707,31 +644,12 @@ button:focus-visible, input:focus-visible {
    * What this payment is: a new booking, extra time, or one more player.
    *
    * The describe call is the one that carries it, and the page keeps that response in
-   * `session`. The unlock call does not send a kind at all, so anything reading it straight off
-   * an unlock response silently gets undefined and falls through to the new-booking wording --
+   * `session`. Not every other endpoint's answer sends a kind, so anything reading it straight
+   * off one of those silently gets undefined and falls through to the new-booking wording --
    * which is the bug this exists to stop coming back.
    */
   function kindOf(data) {
     return (data && data.kind) || (session && session.kind) || 'new';
-  }
-
-  /**
-   * The line the server reads back before taking money.
-   *
-   * It said "1 players" on every join -- a join is always exactly one head, so the plural bug
-   * showed every single time -- and carried nothing to say the money was for one extra person
-   * rather than a 45-minute session for one. Seen on the board 23 Sep 2026.
-   */
-  function staffDetail(data) {
-    var heads = data.players + (Number(data.players) === 1 ? ' player' : ' players');
-    var kind = kindOf(data);
-
-    if (kind === 'join') {
-      return heads + ' joining · ' + duration(data.minutes) + ' left to play';
-    }
-
-    return heads + ' · ' + duration(data.minutes)
-      + (kind === 'ext' ? ' · extra time' : '');
   }
 
   /** A suite id is a uuid; only the readable tail is worth putting on screen. */
@@ -739,106 +657,7 @@ button:focus-visible, input:focus-visible {
     return String(id).slice(0, 8);
   }
 
-  // ---- 2. staff password --------------------------------------------------
-  var unlocking = false;
-
-  function unlock() {
-    if (unlocking) return;
-
-    var password = el('password').value;
-    if (!password.trim()) {
-      notice('staff-notice-slot', 'Enter your password',
-        'This is your own staff password. Ask a manager if you have not been given one.');
-      el('password').focus();
-      return;
-    }
-
-    unlocking = true;
-    el('unlock').disabled = true;
-    el('unlock').textContent = 'Checking…';
-    el('staff-notice-slot').hidden = true;
-    el('password-field').classList.remove('bad');
-
-    call({ action: 'unlock', code: code, password: password }).then(function (result) {
-      var data = result.data || {};
-      unlocking = false;
-      el('unlock').disabled = false;
-      el('unlock').textContent = 'Unlock the board';
-
-      if (data.ok) {
-        el('password').value = '';
-
-        // This block had no kind branch at all, so it reported what was BOUGHT as though it
-        // were what is on the clock. Proved on a real extension, 23 Sep 2026: 30 minutes bought
-        // with 9 still to run, the phone said "30 min on the clock", the board read 00:38:01.
-        // On a join it is worse -- a join buys a seat and moves the clock by nothing.
-        //
-        // The kind comes from the session the describe call returned, not from this response:
-        // the unlock endpoint does not send one, so branching on data.kind here would have
-        // quietly done nothing and left the wrong wording in place.
-        var kind = kindOf(data);
-
-        el('done-title').textContent = kind === 'join' ? 'You’re in' : 'Board unlocked';
-        el('done-blurb').textContent =
-          kind === 'join'
-            ? 'You’re on the board for the rest of the session. Go and throw.'
-            : kind === 'ext'
-              ? 'Another ' + duration(data.minutes) + ' added to the clock. Go and throw.'
-              : duration(data.minutes) + ' on the clock. Go and throw.';
-        el('done-amount').textContent = money(data.amountMinor, data.currency);
-        setTimeRow(data);
-        el('done-by').textContent = (data.approvedBy || '—').toUpperCase();
-
-        // The digits are only useful if the board did not hear it over the network,
-        // so they are held back until the board has been asked and has not answered.
-        // This comment used to say as much while watchForBoard revealed them on a
-        // timer regardless -- see the note on that function.
-        if (data.fallbackToken) {
-          el('token-digits').textContent =
-            data.fallbackToken.slice(0, 3) + ' ' + data.fallbackToken.slice(3);
-          watchForBoard();
-        }
-
-        show('done');
-        return;
-      }
-
-      el('password-field').classList.add('bad');
-
-      if (data.reason === 'locked') {
-        var wait = data.retryAfterSeconds
-          ? 'Try again in ' + data.retryAfterSeconds + ' seconds.'
-          : 'Try again shortly.';
-        notice('staff-notice-slot', 'Too many wrong passwords',
-          wait + ' If you have forgotten yours, ask a manager to set a new one — '
-          + 'do not use somebody else’s.', true);
-      } else if (data.reason === 'no_staff') {
-        notice('staff-notice-slot', 'No staff passwords set up',
-          'Nobody can unlock a board at this venue yet. Ask a manager.', true);
-      } else if (data.reason === 'wrong_password') {
-        var left = typeof data.attemptsRemaining === 'number' ? data.attemptsRemaining : null;
-        notice('staff-notice-slot', 'That password didn’t work',
-          (left === null ? '' : left + (left === 1 ? ' try' : ' tries') + ' left, then this locks for a moment. ')
-          + 'If you have forgotten it, ask a manager to set a new one.');
-      } else if (data.reason === 'not_recorded') {
-        notice('staff-notice-slot', 'Payment accepted but not recorded',
-          'Tell a manager before the group plays — this session will not appear in '
-          + 'tonight’s takings.', true);
-      } else {
-        notice('staff-notice-slot', 'That didn’t work',
-          data.message || 'Try again, or ask a manager.', true);
-      }
-
-      el('password').select();
-    }).catch(function () {
-      unlocking = false;
-      el('unlock').disabled = false;
-      el('unlock').textContent = 'Unlock the board';
-      notice('staff-notice-slot', 'No connection',
-        'The payment has not been taken through this page, so nothing is lost. '
-        + 'Check the phone has signal and try again.', true);
-    });
-  }
+  // ---- 2. the board picking it up ------------------------------------------
 
   /**
    * The board normally hears about the unlock over its own connection and starts
@@ -944,9 +763,10 @@ button:focus-visible, input:focus-visible {
     }
     setTimeRow(data);
 
-    // "Approved by" names the person who took the money. A card sale had nobody, and
-    // writing "Staff" there would be a small lie in the one place a guest looks to work
-    // out who to go and ask. Nor did a voucher.
+    // Card and voucher are the only ways to pay now. "Approved by" is left for a sale a
+    // member of staff took in person before that was retired on 14 Nov 2026 -- an old code
+    // re-scanned can still be one, and describe still names who approved it. Nothing new is
+    // built on it.
     el('done-by-label').textContent = (byCard || byVoucher) ? 'Paid by' : 'Approved by';
     el('done-by').textContent = byCard ? 'CARD'
       : byVoucher ? 'VOUCHER'
@@ -958,8 +778,9 @@ button:focus-visible, input:focus-visible {
     }
 
     // The six digits matter only if the board did not hear it over the network. A card
-    // sale has no unlock response to carry them, so describe hands them over once -- and
-    // only once -- the session has actually been paid for.
+    // sale has no response of its own to carry them, so describe hands them over once --
+    // and only once -- the session has actually been paid for. A voucher's answer carries
+    // them directly.
     if (data.fallbackToken) {
       el('token-digits').textContent =
         data.fallbackToken.slice(0, 3) + ' ' + data.fallbackToken.slice(3);
@@ -971,70 +792,38 @@ button:focus-visible, input:focus-visible {
 
   // ---- 3. pay by card ------------------------------------------------------
 
-  /**
-   * What the screen says when the bar is the only way to buy.
-   *
-   * Every branch on this page used to test for 'ext' and nothing else, so a join -- which
-   * buys ONE SEAT on a session already running and adds no time at all -- was shown the
-   * wording written for a brand new booking. Measured on the board 23 Sep 2026: a joiner's
-   * phone offered "Players 1 / Time 45 min" and said the server's password would "start the
-   * board", which was already running.
-   */
-  function barBlurb(kind) {
-    if (kind === 'ext') {
-      return 'This adds more time to the session you are already playing. Your server '
-        + 'takes the payment, then enters their own password below.';
-    }
-    if (kind === 'join') {
-      return 'This adds you to the session already running — a seat for the time that is '
-        + 'left, not extra time on the clock. Your server takes the payment, then '
-        + 'enters their own password below.';
-    }
-    return 'Your server takes the payment, then taps below and enters their own '
-      + 'password to start the board.';
-  }
+  // What the screen says when nothing on it can take the money. Card is the only way to
+  // pay -- paying a member of staff in person was retired on 14 Nov 2026 -- so there is no
+  // other route to point a guest at, and a person is the only help left.
+  var CANNOT_PAY = 'This board can’t take payment right now. Ask a member of staff.';
 
   /**
    * The card button and the wording that goes with it.
    *
-   * Hidden unless describe said this venue sells that way. The endpoint would refuse it
-   * anyway, and a button that is always refused is worse than no button at all.
+   * describe says cardPayment for every code that is unpaid and still in date. When it does
+   * not, there is nothing here that can take the money, and the screen says so plainly
+   * rather than offering a button the endpoint would refuse.
    */
   function offerCard(data) {
     var available = !!data.cardPayment
       && (!!CHECKOUT_URL || typeof CONFIG.checkoutTransport === 'function');
 
     if (!available) {
-      withdrawCard(data);
+      cannotTakePayment();
       return;
     }
 
-    // Some venues sell by card alone -- their agreement says so, and unlock-session refuses
-    // a bar purchase there whatever this page shows. describe reports it; the page never
-    // assumes, because a venue with no setting at all still sells at the bar.
-    var barToo = data.barPayment !== false;
-    var context = cardContext(kindOf(data));
-
+    // Extra time and a join are bought on a board that is already running, so neither is
+    // told it will "start the board" -- the mistake the join wording was fixed for in Sep.
+    var kind = kindOf(data);
     el('pay-card').hidden = false;
     el('pay-amount-label').textContent = 'To pay';
-    el('pay-heading').textContent = barToo ? 'Pay now, or at the bar' : 'Pay to start the board';
-    // The document title is written for the bar and is wrong at a card-only venue -- it is
-    // small, and it is also the one piece of this page that follows a guest into their tab
-    // list and their history.
-    if (!barToo) document.title = 'Pay for the board';
-    el('pay-blurb').textContent = context + (barToo
-      ? 'Pay by card here and the board starts on its own, or take this screen to the bar '
-        + 'and your server will start it.'
-      // No mention of the bar, and no apology for it. A guest told "you cannot pay at the
-      // bar here" will go and try anyway, and a server who is asked often enough starts
-      // looking for a way to help -- which is the thing the venue agreed not to do.
-      : 'Pay by card here and the board starts on its own.');
-
-    // The bar route keeps its place and its single tap to the password screen wherever it
-    // exists. It only stops being the only way -- or, at a card-only venue, stops existing.
-    el('to-staff').hidden = !barToo;
-    el('to-staff').className = 'ghost';
-    el('to-staff').textContent = 'Paid at the bar — unlock';
+    el('pay-heading').textContent = kind === 'join' ? 'Pay to join'
+      : kind === 'ext' ? 'Pay for more time'
+      : 'Pay to start the board';
+    el('pay-blurb').textContent = cardContext(kind) + (kind === 'new'
+      ? 'Pay by card here and the board starts on its own.'
+      : 'Pay by card here and the board picks it up on its own.');
 
     arrangeCardButtons(data);
   }
@@ -1126,11 +915,6 @@ button:focus-visible, input:focus-visible {
       el('pay-paid-row').hidden = false;
       el('pay-paid').textContent = money(f.paid, currency) + ' of ' + money(f.total, currency);
 
-      // Half the group has paid by card; a server taking the whole price at the bar now
-      // would sell the board a second time. Their shares would come back automatically, but
-      // nobody should be steered into that.
-      el('to-staff').hidden = true;
-
       el('pay-heading').textContent = 'Pay your share';
       el('pay-blurb').textContent = cardContext(kindOf(data))
         + (f.payers === 1 ? 'One of your group has paid. ' : f.payers > 1 ? f.payers + ' of your group have paid. ' : '')
@@ -1189,7 +973,6 @@ button:focus-visible, input:focus-visible {
     el('pay-card').hidden = true;
     el('pay-share').hidden = true;
     el('split-hint').hidden = true;
-    el('to-staff').hidden = true;
     el('voucher-block').hidden = true;
 
     el('pay-amount-label').textContent = 'Still to pay';
@@ -1204,28 +987,23 @@ button:focus-visible, input:focus-visible {
   }
 
   /**
-   * Put the screen back to bar-only.
+   * Nothing on this page can take the money: describe said card is not on offer for a code
+   * that is unpaid and in date, or the card endpoint refused the venue outright.
    *
-   * Taking the button away is not enough on its own: the heading and the blurb above it
-   * are still inviting a guest to pay here, and a screen that offers a payment it has just
-   * withdrawn is worse than one that never offered it. Seen on the first run of the
-   * refused-venue case, where "Pay by card here and the board starts on its own" sat above
-   * a notice saying card payment was not available.
+   * There used to be a bar to fall back to here. There is not now, so this is an error
+   * state, not a route: the buttons go, and the heading and blurb above them stop inviting
+   * a payment -- a screen that offers a payment it has just withdrawn is worse than one that
+   * never offered it. Seen on the first run of the refused-venue case, where "Pay by card
+   * here and the board starts on its own" sat above a notice saying card payment was not
+   * available. The figures stay: they are still what is owed. A voucher box, if the venue
+   * offers one, stays too -- it is its own endpoint, and still works.
    */
-  function withdrawCard(data) {
+  function cannotTakePayment() {
     el('pay-card').hidden = true;
     el('pay-share').hidden = true;
     el('split-hint').hidden = true;
-    el('pay-paid-row').hidden = true;
-    // Whatever else is true, the bar button comes back when card is not on offer. A venue
-    // cannot be configured with neither route -- the database refuses it -- so if there is
-    // no card here, there is a bar.
-    el('to-staff').hidden = false;
-    el('pay-amount-label').textContent = 'To pay at the bar';
-    el('pay-heading').textContent = 'Show this at the bar';
-    el('pay-blurb').textContent = barBlurb(kindOf(data));
-    el('to-staff').className = 'cta';
-    el('to-staff').textContent = 'Paid — unlock';
+    el('pay-heading').textContent = 'Payment isn’t available';
+    el('pay-blurb').textContent = CANNOT_PAY;
   }
 
   var startingCheckout = false;
@@ -1303,8 +1081,8 @@ button:focus-visible, input:focus-visible {
       }
 
       if (data.reason === 'already_paid') {
-        // Somebody bought it at the bar while this screen sat open. Ask again rather than
-        // explain: describe will put the unlocked screen up.
+        // Somebody else paid for it, or spent a voucher on it, while this screen sat open.
+        // Ask again rather than explain: describe will put the unlocked screen up.
         show('loading');
         describe();
         return;
@@ -1325,22 +1103,44 @@ button:focus-visible, input:focus-visible {
         return;
       }
 
-      // A venue that does not sell this way, or a project with no Stripe keys, is not a
-      // thing to retry -- put the screen back to bar-only rather than leave a button to be
-      // tapped again under a heading that promises it works.
-      if (data.reason === 'not_enabled' || data.reason === 'not_configured') {
-        withdrawCard(session || data);
+      // A venue switched off, or a project with no Stripe keys, is not a thing to retry --
+      // take the buttons away rather than leave one to be tapped again under a heading that
+      // promises it works.
+      var noRoute = data.reason === 'not_enabled' || data.reason === 'not_configured';
+      if (noRoute) {
+        if (slotId === 'share-notice-slot') {
+          el('share-rest').hidden = true;
+        } else {
+          cannotTakePayment();
+        }
       }
 
-      notice(slotId,
-        data.reason === 'expired' ? 'This code has expired'
-          : data.reason === 'stale_code' ? 'Scan the board again'
-          : 'Card payment isn’t available',
-        (data.message
+      // The page's own words for these, not the endpoint's. create-checkout's messages were
+      // written when paying staff in person was the fallback, and a copy still running from
+      // before 14 Nov 2026 sends a guest to that route -- which no longer exists. The page
+      // and the endpoints deploy separately, so it does not wait for them to agree.
+      var title = data.reason === 'expired' ? 'This code has expired'
+        : data.reason === 'stale_code' ? 'Scan the board again'
+        : data.reason === 'stripe_error' ? 'Card payment didn’t start'
+        : 'Card payment isn’t available';
+      var detail;
+      if (noRoute) {
+        // On the pay screen the blurb above has just said to ask a member of staff.
+        detail = slotId === 'share-notice-slot'
+          ? 'Nothing has been charged. Ask a member of staff.'
+          : 'Nothing has been charged.';
+      } else if (data.reason === 'stripe_error' || !data.reason) {
+        detail = 'Nothing has been charged. Try again in a moment, or ask a member of staff.';
+      } else if (data.reason === 'not_purchasable') {
+        detail = 'This code isn’t something you can pay for here. Ask a member of staff.';
+      } else {
+        detail = data.message
           || (data.reason === 'expired' || data.reason === 'stale_code'
             ? 'Scan the code on the board again to pay.'
-            : 'Pay at the bar instead.')),
-        true);
+            : 'Nothing has been charged. Ask a member of staff.');
+      }
+
+      notice(slotId, title, detail, true);
     }).catch(function () {
       // No answer at all, so the attempt is kept: tapping the same button again is the
       // same request, and cannot hold a second share of the group's money.
@@ -1454,8 +1254,8 @@ button:focus-visible, input:focus-visible {
     el('share-hint').textContent = hint;
     el('share-hint').hidden = !hint;
 
-    // The tab title follows a guest into their tab list; "Pay at the bar" on a screen saying
-    // they have paid is the wrong thing to find there.
+    // The tab title follows a guest into their tab list; "Pay for the board" on a screen
+    // saying they have paid is the wrong thing to find there.
     document.title = 'Your share is paid';
     if (el('view-share').hidden) show('share');
   }
@@ -1644,35 +1444,6 @@ button:focus-visible, input:focus-visible {
   }
 
   // ---- wiring -------------------------------------------------------------
-  el('to-staff').addEventListener('click', function () {
-    show('staff');
-    // Not focused automatically: the phone is still being handed over, and a
-    // keyboard springing up while it moves is how a password gets mistyped.
-  });
-
-  el('staff-back').addEventListener('click', function () {
-    el('password').value = '';
-    el('staff-notice-slot').hidden = true;
-    el('password-field').classList.remove('bad');
-    show('pay');
-  });
-
-  el('unlock').addEventListener('click', unlock);
-
-  el('password').addEventListener('keydown', function (event) {
-    if (event.key === 'Enter') { event.preventDefault(); unlock(); }
-  });
-
-  el('reveal').addEventListener('click', function () {
-    var input = el('password');
-    var showing = input.type === 'text';
-    input.type = showing ? 'password' : 'text';
-    this.setAttribute('aria-pressed', String(!showing));
-    this.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
-    this.style.opacity = showing ? '.6' : '1';
-    input.focus();
-  });
-
   el('pay-card').addEventListener('click', payByCard);
   el('pay-share').addEventListener('click', payByCard);
   el('share-rest').addEventListener('click', payByCard);
