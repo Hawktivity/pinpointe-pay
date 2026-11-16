@@ -102,6 +102,12 @@ with every other page here.
 To let someone outside hawktivity.com in, add their Google address (lower case) to
 `public.dashboard_viewers` on the production project.
 
+Each guest who was sent a clips email gets a **Their page** link in the session's People
+list. It opens `story.html#staff=<claim id>`, the story page's staff view: the database keeps
+no copy of a guest's link (only its hash), so the staff view uses this browser's dashboard
+sign-in instead, and `get-story` lets it in only for a viewer who may see people. Opening it
+there does not count as the guest opening their email.
+
 
 ## Running it locally
 

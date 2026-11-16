@@ -74,6 +74,7 @@ button { font: inherit; color: inherit; }
 .hero .when { color: var(--dim); font-weight: 600; font-size: .95rem; margin: 0; }
 .viewing { background: var(--ink-3); border: 1px solid var(--line); border-radius: 12px; padding: .7rem .9rem; font-size: .9rem; margin: 0 0 1rem; }
 .viewing button { background: none; border: 0; padding: 0; text-decoration: underline; font-weight: 600; cursor: pointer; }
+.staff-note { background: #2a2416; border: 1px solid #5c4b22; border-radius: 12px; padding: .7rem .9rem; font-size: .85rem; margin: 0 0 1rem; }
 
 .title-card {
   margin-top: 1.3rem; border-radius: 16px; padding: 1.1rem 1.15rem;
@@ -198,6 +199,7 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
       </label>
     </div>
 
+    <p id="staff-note" class="staff-note hidden"></p>
     <p id="viewing" class="viewing hidden"></p>
 
     <section class="hero">
@@ -284,6 +286,12 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
   var host = window.location.hostname;
   var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '' || host === '[::1]' || /\.local$/.test(host);
   var token = window.location.hash.replace(/^#/, '');
+  // The sessions dashboard's staff view: #staff=<claim id> opens the page a guest was emailed,
+  // using the dashboard's own sign-in on this site in place of the guest's link, which the
+  // database cannot rebuild. get-story checks the sign-in, and does not count it as the guest
+  // opening their link.
+  var staffClaim = (/^staff=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(token) || [])[1] || null;
+  var DASHBOARD = 'dashboard/';
   var story = null;
   var view = null;   // the player whose side the page is telling
   var filter = null; // whose clips the reel shows
@@ -738,13 +746,76 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
 
   // ------------------------------------------------------------------ load
 
-  function problem(title, text, canRetry) {
+  function problem(title, text, canRetry, link) {
     $('loading').classList.add('hidden');
     $('story').classList.add('hidden');
     $('problem').classList.remove('hidden');
     $('problem-title').textContent = title;
     $('problem-text').textContent = text;
+    if (link) $('problem-text').append(' ', el('a', { href: link, text: 'Open the dashboard' }));
     $('retry').classList.toggle('hidden', !canRetry);
+  }
+
+  // ------------------------------------------------------------------ staff view
+
+  // The same supabase-js the dashboard loads, only in the staff view: a guest's page never
+  // loads it.
+  var SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js';
+  var SUPABASE_JS_SRI = 'sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o';
+
+  function loadSupabase() {
+    if (window.supabase) return Promise.resolve();
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = SUPABASE_JS;
+      s.integrity = SUPABASE_JS_SRI;
+      s.crossOrigin = 'anonymous';
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  /** The dashboard's sign-in in this browser, renewed if it has lapsed. Null when there is none. */
+  async function dashboardToken() {
+    await loadSupabase();
+    var sb = window.supabase.createClient(cfg.supabaseUrl, cfg.anonKey, {
+      auth: { persistSession: true, autoRefreshToken: false, detectSessionInUrl: false,
+              storageKey: 'hawktivity-dashboard-auth' }
+    });
+    var res = await sb.auth.getSession();
+    return res.data && res.data.session ? res.data.session.access_token : null;
+  }
+
+  async function staffStory() {
+    var accessToken;
+    try {
+      accessToken = await dashboardToken();
+    } catch (e) {
+      problem('Couldn’t open this page', 'Something went wrong just now. Try again in a minute.', true);
+      return null;
+    }
+    if (!accessToken) {
+      problem('Sign in first', 'This is the staff view of a guest’s page. Sign in to the sessions dashboard in this browser, then open the link again.', false, DASHBOARD);
+      return null;
+    }
+    try {
+      var response = await fetch(cfg.storyUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', apikey: cfg.anonKey, authorization: 'Bearer ' + accessToken },
+        body: JSON.stringify({ claimRequestId: staffClaim })
+      });
+      var body = await response.json().catch(function () { return {}; });
+      if (response.status === 401) { problem('Sign in again', 'Your sign-in to the sessions dashboard has run out.', false, DASHBOARD); return null; }
+      if (response.status === 403) { problem('Not for this account', 'Only Hawktivity people signed in to the sessions dashboard can open a guest’s page this way.', false, DASHBOARD); return null; }
+      if (response.status === 404) { problem('Nothing to show', 'No clips email went out for this guest.'); return null; }
+      if (response.status === 410) { problem('These highlights have gone', 'Clips and photos are kept for 30 days after a game, then deleted for good.'); return null; }
+      if (!response.ok) throw new Error(body.error || response.status);
+      return body;
+    } catch (e) {
+      problem('Couldn’t load this night', 'Something went wrong getting it just now. Try again in a minute.', true);
+      return null;
+    }
   }
 
   async function load() {
@@ -753,6 +824,9 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
 
     if (isLocal && window.STORY_DEMO) {
       story = window.STORY_DEMO;
+    } else if (staffClaim) {
+      story = await staffStory();
+      if (!story) return;
     } else {
       if (!/^[A-Za-z0-9_-]{43}$/.test(token)) {
         problem('Link not recognised', 'This link doesn’t open anything. Check you used the whole link from the email.');
@@ -776,6 +850,10 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
     }
 
     view = story.you;
+    if (staffClaim) {
+      $('staff-note').textContent = 'Staff view of the page ' + nameOf(story.you) + ' was emailed. Opening it here doesn’t count as ' + nameOf(story.you) + ' opening it.';
+      $('staff-note').classList.remove('hidden');
+    }
     render();
     $('loading').classList.add('hidden');
     $('story').classList.remove('hidden');
