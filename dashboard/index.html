@@ -221,6 +221,22 @@ select, .small {
 .detail td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--grid); vertical-align: top; color: var(--dim); }
 .detail td:first-child { white-space: nowrap; color: var(--dimmer); font-variant-numeric: tabular-nums; }
 .detail td.num { text-align: right; white-space: nowrap; color: var(--paper); font-variant-numeric: tabular-nums; }
+.detail .people-block { grid-column: 1 / -1; }
+.detail .people-block table { width: auto; min-width: min(100%, 560px); }
+.detail .people-block td { padding-right: 28px; }
+@media (max-width: 560px) {
+  .detail .people-block table { min-width: 0; width: 100%; }
+  .detail .people-block tr { display: block; padding: 6px 0; border-bottom: 1px solid var(--grid); }
+  .detail .people-block td { display: block; border: 0; padding: 1px 0; }
+}
+.detail td.pname { color: var(--paper); white-space: normal; }
+.detail td a, .payer a { color: var(--paper); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--dimmer); overflow-wrap: anywhere; }
+.detail td a:hover, .payer a:hover { text-decoration-color: var(--paper); }
+.payer { font-size: 12px; color: var(--dim); margin-top: 3px; }
+.tag { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 4px; background: var(--ink-3); border: 1px solid var(--line); font-size: 11px; color: var(--dim); white-space: nowrap; }
+.tag.ok { border-color: #2c5a35; color: #b9e2c1; }
+.names { font-size: 12px; color: var(--dim); margin-top: 2px; overflow-wrap: anywhere; }
+.privacy-note { font-size: 12px; color: var(--dimmer); margin-top: 14px; max-width: 80ch; line-height: 1.5; }
 .detail .facts { font-size: 12px; color: var(--dimmer); margin-top: 10px; line-height: 1.6; font-family: var(--mono); overflow-wrap: anywhere; }
 .more { margin: 12px auto 0; display: block; }
 
@@ -317,6 +333,7 @@ select, .small {
     </div>
     <div class="list" id="list"></div>
     <button class="small more" id="more" type="button" hidden>Show more</button>
+    <p class="privacy-note" id="privacy-note" hidden>Names and contact details are here so we can run and account for the business: answer a question about a charge, sort out a problem with a session. Do not use them to contact anyone about anything else unless they ticked marketing. Payers' details come from Stripe each time you look and are not stored by us.</p>
   </section>
 </div>
 
@@ -437,7 +454,8 @@ select, .small {
   }
 
   // ---- state --------------------------------------------------------------
-  var state = { range: '30d', venue: 'all', tests: false, rows: [], from: null, email: '', loadedAt: null, shown: PAGE, open: {} };
+  var state = { range: '30d', venue: 'all', tests: false, rows: [], from: null, email: '', loadedAt: null, shown: PAGE, open: {},
+                seesPeople: false, payers: {} };
   try {
     var saved = JSON.parse(localStorage.getItem('hawktivity-dashboard-prefs') || '{}');
     if (['today', '7d', '30d', 'all'].indexOf(saved.range) >= 0) state.range = saved.range;
@@ -507,9 +525,11 @@ select, .small {
       $('banner').hidden = true;
       state.from = from;
       state.rows = (r.data || []).map(derive);
+      state.seesPeople = state.rows.some(function (x) { return x.guestList !== null; });
       state.loadedAt = new Date();
       fillVenues();
       render();
+      if (state.seesPeople) loadPayers();
     }, function (err) {
       loading = false; $('refresh').disabled = false;
       $('banner-text').textContent = 'Could not reach the database. ' + (err && err.message ? err.message : '');
@@ -537,6 +557,15 @@ select, .small {
     // People: those who threw in a game. A guest can register and never play, so the
     // board's guest list overcounts. Without games, the guest list; before the board's
     // upload arrives, who was paid for.
+    // The server's list of who they were (null unless this viewer may see people). Kept
+    // apart from x.people, which is the head count.
+    x.guestList = Array.isArray(r.people) ? r.people : null;
+    x.payments = [];
+    acts.forEach(function (a) {
+      (a.stripe || []).forEach(function (p) {
+        x.payments.push({ ref: p, live: p.live == null ? !a.isTest : p.live, act: a });
+      });
+    });
     var g = r.guests || {};
     x.registered = g.registered || 0;
     x.played = g.played || 0;
@@ -582,6 +611,7 @@ select, .small {
     renderPerDay(rows);
     renderGames(rows);
     renderList(rows);
+    $('privacy-note').hidden = !state.seesPeople;
   }
 
   function tile(label, value, sub) {
@@ -788,6 +818,9 @@ select, .small {
     if (fromBoard && r.paidFor && r.paidFor !== r.people) peopleSub.push('paid for ' + r.paidFor);
     if (r.under18) peopleSub.push(r.under18 + ' under 18');
     if (!r.uploaded && acts.length) peopleSub.push('board not uploaded yet');
+    var names = (r.guestList || []).filter(function (p) { return p.played || !r.played; })
+      .map(function (p) { return p.name; }).filter(Boolean);
+    var payerNames = payerNamesOf(r);
 
     var gamesText = r.gameCounts.length
       ? r.gameCounts.map(function (g) { return g[1] > 1 ? g[0] + ' ×' + g[1] : g[0]; }).join(' · ')
@@ -803,8 +836,10 @@ select, .small {
       h('div', { class: 'people' },
         h('span', { class: 'col-label', text: 'Played' }),
         h('span', { text: peopleLine }),
+        names.length ? h('div', { class: 'names', text: names.join(', ') }) : null,
         peopleSub.length ? h('div', { class: 'muted', text: peopleSub.join(' · ') }) : null),
-      h('div', { class: 'pay chips' }, chips),
+      h('div', { class: 'pay' }, h('div', { class: 'chips' }, chips),
+        payerNames.length ? h('div', { class: 'names', text: 'Paid by ' + payerNames.join(', ') }) : null),
       h('div', { class: 'money' },
         h('span', { class: 'col-label', text: 'Paid' }),
         h('span', { text: money(r.cardMinor, r.currency) }),
@@ -832,10 +867,28 @@ select, .small {
       if (a.refundedMinor) notes.push(money(a.refundedMinor, a.currency) + ' refunded (overpaid share)');
       if (!a.acked) notes.push('no acknowledgement from the board');
       if (a.isTest) notes.push('test');
+      var own = r.payments.filter(function (p) { return p.act === a; });
+      var paidBy = own.map(function (p) {
+        var who = state.payers[p.ref.checkoutSession];
+        var line = h('div', { class: 'payer' });
+        if (who && !who.unavailable) {
+          line.append(h('span', { text: 'Paid by ' + (who.name || 'no name given') }));
+          if (who.email) line.append(' · ', h('a', { href: 'mailto:' + who.email, text: who.email }));
+          if (who.phone) line.append(' · ', h('a', { href: 'tel:' + who.phone, text: who.phone }));
+        } else if (state.seesPeople) {
+          line.append(h('span', { class: 'muted', text: who ? payerGap(who.unavailable) : 'Asking Stripe who paid…' }));
+        }
+        if (own.length > 1) line.append(' · ' + money(p.ref.amountMinor, a.currency));
+        if (p.ref.paymentIntent) {
+          line.append(' · ', h('a', { href: 'https://dashboard.stripe.com/' + (p.live ? '' : 'test/') + 'payments/' + encodeURIComponent(p.ref.paymentIntent),
+            target: '_blank', rel: 'noopener noreferrer', text: 'Stripe ↗' }));
+        }
+        return line;
+      });
       return h('tr', null,
         h('td', { text: time(new Date(a.at)) }),
         h('td', null, h('div', { text: actLabel(a) + ' · ' + plural(a.players, 'player') }),
-          notes.length ? h('div', { class: 'muted', text: notes.join(' · ') }) : null),
+          notes.length ? h('div', { class: 'muted', text: notes.join(' · ') }) : null, paidBy),
         h('td', { class: 'num', text: a.paidVia === 'voucher' ? '£0 (' + money(a.priceMinor, a.currency) + ')' : money(a.priceMinor, a.currency) }));
     });
     var games = r.games || [];
@@ -852,7 +905,23 @@ select, .small {
       r.registered > r.played && r.played ? (r.registered - r.played) + ' registered and never played' : null,
       r.guests && r.guests.remembered ? plural(r.guests.remembered, 'remembered player') : null
     ].filter(Boolean).join(' · ');
+    var peopleBlock = null;
+    if (r.guestList) {
+      peopleBlock = h('div', { class: 'people-block' }, h('h3', { text: 'People' }),
+        r.guestList.length ? h('table', null, h('tbody', null, r.guestList.map(function (p) {
+          var tags = [];
+          if (p.under18) tags.push(h('span', { class: 'tag', text: 'under 18' }));
+          if (p.remembered) tags.push(h('span', { class: 'tag', text: 'remembered' }));
+          if (p.marketing) tags.push(h('span', { class: 'tag ok', text: 'marketing ok' }));
+          if (!p.played && r.played) tags.push(h('span', { class: 'tag', text: 'did not play' }));
+          return h('tr', null,
+            h('td', { class: 'pname' }, h('span', { text: p.name || 'No name given' }), tags),
+            h('td', null, p.email ? h('a', { href: 'mailto:' + p.email, text: p.email }) : h('span', { class: 'muted', text: p.under18 ? '—' : 'no email' })),
+            h('td', null, p.mobile ? h('a', { href: 'tel:' + p.mobile, text: p.mobile }) : h('span', { class: 'muted', text: p.under18 ? '—' : 'no mobile' })));
+        }))) : h('p', { text: r.uploaded ? 'The board uploaded no guests for this session.' : 'The board has not uploaded this session yet.' }));
+    }
     return h('div', { class: 'detail' },
+      peopleBlock,
       h('div', null, h('h3', { text: 'Payments' }),
         payRows.length ? h('table', null, h('tbody', null, payRows)) : h('p', { text: 'No payment on record for this session.' }),
         h('div', { class: 'facts', text: facts })),
@@ -861,12 +930,63 @@ select, .small {
           : h('p', { text: r.uploaded ? 'No games were played.' : 'The board has not uploaded this session yet.' })));
   }
 
+  // ---- who paid (Stripe) --------------------------------------------------
+  // dashboard-payers asks Stripe for each card payment's customer details, while a viewer who
+  // may see people is looking. Nothing is stored; it is asked again on the next visit.
+  function payersOf(r) {
+    return (r.payments || []).map(function (p) { return state.payers[p.ref.checkoutSession]; })
+      .filter(function (w) { return w && !w.unavailable; });
+  }
+  // Each payer once: a split paid in five shares from one card is one person.
+  function payerNamesOf(r) {
+    var seen = [];
+    payersOf(r).forEach(function (p) {
+      var n = p.name || p.email;
+      if (n && seen.indexOf(n) < 0) seen.push(n);
+    });
+    return seen;
+  }
+  function payerGap(why) {
+    if (why === 'other_mode') return 'Test-mode payment: not visible with the live Stripe key';
+    if (why === 'not_found') return 'Stripe has no record of this payment';
+    return 'Could not ask Stripe who paid';
+  }
+  var payersLoading = false;
+  function loadPayers() {
+    if (payersLoading) return;
+    var ids = [];
+    state.rows.forEach(function (r) {
+      r.payments.forEach(function (p) {
+        var id = p.ref.checkoutSession;
+        if (id && !state.payers[id] && ids.indexOf(id) < 0) ids.push(id);
+      });
+    });
+    ids = ids.slice(0, 300);                       // rows arrive newest first
+    if (!ids.length) return;
+    payersLoading = true;
+    var ask = MOCK ? Promise.resolve({ data: { payers: MOCK.payers(ids) }, error: null })
+                   : sb.functions.invoke('dashboard-payers', { body: { checkoutSessions: ids } });
+    ask.then(function (res) {
+      payersLoading = false;
+      if (res.error || !res.data || !res.data.payers) {
+        ids.forEach(function (id) { state.payers[id] = { unavailable: 'stripe_error' }; });
+      } else {
+        Object.keys(res.data.payers).forEach(function (id) { state.payers[id] = res.data.payers[id]; });
+      }
+      renderList(visible());
+    }, function () {
+      payersLoading = false;
+      ids.forEach(function (id) { state.payers[id] = { unavailable: 'stripe_error' }; });
+      renderList(visible());
+    });
+  }
+
   // ---- CSV ----------------------------------------------------------------
   function downloadCsv() {
     var rows = visible();
     var head = ['date', 'start', 'end', 'venue', 'board', 'session_id', 'test', 'people_played', 'under_18', 'registered', 'paid_for',
       'began_with', 'card_paid', 'voucher_value', 'refunded_overpaid_shares', 'voucher_codes', 'minutes_bought',
-      'minutes_on_board', 'games_count', 'games'];
+      'minutes_on_board', 'games_count', 'games', 'people', 'paid_by'];
     var out = [head];
     rows.forEach(function (r) {
       out.push([
@@ -875,7 +995,9 @@ select, .small {
         (r.cardMinor / 100).toFixed(2), (r.voucherMinor / 100).toFixed(2), (r.refundedMinor / 100).toFixed(2),
         (r.activations || []).filter(function (a) { return a.voucher; }).map(function (a) { return a.voucher.hint; }).join(' '),
         r.minutesBought, r.lengthMin == null ? '' : r.lengthMin, (r.games || []).length,
-        r.gameCounts.map(function (g) { return g[0] + (g[1] > 1 ? ' x' + g[1] : ''); }).join('; ')
+        r.gameCounts.map(function (g) { return g[0] + (g[1] > 1 ? ' x' + g[1] : ''); }).join('; '),
+        (r.guestList || []).map(function (p) { return p.name; }).filter(Boolean).join('; '),
+        payerNamesOf(r).join('; ')
       ]);
     });
     var csv = out.map(function (line) {
