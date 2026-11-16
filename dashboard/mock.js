@@ -96,10 +96,16 @@
         return { name: kid ? first : (kept ? first + ' ' + last : first), under18: kid, played: games.length > 0,
                  remembered: kept, email: left || kept ? first.toLowerCase() + '.' + last.toLowerCase() + '@example.com' : null,
                  mobile: left || kept ? '07700 900' + String(100 + Math.floor(rnd() * 899)) : null,
-                 marketing: !kid && rnd() < 0.3 };
+                 marketing: !kid && rnd() < 0.3,
+                 clipsEmail: (left || kept) && rnd() < 0.7 ? {
+                   claimId: 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, function () { return Math.floor(rnd() * 16).toString(16); }),
+                   sentAt: new Date(start.getTime() + (len + 5) * 60e3).toISOString(),
+                   openedAt: rnd() < 0.4 ? new Date(start.getTime() + (len + 95) * 60e3).toISOString() : null,
+                   gone: daysAgo > 30 } : null };
       }) : []
     });
   }
+  rows.forEach(function (r) { r.clipsEmailsSent = r.people.filter(function (p) { return p.clipsEmail; }).length; });
   rows.sort(function (a, b) { return b.startedAt < a.startedAt ? -1 : 1; });
 
   window.DASHBOARD_MOCK = {

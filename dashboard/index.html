@@ -230,6 +230,7 @@ select, .small {
   .detail .people-block td { display: block; border: 0; padding: 1px 0; }
 }
 .detail td.pname { color: var(--paper); white-space: normal; }
+.detail td.clips { white-space: normal; }
 .detail td a, .payer a { color: var(--paper); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--dimmer); overflow-wrap: anywhere; }
 .detail td a:hover, .payer a:hover { text-decoration-color: var(--paper); }
 .payer { font-size: 12px; color: var(--dim); margin-top: 3px; }
@@ -589,6 +590,7 @@ select, .small {
     // The server's list of who they were (null unless this viewer may see people). Kept
     // apart from x.people, which is the head count.
     x.guestList = Array.isArray(r.people) ? r.people : null;
+    x.clipsEmailsSent = r.clipsEmailsSent || 0;
     x.payments = [];
     acts.forEach(function (a) {
       (a.stripe || []).forEach(function (p) {
@@ -847,6 +849,7 @@ select, .small {
     if (fromBoard && r.paidFor && r.paidFor !== r.people) peopleSub.push('paid for ' + r.paidFor);
     if (r.under18) peopleSub.push(r.under18 + ' under 18');
     if (!r.uploaded && acts.length) peopleSub.push('board not uploaded yet');
+    if (r.clipsEmailsSent) peopleSub.push(plural(r.clipsEmailsSent, 'clips email') + ' sent');
     var names = (r.guestList || []).filter(function (p) { return p.played || !r.played; })
       .map(function (p) { return p.name; }).filter(Boolean);
     var payerNames = payerNamesOf(r);
@@ -946,7 +949,8 @@ select, .small {
           return h('tr', null,
             h('td', { class: 'pname' }, h('span', { text: p.name || 'No name given' }), tags),
             h('td', null, p.email ? h('a', { href: 'mailto:' + p.email, text: p.email }) : h('span', { class: 'muted', text: p.under18 ? '—' : 'no email' })),
-            h('td', null, p.mobile ? h('a', { href: 'tel:' + p.mobile, text: p.mobile }) : h('span', { class: 'muted', text: p.under18 ? '—' : 'no mobile' })));
+            h('td', null, p.mobile ? h('a', { href: 'tel:' + p.mobile, text: p.mobile }) : h('span', { class: 'muted', text: p.under18 ? '—' : 'no mobile' })),
+            clipsEmailCell(p.clipsEmail));
         }))) : h('p', { text: r.uploaded ? 'The board uploaded no guests for this session.' : 'The board has not uploaded this session yet.' }));
     }
     return h('div', { class: 'detail' },
@@ -957,6 +961,27 @@ select, .small {
       h('div', null, h('h3', { text: 'Games' }),
         gameRows.length ? h('table', null, h('tbody', null, gameRows))
           : h('p', { text: r.uploaded ? 'No games were played.' : 'The board has not uploaded this session yet.' })));
+  }
+
+  // ---- clips emails ---------------------------------------------------------
+  // The page a guest was emailed opens in the story page's staff view: the database keeps no
+  // copy of the guest's link, so the staff view takes the claim's id and this browser's
+  // dashboard sign-in instead. Opening it there does not count as the guest opening it.
+  function clipsEmailCell(ce) {
+    var td = h('td', { class: 'clips' });
+    if (!ce) return td;
+    var sent = new Date(ce.sentAt);
+    td.append(h('span', { text: 'Clips email ' + time(sent) }), ' · ');
+    if (ce.openedAt) {
+      var opened = new Date(ce.openedAt);
+      td.append(h('span', { text: 'opened ' + (dayKey(opened) === dayKey(sent) ? time(opened) : day(opened)) }));
+    } else {
+      td.append(h('span', { class: 'muted', text: 'not opened yet' }));
+    }
+    td.append(' · ', ce.gone
+      ? h('span', { class: 'muted', text: 'page deleted (30 days)' })
+      : h('a', { href: '../story.html#staff=' + encodeURIComponent(ce.claimId), target: '_blank', rel: 'noopener', text: 'Their page ↗' }));
+    return td;
   }
 
   // ---- who paid (Stripe) --------------------------------------------------
@@ -1015,7 +1040,7 @@ select, .small {
     var rows = visible();
     var head = ['date', 'start', 'end', 'venue', 'board', 'session_id', 'test', 'people_played', 'under_18', 'registered', 'paid_for',
       'began_with', 'card_paid', 'voucher_value', 'refunded_overpaid_shares', 'voucher_codes', 'minutes_bought',
-      'minutes_on_board', 'games_count', 'games', 'people', 'paid_by'];
+      'minutes_on_board', 'games_count', 'games', 'people', 'paid_by', 'clips_emails_sent'];
     var out = [head];
     rows.forEach(function (r) {
       out.push([
@@ -1026,7 +1051,8 @@ select, .small {
         r.minutesBought, r.lengthMin == null ? '' : r.lengthMin, (r.games || []).length,
         r.gameCounts.map(function (g) { return g[0] + (g[1] > 1 ? ' x' + g[1] : ''); }).join('; '),
         (r.guestList || []).map(function (p) { return p.name; }).filter(Boolean).join('; '),
-        payerNamesOf(r).join('; ')
+        payerNamesOf(r).join('; '),
+        r.clipsEmailsSent
       ]);
     });
     var csv = out.map(function (line) {
