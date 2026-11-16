@@ -16,6 +16,14 @@
   ];
   var GAMES = [10, 10, 10, 7, 7, 3, 3, 5, 5, 1, 8, 2, 6, 4, 9];
   var HINTS = ['SJXV', 'HC48', 'ZX2J', 'KNVW', 'MUGE', '6SY5', 'Q7PD', 'T3LM'];
+  var FIRST = ['Sam', 'Alex', 'Jo', 'Chris', 'Pat', 'Robin', 'Charlie', 'Jamie', 'Morgan', 'Taylor', 'Casey', 'Drew'];
+  var LAST = ['Smith', 'Jones', 'Taylor', 'Brown', 'Wilson', 'Evans', 'Walker', 'Wright'];
+  var stripeCounter = 0;
+  function stripeRef(amount, heads) {
+    stripeCounter++;
+    return { checkoutSession: 'cs_test_mock' + String(100000 + stripeCounter), paymentIntent: 'pi_mock' + stripeCounter,
+             amountMinor: amount, refundedMinor: 0, live: false };
+  }
 
   var rows = [];
   var now = Date.now();
@@ -34,6 +42,10 @@
       acts.push({ kind: 'new', paidVia: 'card', at: at, players: heads, minutes: minutes, priceMinor: heads * minutes / 60 * 1000,
         currency: 'GBP', isTest: false, acked: true, voucher: null, sharesPaid: heads > 1 && rnd() < 0.3 ? 2 : 1,
         refundedMinor: rnd() < 0.05 ? 500 : 0 });
+      var newAct = acts[acts.length - 1];
+      newAct.stripe = newAct.sharesPaid === 2
+        ? [stripeRef(newAct.priceMinor / 2), stripeRef(newAct.priceMinor / 2)]
+        : [stripeRef(newAct.priceMinor)];
     } else if (how < 0.92) {
       minutes = 15;
       acts.push({ kind: 'new', paidVia: 'voucher', at: at, players: heads, minutes: 15, priceMinor: heads * 250,
@@ -42,12 +54,14 @@
     }
     if (acts.length && rnd() < 0.15) {
       acts.push({ kind: 'ext', paidVia: 'card', at: new Date(start.getTime() + minutes * 60e3).toISOString(), players: heads, minutes: 30,
-        priceMinor: heads * 500, currency: 'GBP', isTest: false, acked: rnd() < 0.8, voucher: null, sharesPaid: 1, refundedMinor: 0 });
+        priceMinor: heads * 500, currency: 'GBP', isTest: false, acked: rnd() < 0.8, voucher: null, sharesPaid: 1, refundedMinor: 0,
+        stripe: [stripeRef(heads * 500)] });
       minutes += 30;
     }
     if (acts.length && rnd() < 0.1) {
       acts.push({ kind: 'join', paidVia: 'card', at: new Date(start.getTime() + 6 * 60e3).toISOString(), players: 1, minutes: minutes - 6,
-        priceMinor: 250, currency: 'GBP', isTest: false, acked: false, voucher: null, sharesPaid: 1, refundedMinor: 0 });
+        priceMinor: 250, currency: 'GBP', isTest: false, acked: false, voucher: null, sharesPaid: 1, refundedMinor: 0,
+        stripe: [stripeRef(250)] });
       heads++;
     }
     var isTest = rnd() < 0.12;
@@ -75,13 +89,30 @@
           ? { registered: heads + extra, registeredUnder18: u18, played: games.length ? heads : 0, playedUnder18: games.length ? u18 : 0, remembered: rnd() < 0.3 ? 1 : 0 }
           : { registered: 0, registeredUnder18: 0, played: 0, playedUnder18: 0, remembered: 0 };
       })(),
-      games: games
+      games: games,
+      people: uploaded ? Array.from({ length: heads }, function (_, k) {
+        var first = pick(FIRST), last = pick(LAST), kid = k === heads - 1 && rnd() < 0.1;
+        var left = !kid && rnd() < 0.5, kept = !kid && rnd() < 0.2;
+        return { name: kid ? first : (kept ? first + ' ' + last : first), under18: kid, played: games.length > 0,
+                 remembered: kept, email: left || kept ? first.toLowerCase() + '.' + last.toLowerCase() + '@example.com' : null,
+                 mobile: left || kept ? '07700 900' + String(100 + Math.floor(rnd() * 899)) : null,
+                 marketing: !kid && rnd() < 0.3 };
+      }) : []
     });
   }
   rows.sort(function (a, b) { return b.startedAt < a.startedAt ? -1 : 1; });
 
   window.DASHBOARD_MOCK = {
     email: 'someone@hawktivity.com',
+    payers: function (ids) {
+      var out = {};
+      ids.forEach(function (id, k) {
+        var first = FIRST[k % FIRST.length], last = LAST[k % LAST.length];
+        out[id] = k % 7 === 6 ? { unavailable: 'other_mode' }
+          : { name: first + ' ' + last, email: first.toLowerCase() + '@example.com', phone: null };
+      });
+      return out;
+    },
     rows: function (from) {
       return JSON.parse(JSON.stringify(rows.filter(function (r) { return !from || new Date(r.startedAt) >= from; })));
     }
