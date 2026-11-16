@@ -820,7 +820,7 @@ select, .small {
     if (!r.uploaded && acts.length) peopleSub.push('board not uploaded yet');
     var names = (r.guestList || []).filter(function (p) { return p.played || !r.played; })
       .map(function (p) { return p.name; }).filter(Boolean);
-    var payerNames = payersOf(r).map(function (p) { return p.name || p.email; }).filter(Boolean);
+    var payerNames = payerNamesOf(r);
 
     var gamesText = r.gameCounts.length
       ? r.gameCounts.map(function (g) { return g[1] > 1 ? g[0] + ' ×' + g[1] : g[0]; }).join(' · ')
@@ -937,6 +937,15 @@ select, .small {
     return (r.payments || []).map(function (p) { return state.payers[p.ref.checkoutSession]; })
       .filter(function (w) { return w && !w.unavailable; });
   }
+  // Each payer once: a split paid in five shares from one card is one person.
+  function payerNamesOf(r) {
+    var seen = [];
+    payersOf(r).forEach(function (p) {
+      var n = p.name || p.email;
+      if (n && seen.indexOf(n) < 0) seen.push(n);
+    });
+    return seen;
+  }
   function payerGap(why) {
     if (why === 'other_mode') return 'Test-mode payment: not visible with the live Stripe key';
     if (why === 'not_found') return 'Stripe has no record of this payment';
@@ -988,7 +997,7 @@ select, .small {
         r.minutesBought, r.lengthMin == null ? '' : r.lengthMin, (r.games || []).length,
         r.gameCounts.map(function (g) { return g[0] + (g[1] > 1 ? ' x' + g[1] : ''); }).join('; '),
         (r.guestList || []).map(function (p) { return p.name; }).filter(Boolean).join('; '),
-        payersOf(r).map(function (p) { return p.name || p.email; }).filter(Boolean).join('; ')
+        payerNamesOf(r).join('; ')
       ]);
     });
     var csv = out.map(function (line) {
