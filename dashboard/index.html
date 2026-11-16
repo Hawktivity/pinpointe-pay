@@ -266,6 +266,7 @@ select, .small {
       Sign in with Google
     </button>
     <p id="signin-error" class="error" hidden></p>
+    <p id="signin-note" hidden>This browser is blocking website data for this page, so it will ask you to sign in each time you open it.</p>
   </section>
 
   <!-- Signed in, not allowed -------------------------------------------- -->
@@ -467,10 +468,24 @@ select, .small {
   }
 
   // ---- auth ---------------------------------------------------------------
+  // Noted before supabase-js reads (and clears) the address bar: are we arriving back from
+  // Google, and can this browser keep anything for the page at all?
+  var returningFromGoogle = /(^|[#&?])(access_token|code)=/.test(location.hash + '&' + location.search);
+  var storageWorks = (function () {
+    try { localStorage.setItem('hd-probe', '1'); localStorage.removeItem('hd-probe'); return true; }
+    catch (e) { return false; }
+  })();
+
+  // The implicit flow, not PKCE. PKCE stores a secret in localStorage before leaving for Google
+  // and needs it on return; a browser that blocks website data (Safari's Block All Cookies, some
+  // content blockers, some in-app browsers) loses it, Google's code arrives and nothing can
+  // redeem it, and the sign-in screen simply comes back. Brian Howe, iPhone Safari, 16 Nov 2026:
+  // four Google logins, no session. The implicit flow brings the session itself back in the
+  // address bar's fragment, which never reaches a server and is cleared at once.
   var sb = null;
   if (!MOCK && window.supabase && CFG.supabaseUrl) {
     sb = window.supabase.createClient(CFG.supabaseUrl, CFG.anonKey, {
-      auth: { flowType: 'pkce', persistSession: true, autoRefreshToken: true, detectSessionInUrl: true,
+      auth: { flowType: 'implicit', persistSession: true, autoRefreshToken: true, detectSessionInUrl: true,
               storageKey: 'hawktivity-dashboard-auth' }
     });
   }
@@ -496,7 +511,21 @@ select, .small {
 
   var currentUser = null;
   function onSession(session) {
-    if (!session) { currentUser = null; show('signin'); return; }
+    if (location.hash.indexOf('access_token') >= 0 || /[?&]code=/.test(location.search)) {
+      history.replaceState(null, '', location.pathname);
+    }
+    if (!session) {
+      currentUser = null;
+      show('signin');
+      $('signin-btn').disabled = false;
+      if (returningFromGoogle) {
+        showSigninError('Google signed you in, but this browser did not keep the login. Open the link in Safari or Chrome itself rather than inside WhatsApp, and allow cookies and website data for this site, then try again.');
+      }
+      returningFromGoogle = false;
+      $('signin-note').hidden = storageWorks;
+      return;
+    }
+    returningFromGoogle = false;
     if (currentUser === session.user.id) return;          // a token refresh, not a new person
     currentUser = session.user.id;
     state.email = session.user.email || '';
