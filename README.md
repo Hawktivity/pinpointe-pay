@@ -76,6 +76,8 @@ signature first, figures second.
 | `.nojekyll` | stops GitHub Pages running the files through Jekyll |
 | `staff/rising-sun.html` | the Rising Sun's free 15-minute voucher codes, for bar staff, behind a password |
 | `staff/seal-codes.mjs` | encrypts a batch's codes into a staff page under its password |
+| `dashboard/index.html` | Hawktivity's sessions dashboard, behind Google sign-in |
+| `dashboard/mock.js` | made-up sessions for walking the dashboard on a laptop (`/dashboard/?mock`) |
 
 ### Staff voucher pages
 
@@ -86,6 +88,20 @@ is typed. Every 30 seconds the page sends the SHA-256 of each code to the
 `vouchers_spent` database function and drops whichever come back used or revoked. To
 reseal a page with a new batch or password, run `staff/seal-codes.mjs` (usage at its top)
 with the CSV that `create_voucher_batch()` produced.
+
+### Sessions dashboard
+
+`pay.hawktivity.com/dashboard/` shows every session on our boards: when, where, how many
+played, card or voucher, what was paid, and which games. People sign in with Google through
+Supabase Auth. The page reads one database function, `dashboard_sessions(from, to)`
+(pinpointe-supabase migration `20261116110000`), which answers only a verified Google account
+on hawktivity.com or one listed in `dashboard_viewers`, and never a board's own login. Nothing
+on the page is a security boundary. Preview deploys of this repo talk to the dev project, as
+with every other page here.
+
+To let someone outside hawktivity.com in, add their Google address (lower case) to
+`public.dashboard_viewers` on the production project.
+
 
 ## Running it locally
 

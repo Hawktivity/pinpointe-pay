@@ -61,6 +61,10 @@
     // after the #, and this is the only place the page sends it.
     storyUrl: project.url ? project.url + '/functions/v1/get-story' : '',
 
+    // The project itself, for pages that sign in rather than call one function: the staff
+    // dashboard (dashboard/) signs Hawktivity people in with Google through Supabase Auth.
+    supabaseUrl: project.url,
+
     anonKey: project.anonKey,
     environment: project === PROJECTS.prod ? 'prod' : 'dev'
   };
