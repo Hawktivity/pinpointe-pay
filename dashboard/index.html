@@ -207,6 +207,8 @@ select, .small {
 }
 .chip .sw { width: 8px; height: 8px; border-radius: 2px; }
 .chip.flag { border-color: #5c4521; color: #f2d3a6; }
+.chip.clips { border-color: #2d4f73; color: #bcd6f2; }
+.chip.clips svg { width: 13px; height: 10px; flex: none; }
 .games-text { color: var(--dim); }
 .chev { color: var(--dimmer); transition: transform .15s; justify-self: end; margin-top: 2px; }
 .row[data-open="true"] .chev { transform: rotate(90deg); }
@@ -841,6 +843,7 @@ select, .small {
       return h('span', { class: 'chip' }, h('i', { class: 'sw ' + (a.paidVia === 'voucher' ? 'voucher' : 'card') }), actLabel(a));
     });
     if (!acts.length) chips.push(h('span', { class: 'chip' }, h('i', { class: 'sw none' }), 'No payment on record'));
+    if (r.clipsEmailsSent) chips.push(clipsChip(r));
     if (r.isTest) chips.push(h('span', { class: 'chip flag', text: 'Test' }));
 
     var fromBoard = r.uploaded && (r.played > 0 || r.registered > 0);
@@ -849,7 +852,6 @@ select, .small {
     if (fromBoard && r.paidFor && r.paidFor !== r.people) peopleSub.push('paid for ' + r.paidFor);
     if (r.under18) peopleSub.push(r.under18 + ' under 18');
     if (!r.uploaded && acts.length) peopleSub.push('board not uploaded yet');
-    if (r.clipsEmailsSent) peopleSub.push(plural(r.clipsEmailsSent, 'clips email') + ' sent');
     var names = (r.guestList || []).filter(function (p) { return p.played || !r.played; })
       .map(function (p) { return p.name; }).filter(Boolean);
     var payerNames = payerNamesOf(r);
@@ -967,6 +969,27 @@ select, .small {
   // The page a guest was emailed opens in the story page's staff view: the database keeps no
   // copy of the guest's link, so the staff view takes the claim's id and this browser's
   // dashboard sign-in instead. Opening it there does not count as the guest opening it.
+  // The marker on a session's row: clips emails went out for it. Every viewer sees it (it is a
+  // count, no names); who they went to and the links are in the session's People list.
+  function clipsChip(r) {
+    var n = r.clipsEmailsSent;
+    var opened = (r.guestList || []).filter(function (p) { return p.clipsEmail && p.clipsEmail.openedAt; }).length;
+    var NS = 'http://www.w3.org/2000/svg';
+    var icon = document.createElementNS(NS, 'svg');
+    icon.setAttribute('viewBox', '0 0 13 10');
+    icon.setAttribute('aria-hidden', 'true');
+    var box = document.createElementNS(NS, 'rect');
+    box.setAttribute('x', '0.75'); box.setAttribute('y', '0.75'); box.setAttribute('width', '11.5'); box.setAttribute('height', '8.5');
+    box.setAttribute('rx', '1.5'); box.setAttribute('fill', 'none'); box.setAttribute('stroke', 'currentColor'); box.setAttribute('stroke-width', '1.5');
+    var flap = document.createElementNS(NS, 'path');
+    flap.setAttribute('d', 'M1.5 1.5 6.5 5.5 11.5 1.5');
+    flap.setAttribute('fill', 'none'); flap.setAttribute('stroke', 'currentColor'); flap.setAttribute('stroke-width', '1.5');
+    icon.append(box, flap);
+    var title = plural(n, 'clips email') + ' sent' + (r.guestList ? ', ' + opened + ' opened' : '');
+    return h('span', { class: 'chip clips', title: title, 'aria-label': title },
+      icon, 'Clips emailed' + (n > 1 ? ' ×' + n : ''));
+  }
+
   function clipsEmailCell(ce) {
     var td = h('td', { class: 'clips' });
     if (!ce) return td;
