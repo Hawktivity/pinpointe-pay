@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#14141a">
+<title>Darts sessions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@500;600&family=Montserrat:wght@400;500;600;700&display=swap">
+<style>
+/* ---------------------------------------------------------------------------
+   Hawktivity's own view of every session on our boards: who played, how they
+   paid, what they played. Same palette as the guest pages so it is plainly the
+   same product. Single dark theme, like the staff page.
+
+   Chart colours are the dark steps of the reference categorical palette, validated
+   against this surface (#1b1b22): card blue, voucher orange, no-payment aqua.
+   Text never wears a series colour; a swatch beside it carries identity.
+--------------------------------------------------------------------------- */
+:root {
+  --ink: #14141a;
+  --ink-2: #1b1b22;
+  --ink-3: #24242c;
+  --line: #2c2c34;
+  --grid: #2a2a32;
+  --brick: #a8433f;
+  --brick-lit: #c0504b;
+  --warn: #d08a2c;
+  --paper: #f0f0f2;
+  --dim: #9b9ba4;
+  --dimmer: #74747e;
+  --c-card: #3987e5;
+  --c-voucher: #d95926;
+  --c-none: #199e70;
+  --display: 'Anton', 'Arial Narrow', Impact, sans-serif;
+  --body: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background-color: var(--ink);
+  background-image: linear-gradient(168deg, #17171d 0%, #101015 100%);
+  background-attachment: fixed;
+  color: var(--paper);
+  font-family: var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+.shell {
+  max-width: 1200px; margin: 0 auto;
+  padding: 22px max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px));
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--paper); outline-offset: 2px;
+}
+p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--dim); max-width: 60ch; }
+b { color: var(--paper); font-weight: 600; }
+.eyebrow {
+  font: 600 11px/1 var(--body); letter-spacing: .18em; text-transform: uppercase; color: var(--dimmer);
+}
+h1 {
+  font: 400 40px/1.02 var(--display); text-transform: uppercase; margin: 0; letter-spacing: .01em;
+}
+h2 {
+  font: 600 11px/1.2 var(--body); letter-spacing: .18em; text-transform: uppercase;
+  color: var(--dim); margin: 0;
+}
+
+/* ---- sign in / refused ------------------------------------------------- */
+.gate {
+  max-width: 440px; margin: 12vh auto 0; display: flex; flex-direction: column; gap: 22px;
+}
+.primary {
+  width: 100%; min-height: 54px; border: 0; border-radius: 12px;
+  background: var(--brick); color: #fff; font: 600 15px/1 var(--body); letter-spacing: .04em;
+  display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+}
+.primary:hover { background: var(--brick-lit); }
+.primary:disabled { opacity: .55; cursor: default; }
+.primary svg { width: 20px; height: 20px; background: #fff; border-radius: 50%; padding: 2px; }
+.link {
+  background: none; border: 0; padding: 6px 0;
+  font: 500 13px/1 var(--body); color: var(--dim);
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--dimmer);
+}
+.link:hover { color: var(--paper); }
+.error { color: #f0a29e; font-weight: 500; }
+.center { text-align: center; color: var(--dim); margin-top: 20vh; font-size: 14px; }
+
+/* ---- app chrome -------------------------------------------------------- */
+.top {
+  display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+  padding-bottom: 18px; border-bottom: 1px solid var(--line);
+}
+.top .who { display: flex; align-items: center; gap: 14px; font-size: 13px; color: var(--dim); }
+.top .who .email { color: var(--paper); font-weight: 500; overflow-wrap: anywhere; }
+.envtag {
+  font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+  background: var(--warn); color: #111; padding: 4px 6px; border-radius: 4px; margin-left: 10px;
+  vertical-align: 8px;
+}
+
+.filters {
+  display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; padding: 16px 0;
+}
+.seg { display: inline-flex; background: var(--ink-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.seg button {
+  border: 0; background: none; padding: 8px 12px; border-radius: 7px;
+  font: 600 12px/1 var(--body); color: var(--dim); white-space: nowrap;
+}
+.seg button[aria-pressed="true"] { background: var(--ink-3); color: var(--paper); }
+select, .small {
+  background: var(--ink-2); border: 1px solid var(--line); border-radius: 10px;
+  color: var(--paper); font: 600 12px/1 var(--body); padding: 10px 12px; min-height: 38px;
+}
+.small:hover { background: var(--ink-3); }
+.check { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--dim); cursor: pointer; }
+.check input { width: 16px; height: 16px; accent-color: var(--brick); margin: 0; }
+.filters .spacer { flex: 1 1 auto; }
+.stamp { font-size: 12px; color: var(--dimmer); white-space: nowrap; }
+
+.banner {
+  background: #3a1f1e; border: 1px solid #5a2c2a; color: #f0c6c3; border-radius: 10px;
+  padding: 12px 14px; font-size: 13px; margin-bottom: 14px; display: flex; gap: 12px; align-items: center;
+  justify-content: space-between; flex-wrap: wrap;
+}
+
+/* ---- stat tiles -------------------------------------------------------- */
+.tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 1000px) { .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tile {
+  background: var(--ink-2); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 16px 15px; display: flex; flex-direction: column; gap: 8px; min-width: 0;
+}
+.tile .label { font: 500 12px/1.2 var(--body); color: var(--dim); }
+.tile .value { font: 600 26px/1 var(--body); white-space: nowrap; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.tile .sub { font-size: 12px; color: var(--dimmer); line-height: 1.35; }
+
+/* ---- charts ------------------------------------------------------------ */
+.charts { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 10px; margin-top: 10px; }
+@media (max-width: 860px) { .charts { grid-template-columns: minmax(0, 1fr); } }
+.panel {
+  background: var(--ink-2); border: 1px solid var(--line); border-radius: 12px;
+  padding: 16px; min-width: 0; display: flex; flex-direction: column; gap: 12px;
+}
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--dim); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
+.sw.card { background: var(--c-card); } .sw.voucher { background: var(--c-voucher); } .sw.none { background: var(--c-none); }
+.chart { position: relative; width: 100%; min-height: 220px; }
+.chart svg { display: block; width: 100%; overflow: visible; }
+.chart text { fill: var(--dimmer); font: 500 11px var(--body); }
+.empty { color: var(--dimmer); font-size: 13px; padding: 30px 0; text-align: center; }
+
+.bars { display: flex; flex-direction: column; gap: 10px; }
+.bar-row { display: grid; grid-template-columns: minmax(84px, 128px) minmax(0, 1fr); gap: 10px; align-items: center; font-size: 12px; }
+.bar-row .name { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.bar-fill { height: 14px; background: var(--c-card); border-radius: 0 4px 4px 0; min-width: 2px; flex: none; }
+.bar-val { color: var(--paper); font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.bar-row:hover .name { color: var(--paper); }
+
+.tip {
+  position: fixed; z-index: 10; pointer-events: none;
+  background: #0d0d11; border: 1px solid var(--line); border-radius: 8px;
+  padding: 10px 12px; font-size: 12px; color: var(--paper); line-height: 1.5;
+  box-shadow: 0 8px 24px rgba(0,0,0,.4); max-width: 260px;
+}
+.tip .t { font-weight: 600; margin-bottom: 4px; }
+.tip .r { display: flex; align-items: center; gap: 8px; justify-content: space-between; color: var(--dim); }
+.tip .r b { font-variant-numeric: tabular-nums; }
+.tip .r span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---- the sessions ------------------------------------------------------ */
+.list-head { display: flex; justify-content: space-between; align-items: baseline; margin: 26px 0 10px; gap: 12px; flex-wrap: wrap; }
+.list { display: flex; flex-direction: column; gap: 6px; }
+.row {
+  background: var(--ink-2); border: 1px solid var(--line); border-radius: 10px;
+}
+.row.test { opacity: .72; }
+.row-main {
+  display: grid; width: 100%; text-align: left; background: none; border: 0; padding: 12px 14px;
+  grid-template-columns: 124px minmax(110px, 1.1fr) 104px minmax(150px, 1.4fr) 84px minmax(140px, 1.6fr) 18px;
+  gap: 12px; align-items: start; font-size: 13px; line-height: 1.4;
+}
+.row-main:hover { background: rgba(255,255,255,.02); }
+.col-label { display: none; }
+.when b { display: block; }
+.muted { color: var(--dimmer); font-size: 12px; }
+.money { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+.money .muted { font-weight: 500; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  background: var(--ink-3); border: 1px solid var(--line); border-radius: 6px;
+  padding: 3px 7px; font-size: 12px; color: var(--paper);
+}
+.chip .sw { width: 8px; height: 8px; border-radius: 2px; }
+.chip.flag { border-color: #5c4521; color: #f2d3a6; }
+.games-text { color: var(--dim); }
+.chev { color: var(--dimmer); transition: transform .15s; justify-self: end; margin-top: 2px; }
+.row[data-open="true"] .chev { transform: rotate(90deg); }
+
+.detail {
+  border-top: 1px solid var(--line); padding: 14px; display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px;
+}
+@media (max-width: 760px) { .detail { grid-template-columns: minmax(0, 1fr); } }
+.detail h3 { font: 600 11px/1.2 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--dimmer); margin: 0 0 8px; }
+.detail table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.detail td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--grid); vertical-align: top; color: var(--dim); }
+.detail td:first-child { white-space: nowrap; color: var(--dimmer); font-variant-numeric: tabular-nums; }
+.detail td.num { text-align: right; white-space: nowrap; color: var(--paper); font-variant-numeric: tabular-nums; }
+.detail .facts { font-size: 12px; color: var(--dimmer); margin-top: 10px; line-height: 1.6; font-family: var(--mono); overflow-wrap: anywhere; }
+.more { margin: 12px auto 0; display: block; }
+
+@media (max-width: 900px) {
+  .row-main { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 18px; }
+  .row-main > .when { grid-column: 1; }
+  .row-main > .venue { grid-column: 2; }
+  .row-main > .chev { grid-column: 3; grid-row: 1; }
+  .row-main > .people, .row-main > .pay, .row-main > .money, .row-main > .games { grid-column: 1 / span 2; }
+  .row-main > .money { text-align: left; }
+  .col-label { display: inline; color: var(--dimmer); font-size: 12px; margin-right: 6px; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div id="loading" class="center">Loading&hellip;</div>
+
+  <!-- Signed out --------------------------------------------------------- -->
+  <section id="signin" class="gate" hidden>
+    <div class="eyebrow">Hawktivity</div>
+    <h1>Darts sessions</h1>
+    <p>Every session on our boards: who played, how they paid and what they played. Sign in with your Hawktivity Google account.</p>
+    <button id="signin-btn" class="primary" type="button">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.2C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.8c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.5c-.5-1.4-.8-2.9-.8-4.5s.3-3.1.8-4.5l-7.9-6.2C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.8c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg>
+      Sign in with Google
+    </button>
+    <p id="signin-error" class="error" hidden></p>
+  </section>
+
+  <!-- Signed in, not allowed -------------------------------------------- -->
+  <section id="denied" class="gate" hidden>
+    <div class="eyebrow">Hawktivity</div>
+    <h1>Not on the list</h1>
+    <p><b id="denied-email"></b> can't open the dashboard. Use your Hawktivity Google account, or ask Richard to add this one.</p>
+    <button id="denied-switch" class="primary" type="button">Use another Google account</button>
+    <button id="denied-out" class="link" type="button">Sign out</button>
+  </section>
+
+  <!-- The dashboard ------------------------------------------------------ -->
+  <section id="app" hidden>
+    <header class="top">
+      <div>
+        <div class="eyebrow">Hawktivity</div>
+        <h1>Darts sessions<span id="envtag" class="envtag" hidden></span></h1>
+      </div>
+      <div class="who">
+        <span class="email" id="who-email"></span>
+        <button id="signout" class="link" type="button">Sign out</button>
+      </div>
+    </header>
+
+    <div class="filters">
+      <div class="seg" role="group" aria-label="Period">
+        <button type="button" data-range="today">Today</button>
+        <button type="button" data-range="7d">7 days</button>
+        <button type="button" data-range="30d">30 days</button>
+        <button type="button" data-range="all">All time</button>
+      </div>
+      <select id="venue" aria-label="Venue"><option value="all">All venues</option></select>
+      <label class="check"><input type="checkbox" id="tests"> Include tests</label>
+      <span class="spacer"></span>
+      <span class="stamp" id="stamp"></span>
+      <button class="small" id="refresh" type="button">Refresh</button>
+      <button class="small" id="csv" type="button">Download CSV</button>
+    </div>
+
+    <div id="banner" class="banner" hidden><span id="banner-text"></span><button class="small" id="banner-retry" type="button">Try again</button></div>
+
+    <div class="tiles" id="tiles"></div>
+
+    <div class="charts">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 id="per-title">Sessions per day</h2>
+          <div class="legend">
+            <span><i class="sw card"></i>Card</span>
+            <span><i class="sw voucher"></i>Voucher</span>
+            <span><i class="sw none"></i>No payment</span>
+          </div>
+        </div>
+        <div class="chart" id="per-chart"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Games played</h2></div>
+        <div class="bars" id="games-chart"></div>
+      </div>
+    </div>
+
+    <div class="list-head">
+      <h2 id="list-title">Sessions</h2>
+      <span class="muted">Times are UK time. Tap a session for its payments and games.</span>
+    </div>
+    <div class="list" id="list"></div>
+    <button class="small more" id="more" type="button" hidden>Show more</button>
+  </section>
+</div>
+
+<div id="tip" class="tip" role="tooltip" hidden></div>
+
+<script src="../config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"
+        integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o"
+        crossorigin="anonymous"></script>
+<script>
+/* -----------------------------------------------------------------------------
+ * The whole of what this page can read is one database function,
+ * dashboard_sessions(from, to). It answers only a Google account on hawktivity.com,
+ * or one listed in dashboard_viewers -- see pinpointe-supabase migration
+ * 20261116110000. A board's login (suite-...@hawktivity.com) is refused there,
+ * not here: nothing on this page is a security boundary.
+ *
+ * Money follows the takings views: a card activation's price is the sale; a voucher
+ * took no money and shows what it would have cost; refunds are of overpaid split
+ * shares and never reduce a sale. Test sessions are hidden unless asked for.
+ * -------------------------------------------------------------------------- */
+(function () {
+  'use strict';
+
+  var CFG = window.PAY_CONFIG || {};
+  var MOCK = window.DASHBOARD_MOCK || null;
+  var TZ = 'Europe/London';
+  var PAGE = 150;
+
+  // The board's GameId -> name, as the story page names them (pinpointe-supabase
+  // supabase/functions/_shared/story-catalogue.ts), plus the two games being built.
+  var GAME_NAMES = {
+    1: 'Zero Hour', 2: '501', 3: '301', 4: 'Kill Shot', 5: 'Roulette', 6: 'Killer',
+    7: 'Warships', 8: 'Hounds & Hares', 9: 'Casual Cricket', 10: 'Around the World',
+    11: 'Snakes & Ladders', 12: 'Smart Arrows'
+  };
+  function gameName(id) { return GAME_NAMES[id] || (id == null ? 'Darts' : 'Game ' + id); }
+
+  var $ = function (id) { return document.getElementById(id); };
+  var VIEWS = ['loading', 'signin', 'denied', 'app'];
+  function show(view) { VIEWS.forEach(function (v) { $(v).hidden = v !== view; }); }
+
+  // Build DOM without innerHTML: names and labels come from the database.
+  function h(tag, attrs) {
+    var el = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      var v = attrs[k];
+      if (v == null || v === false) return;
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else if (k.slice(0, 2) === 'on') el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : v);
+    });
+    for (var i = 2; i < arguments.length; i++) {
+      var c = arguments[i];
+      if (c == null || c === false) continue;
+      if (Array.isArray(c)) c.forEach(function (x) { if (x != null && x !== false) el.append(x); });
+      else el.append(c);
+    }
+    return el;
+  }
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  function s(tag, attrs) {
+    var el = document.createElementNS(SVGNS, tag);
+    Object.keys(attrs || {}).forEach(function (k) { el.setAttribute(k, attrs[k]); });
+    return el;
+  }
+
+  // ---- formatting ---------------------------------------------------------
+  var fmtCache = {};
+  function money(minor, currency) {
+    var c = currency || 'GBP';
+    if (!fmtCache[c]) fmtCache[c] = new Intl.NumberFormat('en-GB', { style: 'currency', currency: c });
+    return fmtCache[c].format((minor || 0) / 100);
+  }
+  var fmtDay = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short' });
+  var fmtDayYear = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  var fmtTime = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  var fmtKey = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+  var fmtHour = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', hourCycle: 'h23' });
+  var fmtShort = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, day: 'numeric', month: 'short' });
+  var thisYear = new Date().getFullYear();
+  function day(d) { return (d.getFullYear() === thisYear ? fmtDay : fmtDayYear).format(d); }
+  function time(d) { return fmtTime.format(d); }
+  function dayKey(d) { return fmtKey.format(d); }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); }
+  function mins(m) {
+    if (m == null) return '';
+    if (m < 60) return m + ' min';
+    var hh = Math.floor(m / 60), mm = m % 60;
+    return hh + ' h' + (mm ? ' ' + mm + ' min' : '');
+  }
+  // For a tile: 45 min, 3h 20m, 23.5 h -- it has to fit on one line.
+  function hoursShort(m) {
+    if (!m) return '0 min';
+    if (m < 60) return m + ' min';
+    if (m < 600) return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+    return (Math.round(m / 6) / 10).toLocaleString('en-GB') + ' h';
+  }
+  function compact(n) { return n >= 10000 ? (Math.round(n / 100) / 10) + 'K' : n.toLocaleString('en-GB'); }
+
+  // Midnight in London, as an instant.
+  function londonMidnight(d) {
+    var p = {};
+    new Intl.DateTimeFormat('en-GB', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
+      .formatToParts(d).forEach(function (x) { p[x.type] = +x.value; });
+    var wallAsUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+    var offset = Math.round((wallAsUtc - d.getTime()) / 60000) * 60000;
+    return new Date(Date.UTC(p.year, p.month - 1, p.day) - offset);
+  }
+  function rangeFrom(range) {
+    var today = londonMidnight(new Date());
+    if (range === 'today') return today;
+    if (range === '7d') return new Date(today.getTime() - 6 * 864e5);
+    if (range === '30d') return new Date(today.getTime() - 29 * 864e5);
+    return null;
+  }
+
+  // ---- state --------------------------------------------------------------
+  var state = { range: '30d', venue: 'all', tests: false, rows: [], from: null, email: '', loadedAt: null, shown: PAGE, open: {} };
+  try {
+    var saved = JSON.parse(localStorage.getItem('hawktivity-dashboard-prefs') || '{}');
+    if (['today', '7d', '30d', 'all'].indexOf(saved.range) >= 0) state.range = saved.range;
+    if (typeof saved.tests === 'boolean') state.tests = saved.tests;
+    if (typeof saved.venue === 'string') state.venue = saved.venue;
+  } catch (e) { /* private window: defaults */ }
+  function savePrefs() {
+    try { localStorage.setItem('hawktivity-dashboard-prefs', JSON.stringify({ range: state.range, tests: state.tests, venue: state.venue })); } catch (e) {}
+  }
+
+  // ---- auth ---------------------------------------------------------------
+  var sb = null;
+  if (!MOCK && window.supabase && CFG.supabaseUrl) {
+    sb = window.supabase.createClient(CFG.supabaseUrl, CFG.anonKey, {
+      auth: { flowType: 'pkce', persistSession: true, autoRefreshToken: true, detectSessionInUrl: true,
+              storageKey: 'hawktivity-dashboard-auth' }
+    });
+  }
+
+  function signIn(switchAccount) {
+    $('signin-btn').disabled = true;
+    sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: location.origin + location.pathname,
+        queryParams: { prompt: 'select_account' }
+      }
+    }).then(function (r) {
+      if (r.error) { $('signin-btn').disabled = false; showSigninError(r.error.message); }
+    });
+  }
+  function signOut() {
+    state.rows = []; currentUser = null;
+    if (MOCK) { show('signin'); return Promise.resolve(); }
+    return sb.auth.signOut().then(function () { show('signin'); });
+  }
+  function showSigninError(msg) { var e = $('signin-error'); e.textContent = msg; e.hidden = !msg; }
+
+  var currentUser = null;
+  function onSession(session) {
+    if (!session) { currentUser = null; show('signin'); return; }
+    if (currentUser === session.user.id) return;          // a token refresh, not a new person
+    currentUser = session.user.id;
+    state.email = session.user.email || '';
+    enterApp();
+  }
+
+  // ---- loading ------------------------------------------------------------
+  var loading = false;
+  function fetchRows(from) {
+    if (MOCK) return Promise.resolve({ data: MOCK.rows(from), error: null });
+    return sb.rpc('dashboard_sessions', { p_from: from ? from.toISOString() : null, p_to: null });
+  }
+  function load() {
+    if (loading) return;
+    loading = true;
+    $('refresh').disabled = true;
+    var from = rangeFrom(state.range);
+    fetchRows(from).then(function (r) {
+      loading = false; $('refresh').disabled = false;
+      if (r.error) {
+        if (r.error.code === '42501') { $('denied-email').textContent = state.email; show('denied'); return; }
+        $('banner-text').textContent = 'Could not load sessions: ' + (r.error.message || 'unknown error');
+        $('banner').hidden = false;
+        return;
+      }
+      $('banner').hidden = true;
+      state.from = from;
+      state.rows = (r.data || []).map(derive);
+      state.loadedAt = new Date();
+      fillVenues();
+      render();
+    }, function (err) {
+      loading = false; $('refresh').disabled = false;
+      $('banner-text').textContent = 'Could not reach the database. ' + (err && err.message ? err.message : '');
+      $('banner').hidden = false;
+    });
+  }
+
+  // One session, with the figures the page needs worked out once.
+  function derive(r) {
+    var acts = r.activations || [];
+    var first = acts.filter(function (a) { return a.kind === 'new'; })[0] || acts[0] || null;
+    var x = r;
+    x.start = new Date(r.startedAt);
+    x.end = r.boardEndedAt ? new Date(r.boardEndedAt) : null;
+    x.how = !first ? 'none' : (first.paidVia === 'voucher' ? 'voucher' : 'card');
+    x.paidFor = 0; x.cardMinor = 0; x.voucherMinor = 0; x.refundedMinor = 0; x.minutesBought = 0; x.vouchers = 0;
+    x.currency = (first && first.currency) || 'GBP';
+    acts.forEach(function (a) {
+      if (a.kind === 'new' || a.kind === 'join') x.paidFor += a.players || 0;
+      if (a.kind === 'new' || a.kind === 'ext') x.minutesBought += a.minutes || 0;
+      if (a.paidVia === 'card') x.cardMinor += a.priceMinor || 0;
+      if (a.paidVia === 'voucher') { x.voucherMinor += a.priceMinor || 0; x.vouchers++; }
+      x.refundedMinor += a.refundedMinor || 0;
+    });
+    // People: those who threw in a game. A guest can register and never play, so the
+    // board's guest list overcounts. Without games, the guest list; before the board's
+    // upload arrives, who was paid for.
+    var g = r.guests || {};
+    x.registered = g.registered || 0;
+    x.played = g.played || 0;
+    x.under18 = x.played ? (g.playedUnder18 || 0) : (g.registeredUnder18 || 0);
+    x.people = x.played > 0 ? x.played : (r.uploaded && x.registered > 0 ? x.registered : x.paidFor);
+    x.lengthMin = (r.boardStartedAt && r.boardEndedAt)
+      ? Math.max(0, Math.round((new Date(r.boardEndedAt) - new Date(r.boardStartedAt)) / 60000)) : null;
+    var counts = {};
+    (r.games || []).forEach(function (gm) { var n = gameName(gm.typeId); counts[n] = (counts[n] || 0) + 1; });
+    x.gameCounts = Object.keys(counts).map(function (n) { return [n, counts[n]]; })
+      .sort(function (a, b) { return b[1] - a[1] || a[0].localeCompare(b[0]); });
+    return x;
+  }
+
+  function visible() {
+    return state.rows.filter(function (r) {
+      return (state.tests || !r.isTest) && (state.venue === 'all' || r.locationId === state.venue);
+    });
+  }
+
+  function fillVenues() {
+    var sel = $('venue');
+    var seen = {};
+    state.rows.forEach(function (r) { if (!seen[r.locationId]) seen[r.locationId] = r.venue; });
+    var keep = state.venue;
+    while (sel.options.length > 1) sel.remove(1);
+    Object.keys(seen).sort(function (a, b) { return seen[a].localeCompare(seen[b]); }).forEach(function (id) {
+      sel.append(h('option', { value: id, text: seen[id] }));
+    });
+    if (keep !== 'all' && !seen[keep]) { state.venue = 'all'; }
+    sel.value = state.venue;
+  }
+
+  // ---- rendering ----------------------------------------------------------
+  function render() {
+    document.querySelectorAll('.seg button').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.range === state.range));
+    });
+    $('tests').checked = state.tests;
+    $('stamp').textContent = state.loadedAt ? 'Updated ' + time(state.loadedAt) : '';
+    var rows = visible();
+    renderTiles(rows);
+    renderPerDay(rows);
+    renderGames(rows);
+    renderList(rows);
+  }
+
+  function tile(label, value, sub) {
+    return h('div', { class: 'tile' },
+      h('div', { class: 'label', text: label }),
+      h('div', { class: 'value', text: value }),
+      sub ? h('div', { class: 'sub', text: sub }) : null);
+  }
+
+  function renderTiles(rows) {
+    var t = { sessions: rows.length, card: 0, voucher: 0, none: 0, people: 0, under18: 0, cardMinor: 0,
+              refunded: 0, vouchersUsed: 0, voucherMinor: 0, games: 0, playMin: 0, timed: 0, currency: 'GBP' };
+    var gameTotals = {};
+    rows.forEach(function (r) {
+      t[r.how]++; t.people += r.people; t.under18 += r.under18; t.cardMinor += r.cardMinor;
+      t.refunded += r.refundedMinor; t.vouchersUsed += r.vouchers; t.voucherMinor += r.voucherMinor;
+      t.games += (r.games || []).length; t.currency = r.currency || t.currency;
+      if (r.lengthMin != null) { t.playMin += r.lengthMin; t.timed++; }
+      r.gameCounts.forEach(function (g) { gameTotals[g[0]] = (gameTotals[g[0]] || 0) + g[1]; });
+    });
+    var top = Object.keys(gameTotals).sort(function (a, b) { return gameTotals[b] - gameTotals[a]; })[0];
+    var tiles = $('tiles');
+    tiles.replaceChildren(
+      tile('Sessions', compact(t.sessions),
+        [t.card && t.card + ' card', t.voucher && t.voucher + ' voucher', t.none && t.none + ' no payment'].filter(Boolean).join(' · ') || 'None in this period'),
+      tile('People played', compact(t.people), t.under18 ? plural(t.under18, 'under 18', 'under 18') : (t.sessions ? 'avg ' + (t.people / t.sessions).toFixed(1) + ' a session' : '')),
+      tile('Card takings', money(t.cardMinor, t.currency),
+        t.refunded ? money(t.refunded, t.currency) + ' of overpaid shares refunded' : (t.card ? 'avg ' + money(Math.round(t.cardMinor / Math.max(1, t.card)), t.currency) + ' a card session' : 'No card sales')),
+      tile('Vouchers used', compact(t.vouchersUsed), t.vouchersUsed ? 'worth ' + money(t.voucherMinor, t.currency) + ', no money taken' : 'None used'),
+      tile('Games played', compact(t.games), top ? 'Most played: ' + top : ''),
+      tile('Time on the board', hoursShort(t.playMin), t.timed ? 'avg ' + mins(Math.round(t.playMin / t.timed)) + ' a session' : '')
+    );
+  }
+
+  // Sessions per day (per hour for Today), stacked by how each session began.
+  function renderPerDay(rows) {
+    var box = $('per-chart');
+    box.replaceChildren();
+    var hourly = state.range === 'today';
+    $('per-title').textContent = hourly ? 'Sessions by hour' : 'Sessions per day';
+    if (!rows.length) { box.append(h('div', { class: 'empty', text: 'No sessions in this period.' })); return; }
+
+    // Buckets: every day (or hour) in the period, empty ones included.
+    var buckets = [], index = {};
+    function add(key, label, longLabel) { index[key] = buckets.length; buckets.push({ key: key, label: label, long: longLabel, card: 0, voucher: 0, none: 0, money: 0, cur: 'GBP' }); }
+    if (hourly) {
+      var firstHour = 10, lastHour = 23;
+      rows.forEach(function (r) { var hh = +fmtHour.format(r.start); firstHour = Math.min(firstHour, hh); lastHour = Math.max(lastHour, hh); });
+      for (var hh = firstHour; hh <= lastHour; hh++) add(String(hh), String(hh).padStart(2, '0'), String(hh).padStart(2, '0') + ':00–' + String(hh + 1).padStart(2, '0') + ':00');
+    } else {
+      var start = state.from || londonMidnight(rows.reduce(function (m, r) { return r.start < m ? r.start : m; }, rows[0].start));
+      var end = new Date();
+      for (var d = new Date(start.getTime() + 12 * 3600e3); d <= new Date(end.getTime() + 12 * 3600e3); d = new Date(d.getTime() + 864e5)) {
+        var k = dayKey(d);
+        if (index[k] == null) add(k, fmtShort.format(d), day(d));
+      }
+    }
+    rows.forEach(function (r) {
+      var k = hourly ? String(+fmtHour.format(r.start)) : dayKey(r.start);
+      var b = buckets[index[k]];
+      if (!b) return;
+      b[r.how]++; b.money += r.cardMinor; b.cur = r.currency || b.cur;
+    });
+
+    var W = Math.max(280, box.clientWidth), H = 220, padL = 28, padB = 24, padT = 8;
+    var plotW = W - padL, plotH = H - padB - padT;
+    var maxV = Math.max(1, Math.max.apply(null, buckets.map(function (b) { return b.card + b.voucher + b.none; })));
+    var step = maxV <= 5 ? 1 : maxV <= 10 ? 2 : maxV <= 25 ? 5 : maxV <= 50 ? 10 : Math.ceil(maxV / 5 / 10) * 10;
+    var top = Math.ceil(maxV / step) * step;
+    var y = function (v) { return padT + plotH - (v / top) * plotH; };
+    var svg = s('svg', { viewBox: '0 0 ' + W + ' ' + H, height: H, role: 'img', 'aria-label': 'Sessions ' + (hourly ? 'by hour' : 'per day') });
+    for (var v = 0; v <= top; v += step) {
+      svg.append(s('line', { x1: padL, x2: W, y1: y(v), y2: y(v), stroke: 'var(--grid)', 'stroke-width': 1 }));
+      var tl = s('text', { x: padL - 8, y: y(v) + 4, 'text-anchor': 'end' }); tl.textContent = v; svg.append(tl);
+    }
+    var band = plotW / buckets.length;
+    var bw = Math.max(3, Math.min(24, band * 0.62));
+    var labelEvery = Math.ceil(buckets.length / Math.max(1, Math.floor(plotW / 52)));
+    var ORDER = [['card', 'var(--c-card)'], ['voucher', 'var(--c-voucher)'], ['none', 'var(--c-none)']];
+    buckets.forEach(function (b, i) {
+      var cx = padL + band * i + band / 2;
+      var x0 = cx - bw / 2, acc = 0;
+      var total = b.card + b.voucher + b.none;
+      var segs = ORDER.filter(function (o) { return b[o[0]] > 0; });
+      segs.forEach(function (o, si) {
+        var v0 = acc, v1 = acc + b[o[0]]; acc = v1;
+        var yTop = y(v1), yBot = y(v0);
+        if (si > 0) yBot -= 2;                       // 2px surface gap between segments
+        var hgt = Math.max(1, yBot - yTop);
+        var isTop = si === segs.length - 1, r = isTop ? Math.min(4, bw / 2, hgt) : 0;
+        var d = 'M' + x0 + ',' + yBot + 'V' + (yTop + r) +
+          (r ? 'Q' + x0 + ',' + yTop + ' ' + (x0 + r) + ',' + yTop + 'H' + (x0 + bw - r) + 'Q' + (x0 + bw) + ',' + yTop + ' ' + (x0 + bw) + ',' + (yTop + r) : 'H' + (x0 + bw)) +
+          'V' + yBot + 'Z';
+        svg.append(s('path', { d: d, fill: o[1] }));
+      });
+      if (i % labelEvery === 0) {
+        var xl = s('text', { x: cx, y: H - 6, 'text-anchor': 'middle' }); xl.textContent = b.label; svg.append(xl);
+      }
+      var hit = s('rect', { x: padL + band * i, y: padT, width: band, height: plotH, fill: 'transparent' });
+      hit.addEventListener('mousemove', function (e) {
+        tipShow(e, b.long, [
+          ['card', 'Card', b.card], ['voucher', 'Voucher', b.voucher], ['none', 'No payment', b.none]
+        ].filter(function (q) { return q[2]; }).map(function (q) { return { sw: q[0], label: q[1], value: q[2] }; })
+          .concat(total ? [{ label: 'Card takings', value: money(b.money, b.cur) }] : [{ label: 'No sessions', value: '' }]));
+      });
+      hit.addEventListener('mouseleave', tipHide);
+      svg.append(hit);
+    });
+    box.append(svg);
+  }
+
+  function renderGames(rows) {
+    var box = $('games-chart');
+    box.replaceChildren();
+    var stats = {};
+    rows.forEach(function (r) {
+      (r.games || []).forEach(function (g) {
+        var n = gameName(g.typeId);
+        var st = stats[n] || (stats[n] = { n: 0, done: 0, secs: 0, timed: 0, players: 0 });
+        st.n++; if (g.completed) st.done++;
+        if (g.seconds) { st.secs += g.seconds; st.timed++; }
+        st.players += g.players || 0;
+      });
+    });
+    var names = Object.keys(stats).sort(function (a, b) { return stats[b].n - stats[a].n || a.localeCompare(b); });
+    if (!names.length) { box.append(h('div', { class: 'empty', text: 'No games uploaded in this period.' })); return; }
+    var max = stats[names[0]].n;
+    names.forEach(function (n) {
+      var st = stats[n];
+      var row = h('div', { class: 'bar-row' },
+        h('span', { class: 'name', text: n }),
+        h('span', { class: 'bar-track' },
+          h('span', { class: 'bar-fill', style: 'width:calc((100% - 44px) * ' + (st.n / max).toFixed(4) + ')' }),
+          h('span', { class: 'bar-val', text: String(st.n) })));
+      row.addEventListener('mousemove', function (e) {
+        tipShow(e, n, [
+          { label: 'Games', value: st.n },
+          { label: 'Played to the end', value: Math.round(100 * st.done / st.n) + '%' },
+          st.timed ? { label: 'Average length', value: mins(Math.max(1, Math.round(st.secs / st.timed / 60))) } : null,
+          { label: 'Average players', value: (st.players / st.n).toFixed(1) }
+        ].filter(Boolean));
+      });
+      row.addEventListener('mouseleave', tipHide);
+      box.append(row);
+    });
+  }
+
+  function tipShow(e, title, lines) {
+    var tip = $('tip');
+    tip.replaceChildren(h('div', { class: 't', text: title }));
+    lines.forEach(function (l) {
+      tip.append(h('div', { class: 'r' },
+        h('span', null, l.sw ? h('i', { class: 'sw ' + l.sw }) : null, l.label),
+        h('b', { text: String(l.value) })));
+    });
+    tip.hidden = false;
+    var w = tip.offsetWidth, ht = tip.offsetHeight;
+    var x = e.clientX + 14, yy = e.clientY + 14;
+    if (x + w > window.innerWidth - 8) x = e.clientX - w - 14;
+    if (yy + ht > window.innerHeight - 8) yy = e.clientY - ht - 14;
+    tip.style.left = Math.max(8, x) + 'px'; tip.style.top = Math.max(8, yy) + 'px';
+  }
+  function tipHide() { $('tip').hidden = true; }
+
+  // What one activation was, in a few words.
+  function actLabel(a) {
+    if (a.kind === 'new') return a.paidVia === 'voucher' ? 'Voucher · ' + mins(a.minutes) : 'Card · ' + mins(a.minutes);
+    if (a.kind === 'ext') return '+' + mins(a.minutes) + ' · ' + (a.paidVia === 'voucher' ? 'voucher' : 'card');
+    if (a.kind === 'join') return '+' + plural(a.players, 'player') + ' joined · ' + (a.paidVia === 'voucher' ? 'voucher' : 'card');
+    if (a.kind === 'close') return 'Ended early';
+    return a.kind;
+  }
+
+  function renderList(rows) {
+    var list = $('list');
+    list.replaceChildren();
+    $('list-title').textContent = rows.length ? plural(rows.length, 'session') : 'Sessions';
+    if (!rows.length) {
+      list.append(h('div', { class: 'panel empty', text: state.rows.length && !state.tests
+        ? 'Only test sessions in this period. Tick Include tests to see them.' : 'No sessions in this period.' }));
+      $('more').hidden = true;
+      return;
+    }
+    rows.slice(0, state.shown).forEach(function (r) { list.append(sessionRow(r)); });
+    $('more').hidden = rows.length <= state.shown;
+  }
+
+  function sessionKey(r) { return r.suiteRowId + '/' + (r.sessionId || r.startedAt); }
+
+  function sessionRow(r) {
+    var key = sessionKey(r);
+    var open = !!state.open[key];
+    var acts = r.activations || [];
+
+    var chips = acts.map(function (a) {
+      return h('span', { class: 'chip' }, h('i', { class: 'sw ' + (a.paidVia === 'voucher' ? 'voucher' : 'card') }), actLabel(a));
+    });
+    if (!acts.length) chips.push(h('span', { class: 'chip' }, h('i', { class: 'sw none' }), 'No payment on record'));
+    if (r.isTest) chips.push(h('span', { class: 'chip flag', text: 'Test' }));
+
+    var fromBoard = r.uploaded && (r.played > 0 || r.registered > 0);
+    var peopleLine = fromBoard ? plural(r.people, 'person', 'people') : plural(r.paidFor, 'person', 'people') + ' paid for';
+    var peopleSub = [];
+    if (fromBoard && r.paidFor && r.paidFor !== r.people) peopleSub.push('paid for ' + r.paidFor);
+    if (r.under18) peopleSub.push(r.under18 + ' under 18');
+    if (!r.uploaded && acts.length) peopleSub.push('board not uploaded yet');
+
+    var gamesText = r.gameCounts.length
+      ? r.gameCounts.map(function (g) { return g[1] > 1 ? g[0] + ' ×' + g[1] : g[0]; }).join(' · ')
+      : (r.uploaded ? 'No games' : '—');
+
+    var main = h('button', { class: 'row-main', type: 'button', 'aria-expanded': String(open) },
+      h('div', { class: 'when' },
+        h('b', { text: day(r.start) }),
+        h('span', { class: 'muted', text: time(r.start) + (r.end ? '–' + time(r.end) : '') + (r.lengthMin != null ? ' · ' + mins(r.lengthMin) : '') })),
+      h('div', { class: 'venue' },
+        h('div', { text: r.venue }),
+        r.venue !== r.board ? h('div', { class: 'muted', text: r.board }) : null),
+      h('div', { class: 'people' },
+        h('span', { class: 'col-label', text: 'Played' }),
+        h('span', { text: peopleLine }),
+        peopleSub.length ? h('div', { class: 'muted', text: peopleSub.join(' · ') }) : null),
+      h('div', { class: 'pay chips' }, chips),
+      h('div', { class: 'money' },
+        h('span', { class: 'col-label', text: 'Paid' }),
+        h('span', { text: money(r.cardMinor, r.currency) }),
+        r.voucherMinor ? h('div', { class: 'muted', text: money(r.voucherMinor, r.currency) + ' voucher' }) : null),
+      h('div', { class: 'games' },
+        h('span', { class: 'col-label', text: 'Games' }),
+        h('span', { class: 'games-text', text: gamesText })),
+      h('span', { class: 'chev', 'aria-hidden': 'true', text: '›' }));
+
+    var row = h('div', { class: 'row' + (r.isTest ? ' test' : ''), 'data-open': String(open) }, main);
+    if (open) row.append(sessionDetail(r));
+    main.addEventListener('click', function () {
+      state.open[key] = !state.open[key];
+      row.replaceWith(sessionRow(r));
+    });
+    return row;
+  }
+
+  function sessionDetail(r) {
+    var acts = r.activations || [];
+    var payRows = acts.map(function (a) {
+      var notes = [];
+      if (a.voucher) notes.push('code …' + a.voucher.hint + ' · ' + a.voucher.batch);
+      if (a.sharesPaid > 1) notes.push('split, ' + a.sharesPaid + ' shares paid');
+      if (a.refundedMinor) notes.push(money(a.refundedMinor, a.currency) + ' refunded (overpaid share)');
+      if (!a.acked) notes.push('no acknowledgement from the board');
+      if (a.isTest) notes.push('test');
+      return h('tr', null,
+        h('td', { text: time(new Date(a.at)) }),
+        h('td', null, h('div', { text: actLabel(a) + ' · ' + plural(a.players, 'player') }),
+          notes.length ? h('div', { class: 'muted', text: notes.join(' · ') }) : null),
+        h('td', { class: 'num', text: a.paidVia === 'voucher' ? '£0 (' + money(a.priceMinor, a.currency) + ')' : money(a.priceMinor, a.currency) }));
+    });
+    var games = r.games || [];
+    var gameRows = games.map(function (g) {
+      return h('tr', null,
+        h('td', { text: g.startedAt ? time(new Date(g.startedAt)) : '' }),
+        h('td', null, h('div', { text: gameName(g.typeId) }),
+          h('div', { class: 'muted', text: plural(g.players, 'player') + (g.completed ? '' : ' · not finished') + (g.rounds ? ' · ' + plural(g.rounds, 'round') : '') })),
+        h('td', { class: 'num', text: g.seconds ? mins(Math.max(1, Math.round(g.seconds / 60))) : '' }));
+    });
+    var facts = [
+      r.sessionId ? 'Session ' + r.sessionId : 'No session id (old board build)',
+      'Minutes bought ' + (r.minutesBought || 0),
+      r.registered > r.played && r.played ? (r.registered - r.played) + ' registered and never played' : null,
+      r.guests && r.guests.remembered ? plural(r.guests.remembered, 'remembered player') : null
+    ].filter(Boolean).join(' · ');
+    return h('div', { class: 'detail' },
+      h('div', null, h('h3', { text: 'Payments' }),
+        payRows.length ? h('table', null, h('tbody', null, payRows)) : h('p', { text: 'No payment on record for this session.' }),
+        h('div', { class: 'facts', text: facts })),
+      h('div', null, h('h3', { text: 'Games' }),
+        gameRows.length ? h('table', null, h('tbody', null, gameRows))
+          : h('p', { text: r.uploaded ? 'No games were played.' : 'The board has not uploaded this session yet.' })));
+  }
+
+  // ---- CSV ----------------------------------------------------------------
+  function downloadCsv() {
+    var rows = visible();
+    var head = ['date', 'start', 'end', 'venue', 'board', 'session_id', 'test', 'people_played', 'under_18', 'registered', 'paid_for',
+      'began_with', 'card_paid', 'voucher_value', 'refunded_overpaid_shares', 'voucher_codes', 'minutes_bought',
+      'minutes_on_board', 'games_count', 'games'];
+    var out = [head];
+    rows.forEach(function (r) {
+      out.push([
+        dayKey(r.start), time(r.start), r.end ? time(r.end) : '', r.venue, r.board, r.sessionId || '', r.isTest ? 'yes' : 'no',
+        r.people, r.under18, r.uploaded ? r.registered : '', r.paidFor, r.how,
+        (r.cardMinor / 100).toFixed(2), (r.voucherMinor / 100).toFixed(2), (r.refundedMinor / 100).toFixed(2),
+        (r.activations || []).filter(function (a) { return a.voucher; }).map(function (a) { return a.voucher.hint; }).join(' '),
+        r.minutesBought, r.lengthMin == null ? '' : r.lengthMin, (r.games || []).length,
+        r.gameCounts.map(function (g) { return g[0] + (g[1] > 1 ? ' x' + g[1] : ''); }).join('; ')
+      ]);
+    });
+    var csv = out.map(function (line) {
+      return line.map(function (v) {
+        var t = String(v == null ? '' : v);
+        if (/^[=+\-@]/.test(t)) t = "'" + t;               // never a formula in a spreadsheet
+        return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+      }).join(',');
+    }).join('\r\n');
+    var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+    var a = h('a', { href: URL.createObjectURL(blob), download: 'darts-sessions-' + state.range + '-' + dayKey(new Date()) + '.csv' });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  }
+
+  // ---- wiring -------------------------------------------------------------
+  var entered = false, timer = null;
+  function enterApp() {
+    $('who-email').textContent = state.email;
+    if (CFG.environment && CFG.environment !== 'prod') { $('envtag').textContent = MOCK ? 'mock' : CFG.environment; $('envtag').hidden = false; }
+    show('app');
+    if (!entered) {
+      entered = true;
+      // Keep a busy night current without a reload. Only while the tab is in front.
+      timer = setInterval(function () { if (!document.hidden) load(); }, 120000);
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && state.loadedAt && Date.now() - state.loadedAt > 60000) load();
+      });
+    }
+    load();
+  }
+
+  document.querySelectorAll('.seg button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (state.range === b.dataset.range) return;
+      state.range = b.dataset.range; state.shown = PAGE; savePrefs(); render(); load();
+    });
+  });
+  $('venue').addEventListener('change', function () { state.venue = this.value; state.shown = PAGE; savePrefs(); render(); });
+  $('tests').addEventListener('change', function () { state.tests = this.checked; state.shown = PAGE; savePrefs(); render(); });
+  $('refresh').addEventListener('click', load);
+  $('banner-retry').addEventListener('click', load);
+  $('csv').addEventListener('click', downloadCsv);
+  $('more').addEventListener('click', function () { state.shown += PAGE; render(); });
+  $('signout').addEventListener('click', signOut);
+  $('denied-out').addEventListener('click', signOut);
+  $('denied-switch').addEventListener('click', function () { signOut().then(function () { signIn(); }); });
+  $('signin-btn').addEventListener('click', function () { signIn(); });
+
+  var lastW = 0;
+  window.addEventListener('resize', function () {
+    var w = $('per-chart').clientWidth;
+    if (state.rows.length && Math.abs(w - lastW) > 8) { lastW = w; renderPerDay(visible()); }
+  });
+
+  // An error coming back from Google or Supabase lands in the address bar.
+  var qs = new URLSearchParams(location.search + '&' + location.hash.replace(/^#/, ''));
+  if (qs.get('error_description') || qs.get('error')) {
+    showSigninError('Sign-in failed: ' + (qs.get('error_description') || qs.get('error')));
+    history.replaceState(null, '', location.pathname);
+  }
+
+  if (MOCK) {
+    state.email = MOCK.email;
+    enterApp();
+  } else if (!sb) {
+    show('signin');
+    showSigninError('This copy of the page has no database to talk to.');
+    $('signin-btn').disabled = true;
+  } else {
+    sb.auth.onAuthStateChange(function (event, session) {
+      // Out of the callback: supabase-js holds a lock while it runs.
+      setTimeout(function () { onSession(session); }, 0);
+    });
+  }
+})();
+</script>
+</body>
+</html>
