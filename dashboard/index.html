@@ -210,6 +210,7 @@ select, .small {
 .chip.clips { border-color: #2d4f73; color: #bcd6f2; }
 .chip.clips svg { width: 13px; height: 10px; flex: none; }
 .games-text { color: var(--dim); }
+.chart-note { font-size: 12px; color: var(--dimmer); margin: -4px 0 8px; line-height: 1.4; }
 .chev { color: var(--dimmer); transition: transform .15s; justify-self: end; margin-top: 2px; }
 .row[data-open="true"] .chev { transform: rotate(90deg); }
 
@@ -316,13 +317,14 @@ select, .small {
     <div class="charts">
       <div class="panel">
         <div class="panel-head">
-          <h2 id="per-title">Sessions per day</h2>
+          <h2 id="per-title">Hours per day</h2>
           <div class="legend">
             <span><i class="sw card"></i>Card</span>
             <span><i class="sw voucher"></i>Voucher</span>
             <span><i class="sw none"></i>No payment</span>
           </div>
         </div>
+        <p class="chart-note">Time bought, so a 15-minute session counts a quarter of an hour; extensions add theirs. A session with no payment counts its time on the board.</p>
         <div class="chart" id="per-chart"></div>
       </div>
       <div class="panel">
@@ -679,17 +681,36 @@ select, .small {
     );
   }
 
-  // Sessions per day (per hour for Today), stacked by how each session began.
+  // Hours per day (per hour started, for Today), stacked by how the time was paid for.
+  // Sessions come in 15 minutes, 30 minutes, an hour and more, so counting them says little:
+  // each paid activation adds the minutes it bought (new and extensions; a join adds players,
+  // not time), coloured by how that activation was paid, and a session with no payment at all
+  // adds its time on the board.
+  function minutesBy(r) {
+    var m = { card: 0, voucher: 0, none: 0 };
+    var acts = r.activations || [];
+    acts.forEach(function (a) {
+      if (a.kind === 'new' || a.kind === 'ext') m[a.paidVia === 'voucher' ? 'voucher' : 'card'] += a.minutes || 0;
+    });
+    if (!acts.length && r.lengthMin) m.none += r.lengthMin;
+    return m;
+  }
+  function hoursLabel(m) {
+    if (m === 0) return '0';
+    if (m < 60) return m + 'm';
+    return (m % 60 ? (m / 60).toFixed(1) : String(m / 60)) + 'h';
+  }
+
   function renderPerDay(rows) {
     var box = $('per-chart');
     box.replaceChildren();
     var hourly = state.range === 'today';
-    $('per-title').textContent = hourly ? 'Sessions by hour' : 'Sessions per day';
+    $('per-title').textContent = hourly ? 'Hours by hour started' : 'Hours per day';
     if (!rows.length) { box.append(h('div', { class: 'empty', text: 'No sessions in this period.' })); return; }
 
     // Buckets: every day (or hour) in the period, empty ones included.
     var buckets = [], index = {};
-    function add(key, label, longLabel) { index[key] = buckets.length; buckets.push({ key: key, label: label, long: longLabel, card: 0, voucher: 0, none: 0, money: 0, cur: 'GBP' }); }
+    function add(key, label, longLabel) { index[key] = buckets.length; buckets.push({ key: key, label: label, long: longLabel, card: 0, voucher: 0, none: 0, sessions: 0, money: 0, cur: 'GBP' }); }
     if (hourly) {
       var firstHour = 10, lastHour = 23;
       rows.forEach(function (r) { var hh = +fmtHour.format(r.start); firstHour = Math.min(firstHour, hh); lastHour = Math.max(lastHour, hh); });
@@ -706,19 +727,22 @@ select, .small {
       var k = hourly ? String(+fmtHour.format(r.start)) : dayKey(r.start);
       var b = buckets[index[k]];
       if (!b) return;
-      b[r.how]++; b.money += r.cardMinor; b.cur = r.currency || b.cur;
+      var m = minutesBy(r);
+      b.card += m.card; b.voucher += m.voucher; b.none += m.none;
+      b.sessions++; b.money += r.cardMinor; b.cur = r.currency || b.cur;
     });
 
-    var W = Math.max(280, box.clientWidth), H = 220, padL = 28, padB = 24, padT = 8;
+    // Minutes throughout; the axis reads in hours.
+    var W = Math.max(280, box.clientWidth), H = 220, padL = 36, padB = 24, padT = 8;
     var plotW = W - padL, plotH = H - padB - padT;
-    var maxV = Math.max(1, Math.max.apply(null, buckets.map(function (b) { return b.card + b.voucher + b.none; })));
-    var step = maxV <= 5 ? 1 : maxV <= 10 ? 2 : maxV <= 25 ? 5 : maxV <= 50 ? 10 : Math.ceil(maxV / 5 / 10) * 10;
+    var maxV = Math.max(60, Math.max.apply(null, buckets.map(function (b) { return b.card + b.voucher + b.none; })));
+    var step = [15, 30, 60, 120, 180, 300, 600, 1200, 3000, 6000].filter(function (st) { return maxV / st <= 5; })[0] || Math.ceil(maxV / 5 / 6000) * 6000;
     var top = Math.ceil(maxV / step) * step;
     var y = function (v) { return padT + plotH - (v / top) * plotH; };
-    var svg = s('svg', { viewBox: '0 0 ' + W + ' ' + H, height: H, role: 'img', 'aria-label': 'Sessions ' + (hourly ? 'by hour' : 'per day') });
+    var svg = s('svg', { viewBox: '0 0 ' + W + ' ' + H, height: H, role: 'img', 'aria-label': 'Hours of play ' + (hourly ? 'by hour started' : 'per day') });
     for (var v = 0; v <= top; v += step) {
       svg.append(s('line', { x1: padL, x2: W, y1: y(v), y2: y(v), stroke: 'var(--grid)', 'stroke-width': 1 }));
-      var tl = s('text', { x: padL - 8, y: y(v) + 4, 'text-anchor': 'end' }); tl.textContent = v; svg.append(tl);
+      var tl = s('text', { x: padL - 8, y: y(v) + 4, 'text-anchor': 'end' }); tl.textContent = hoursLabel(v); svg.append(tl);
     }
     var band = plotW / buckets.length;
     var bw = Math.max(3, Math.min(24, band * 0.62));
@@ -746,9 +770,10 @@ select, .small {
       var hit = s('rect', { x: padL + band * i, y: padT, width: band, height: plotH, fill: 'transparent' });
       hit.addEventListener('mousemove', function (e) {
         tipShow(e, b.long, [
-          ['card', 'Card', b.card], ['voucher', 'Voucher', b.voucher], ['none', 'No payment', b.none]
-        ].filter(function (q) { return q[2]; }).map(function (q) { return { sw: q[0], label: q[1], value: q[2] }; })
-          .concat(total ? [{ label: 'Card takings', value: money(b.money, b.cur) }] : [{ label: 'No sessions', value: '' }]));
+          ['card', 'Card', b.card], ['voucher', 'Voucher', b.voucher], ['none', 'No payment (on the board)', b.none]
+        ].filter(function (q) { return q[2]; }).map(function (q) { return { sw: q[0], label: q[1], value: mins(q[2]) }; })
+          .concat(b.sessions ? [{ label: 'Total', value: mins(total) }, { label: 'Sessions', value: b.sessions }, { label: 'Card takings', value: money(b.money, b.cur) }]
+                             : [{ label: 'No sessions', value: '' }]));
       });
       hit.addEventListener('mouseleave', tipHide);
       svg.append(hit);
