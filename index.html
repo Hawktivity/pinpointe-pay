@@ -281,7 +281,7 @@ button:focus-visible, input:focus-visible {
       <div id="done-token" hidden>
         <div class="notice">
           <b>If the board hasn&rsquo;t started</b>
-          Your session is paid for. If the clock on the board is not running,
+          Your session is paid for. If the board is still asking you to pay,
           type these six digits on the touchscreen.
         </div>
         <div class="token-box" style="margin-top:14px">
@@ -734,7 +734,7 @@ button:focus-visible, input:focus-visible {
           ? 'You’re on the board for the rest of the session. Go and throw.'
           : kind === 'ext'
             ? 'Another ' + duration(data.minutes) + ' added to the clock. Go and throw.'
-            : duration(data.minutes) + ' on the clock. Go and throw.')
+            : duration(data.minutes) + ' paid for. Your time starts with your first game.')
       : (kind === 'join'
           ? 'This seat has already been paid for.'
           : 'This session has been unlocked.');
