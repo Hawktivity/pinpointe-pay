@@ -137,6 +137,10 @@ button:focus-visible, input:focus-visible {
 .field input::placeholder { color: #6f6f79; letter-spacing: normal; font-size: 15px; }
 .field input:focus { outline: none; }
 .hint { font: 500 12px/1.5 var(--body); color: var(--dimmer); margin-top: 10px; }
+/* "See the games": a quiet link to www.hawktivity.com/darts/games. It opens in a new tab so
+   this page, and whatever it is waiting for, stays where it is. */
+.games-link { margin: 14px 0 0; text-align: center; font: 500 14px/1.4 var(--body); }
+.games-link a { color: var(--dim); text-decoration: underline; text-underline-offset: 3px; }
 
 /* ---- notices ---------------------------------------------------------- */
 .notice {
@@ -249,6 +253,8 @@ button:focus-visible, input:focus-visible {
           <div id="voucher-notice-slot" hidden></div>
         </div>
       </div>
+
+      <p class="games-link"><a href="https://www.hawktivity.com/darts/games" target="_blank" rel="noopener">New to the games? See how each one works</a></p>
     </div>
   </section>
 
@@ -294,6 +300,8 @@ button:focus-visible, input:focus-visible {
         We&rsquo;ll nudge this phone ten minutes before the time runs out, in case
         you want longer.
       </p>
+
+      <p class="games-link"><a href="https://www.hawktivity.com/darts/games" target="_blank" rel="noopener">New to the games? See how each one works</a></p>
     </div>
   </section>
 
