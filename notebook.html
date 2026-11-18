@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#1a120c">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<title>Ezra's notebook</title>
+<title>Max's notebook</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,10 +14,11 @@
 
 <style>
 /* ---------------------------------------------------------------------------
-   Ezra's notebook: Murder at Last Orders on a player's phone (17 Nov 2026).
+   Max's notebook: Murder at Last Orders on a player's phone (17 Nov 2026). Max is Maximilian
+   Pheasant, the landlord on the case (Ezra Crabb until 18 Nov); storage keys and state.ezra keep the old name.
 
    The look is mockup 6 (murder-at-last-orders-mockups/6-phone-notebook.png): a lined
-   notebook page on a dark desk, Kalam for Ezra's hand, Special Elite for anything typed.
+   notebook page on a dark desk, Kalam for Max's hand, Special Elite for anything typed.
    One theme on purpose, like the other phone pages: used in a dim pub, it should look the
    same on every phone.
 --------------------------------------------------------------------------- */
@@ -372,8 +373,8 @@ button:focus-visible { outline: 2px dashed var(--red); outline-offset: 3px; }
 <body>
 
 <main class="paper" id="paper" aria-live="polite">
-  <h1>Ezra's notebook</h1>
-  <noscript><p class="message">Ezra's notebook needs JavaScript switched on.</p></noscript>
+  <h1>Max's notebook</h1>
+  <noscript><p class="message">Max's notebook needs JavaScript switched on.</p></noscript>
   <div id="head"></div>
   <div id="body"></div>
 </main>
@@ -389,7 +390,7 @@ button:focus-visible { outline: 2px dashed var(--red); outline-offset: 3px; }
 <script src="config.js"></script>
 <script>
 /* -----------------------------------------------------------------------------
- * Ezra's notebook (Murder at Last Orders). The contract is
+ * Max's notebook (Murder at Last Orders). The contract is
  * Darts/murder-at-last-orders-plan/phone-contract.md, section 5.
  *
  * The board shows a QR for notebook.html?c=<code>. This page asks the mystery-notebook
@@ -652,11 +653,11 @@ button:focus-visible { outline: 2px dashed var(--red); outline-offset: 3px; }
       return;
     }
     if (mode === 'waiting') {
-      body.appendChild(message('The case hasn’t begun.', 'This page fills in as soon as Ezra opens the case file.'));
+      body.appendChild(message('The case hasn’t begun.', 'This page fills in as soon as Max opens the case file.'));
       return;
     }
     if (mode === 'loading') {
-      body.appendChild(message(lagging ? 'Ezra’s notebook is catching up…' : 'Opening the notebook…', null));
+      body.appendChild(message(lagging ? 'Max’s notebook is catching up…' : 'Opening the notebook…', null));
       return;
     }
 
@@ -685,13 +686,13 @@ button:focus-visible { outline: 2px dashed var(--red); outline-offset: 3px; }
     if (str(state.clock)) bits.push(str(state.clock));
     if (num(state.minutesLeft) !== null) bits.push(Math.max(0, state.minutesLeft) + ' min left');
     if (bits.length) head.appendChild(el('div', 'meta', bits.join(' · ')));
-    if (lagging) head.appendChild(el('div', 'lag', 'Ezra’s notebook is catching up…'));
+    if (lagging) head.appendChild(el('div', 'lag', 'Max’s notebook is catching up…'));
   }
 
   function nowLine() {
     var a = obj(state.action);
     switch (state.phase) {
-      case 'briefing': return 'Now · Ezra is reading out the case';
+      case 'briefing': return 'Now · Max is reading out the case';
       case 'hub': return 'Now · choosing where to go next';
       case 'throwing':
         if (a.kind === 'search' && str(a.place)) return 'Now · searching ' + str(a.place).replace(/^The /, 'the ');
@@ -757,12 +758,12 @@ button:focus-visible { outline: 2px dashed var(--red); outline-offset: 3px; }
     var notes = list(state.notes).map(str).filter(Boolean);
     var ezra = obj(state.ezra);
     if (notes.length || ezra.onThisLevel === true) {
-      body.appendChild(el('div', 'label', 'EZRA’S NOTES'));
+      body.appendChild(el('div', 'label', 'MAX’S NOTES'));
       notes.forEach(function (n) { body.appendChild(el('p', 'note', n)); });
       if (ezra.onThisLevel === true) {
         body.appendChild(el('p', 'quiet', ezra.used === true
-          ? 'You’ve asked Ezra. That was his one.'
-          : 'You can still ask Ezra to rule one out, once.'));
+          ? 'You’ve asked Max. That was his one.'
+          : 'You can still ask Max to rule one out, once.'));
       }
     }
   }
