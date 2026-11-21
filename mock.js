@@ -45,6 +45,10 @@
  *   sharemovedon  (with &s=x) the whole group paid, but the board had already gone on to
  *                 another game (CANCEL, then a new group): it is all going back
  * In the voucher case, RS-LATE-0000 is refused as too late tonight.
+ *
+ * Every describe answer names the board "Metropolis board 1", the way two boards in one venue
+ * are told apart (Nov 2026). &board=<name> names it something else; &board= (empty) sends no
+ * name, which is what an unnamed board or an older backend answers.
  * Add &back=1&s=x to any of them to see Stripe's back link release a held share
  * (window.lastRelease). Every checkout request is kept on window.checkoutRequests.
  *
@@ -57,6 +61,8 @@
 
   var params = new URLSearchParams(window.location.search);
   var scenario = params.get('case') || 'new';
+  // The board's name in describe's answer. See the note at the top.
+  var boardName = params.has('board') ? params.get('board') : 'Metropolis board 1';
   // Back from the (fake) card page: Stripe's success link carries paid=1.
   var returning = params.get('paid') === '1';
   var polls = 0;
@@ -87,6 +93,14 @@
       window.setTimeout(function () {
         if (value instanceof Error) { reject(value); } else { resolve(value); }
       }, ms == null ? 600 : ms);
+    });
+  }
+
+  /** Adds the board's name to a describe answer that succeeded, as the real one does. */
+  function withBoardName(answer) {
+    return answer.then(function (result) {
+      if (result && result.data && result.data.ok) result.data.boardName = boardName || null;
+      return result;
     });
   }
 
@@ -349,7 +363,7 @@
   }
 
   window.PAY_CONFIG.transport = function (request) {
-    return request.action === 'describe' ? describe(request) : retiredUnlock(request);
+    return request.action === 'describe' ? withBoardName(describe(request)) : retiredUnlock(request);
   };
 
   window.PAY_CONFIG.checkoutTransport = checkout;
