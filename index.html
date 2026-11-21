@@ -52,6 +52,14 @@ body {
 
 .shell { max-width: 430px; margin: 0 auto; padding: 22px 24px 40px; }
 
+/* ---- the venue's logo -------------------------------------------------- */
+/* The venue's own logo at the very top, when it has one (21 Nov 2026). describe says where
+   it is; it is shown only once it has loaded, so a venue without one looks as before. */
+.venue-logo {
+  display: block; margin: 2px auto 10px; width: auto; height: auto;
+  max-width: 220px; max-height: 64px;
+}
+
 /* ---- masthead --------------------------------------------------------- */
 .venue {
   text-align: center; font: 500 11px/1 var(--body); letter-spacing: .16em;
@@ -189,6 +197,9 @@ button:focus-visible, input:focus-visible {
 <body>
 
 <main class="shell">
+
+  <!-- The venue's logo, above whichever screen is showing. Hidden until it has loaded. -->
+  <img class="venue-logo" id="venue-logo" alt="" hidden>
 
   <!-- ============ loading ============ -->
   <section id="view-loading">
@@ -472,6 +483,17 @@ button:focus-visible, input:focus-visible {
     new URLSearchParams(window.location.search).get('back') === '1';
 
   function call(body) {
+    return send(body).then(function (result) {
+      // Every describe answer says where the venue's logo is. Here rather than in each of
+      // the four places that ask, so a guest arriving back from the card page sees it too.
+      if (body.action === 'describe' && result && result.data && result.data.ok) {
+        showVenueLogo(result.data.venueLogoUrl);
+      }
+      return result;
+    });
+  }
+
+  function send(body) {
     // A local copy can supply its own responder. Never present in a deployed
     // build, because config.js only installs one for localhost.
     if (typeof CONFIG.transport === 'function') {
@@ -484,6 +506,24 @@ button:focus-visible, input:focus-visible {
     }
 
     return post(FUNCTION_URL, body);
+  }
+
+  var venueLogoAsked = false;
+
+  /**
+   * Puts the venue's logo at the top, once (21 Nov 2026). describe gives an address whether or
+   * not the venue has uploaded one, so the image stays hidden until it has actually loaded:
+   * a venue with no logo, or a logo that fails, looks exactly as the page did before.
+   * Only an https address (or an inline image, which the local mock uses) is ever loaded.
+   */
+  function showVenueLogo(url) {
+    if (venueLogoAsked || typeof url !== 'string') return;
+    if (!/^(https:\/\/|data:image\/)/.test(url)) return;
+    venueLogoAsked = true;
+    var img = el('venue-logo');
+    img.onload = function () { img.hidden = false; };
+    img.onerror = function () { img.hidden = true; };
+    img.src = url;
   }
 
   /**

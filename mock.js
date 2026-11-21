@@ -47,6 +47,8 @@
  * In the voucher case, RS-LATE-0000 is refused as too late tonight.
  * Add &back=1&s=x to any of them to see Stripe's back link release a held share
  * (window.lastRelease). Every checkout request is kept on window.checkoutRequests.
+ * Add &logo to any of them for a venue logo at the top (a placeholder, not any real venue's),
+ * or &logo=broken for one that fails to load, which must leave the page as it was.
  *
  * Staff passwords are retired: anything sent to unlock-session other than describe
  * gets the real endpoint's 410 bar_retired, and is kept on window.unlockRequests --
@@ -59,6 +61,14 @@
   var scenario = params.get('case') || 'new';
   // Back from the (fake) card page: Stripe's success link carries paid=1.
   var returning = params.get('paid') === '1';
+  // describe's venueLogoUrl, for &logo. A drawn placeholder: no venue's real artwork here.
+  var PLACEHOLDER_LOGO = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="440" height="110" viewBox="0 0 440 110">' +
+    '<text x="220" y="76" text-anchor="middle" font-family="Georgia, serif" font-style="italic" ' +
+    'font-size="64" fill="#f2a33a">test venue</text></svg>');
+  var venueLogo = !params.has('logo') ? null
+    : params.get('logo') === 'broken' ? 'https://logo.invalid/venue-logos/none.png'
+    : PLACEHOLDER_LOGO;
   var polls = 0;
   var ackPolls = 0;
   // Set once a voucher has been spent, so describe starts reporting that the board picked
@@ -515,6 +525,22 @@
   // `sharepaid` reaches its "Check again" button in about ten seconds.
   window.PAY_CONFIG.splitPollMs = 700;
   window.PAY_CONFIG.splitPollTries = 14;
+
+  // &logo: describe's venueLogoUrl on every answer that succeeded, as the real one sends it.
+  // Wraps whatever transport is set above, so it stacks with anything else that does.
+  if (venueLogo) {
+    var answerWithoutLogo = window.PAY_CONFIG.transport;
+    window.PAY_CONFIG.transport = function (request) {
+      var answer = answerWithoutLogo(request);
+      if (request.action !== 'describe') return answer;
+      return Promise.resolve(answer).then(function (result) {
+        if (result && result.data && result.data.ok) {
+          result = body(Object.assign({}, result.data, { venueLogoUrl: venueLogo }), result.status);
+        }
+        return result;
+      });
+    };
+  }
 
   // Obvious on screen, so a mocked run is never mistaken for a real one.
   window.addEventListener('DOMContentLoaded', function () {
