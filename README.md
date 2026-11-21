@@ -131,6 +131,8 @@ Then open a scenario. The mock only loads from localhost, and only with `?mock`:
 | `localhost:8080/?mock&c=x&case=expired` | past its half hour |
 | `localhost:8080/?mock&c=x&case=altered` | a forged payload |
 | `localhost:8080/?mock&c=x&case=offline` | no network |
+| `localhost:8080/?mock&c=x&logo` | a venue logo at the top (add `&logo` to any case; a placeholder, not a real venue's) |
+| `localhost:8080/?mock&c=x&logo=broken` | a logo that fails to load: the page must look as it does with none |
 | `localhost:8080/?mock&c=x&case=split` | 4 players, £20: pay for everyone or just my share |
 | `localhost:8080/?mock&c=x&case=splitpartial` | £5 of £20 paid: my share, or the rest |
 | `localhost:8080/?mock&c=x&case=splitheld` | the rest is mid-payment on another phone |
