@@ -1,0 +1,894 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a120c">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Max's notebook</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Special+Elite&display=swap">
+
+<style>
+/* ---------------------------------------------------------------------------
+   Max's notebook: Murder at Last Orders on a player's phone (17 Nov 2026). Max is Maximilian
+   Pheasant, the landlord on the case (Ezra Crabb until 18 Nov); storage keys and state.ezra keep the old name.
+
+   The look is mockup 6 (murder-at-last-orders-mockups/6-phone-notebook.png): a lined
+   notebook page on a dark desk, Kalam for Max's hand, Special Elite for anything typed.
+   One theme on purpose, like the other phone pages: used in a dim pub, it should look the
+   same on every phone.
+--------------------------------------------------------------------------- */
+:root {
+  --desk: #1a120c;
+  --paper: #fbf6e8;
+  --rule: #bcd0e4;
+  --margin: #e2a0a0;
+  --ink: #2a2118;
+  --type: #222;
+  --rust: #7a1a14;
+  --red: #b3141b;
+  --label: #5a4630;
+  --faded: #9a8e78;
+  --gold: #ffd36a;
+  --tab: #d9c9a6;
+  --hand: 'Kalam', 'Comic Sans MS', cursive;
+  --typed: 'Special Elite', 'Courier New', monospace;
+  --tabs-h: 64px;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body { min-height: 100%; }
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(255, 220, 160, .07), transparent 60%),
+    repeating-linear-gradient(93deg, rgba(0, 0, 0, .12) 0 2px, transparent 2px 9px),
+    linear-gradient(180deg, #2a1c12, var(--desk));
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--typed);
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ---------------------------------------------------------------- the page */
+
+.paper {
+  position: relative;
+  max-width: 30rem;
+  margin: 12px auto 0;
+  min-height: calc(100vh - 12px - var(--tabs-h) - env(safe-area-inset-bottom));
+  min-height: calc(100dvh - 12px - var(--tabs-h) - env(safe-area-inset-bottom));
+  padding: 14px 16px calc(var(--tabs-h) + 28px + env(safe-area-inset-bottom)) 60px;
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(90deg, transparent 46px, var(--margin) 46px, var(--margin) 48px, transparent 48px),
+    repeating-linear-gradient(transparent 0, transparent 31px, var(--rule) 31px, var(--rule) 32px);
+  background-position: 0 0, 0 70px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .6);
+}
+@media (min-width: 31rem) { .paper { margin-left: auto; margin-right: auto; width: calc(100% - 24px); } }
+@media (max-width: 30.99rem) { .paper { margin-left: 12px; margin-right: 12px; } }
+
+h1 {
+  margin: 0;
+  font-family: var(--hand);
+  font-weight: 700;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.case-title {
+  margin: 6px 0 0;
+  font-family: var(--hand);
+  font-size: 20px;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.meta {
+  margin-top: 4px;
+  font-size: 13px;
+  letter-spacing: .02em;
+  color: var(--rust);
+  text-transform: uppercase;
+}
+
+.lag {
+  margin-top: 8px;
+  font-family: var(--hand);
+  font-size: 17px;
+  color: var(--red);
+}
+
+.label {
+  margin: 18px 0 4px;
+  font-size: 14px;
+  color: var(--label);
+}
+.label .aside { text-transform: none; }
+
+.now {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--label);
+}
+
+.hand { font-family: var(--hand); }
+.note { font-family: var(--hand); font-size: 20px; line-height: 1.15; color: var(--red); margin-top: 8px; }
+.quiet { font-family: var(--hand); font-size: 18px; line-height: 1.2; color: var(--faded); margin-top: 6px; }
+
+/* ---------------------------------------------------------------- portraits */
+
+.polaroid {
+  position: relative;
+  background: #fff;
+  padding: 4px 4px 6px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .35);
+}
+.polaroid .ph {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 270 / 336;
+  background: #c9c4b8;
+}
+.polaroid img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.06);
+}
+
+.stamp {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%) rotate(-14deg);
+  padding: 1px 7px 0;
+  border: 3px solid var(--red);
+  border-radius: 3px;
+  background: rgba(251, 246, 232, .84);
+  color: var(--red);
+  font-family: var(--typed);
+  font-size: 18px;
+  letter-spacing: 2px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* A private cross: two red strokes over the face. */
+.crossed .ph::before, .crossed .ph::after {
+  content: '';
+  position: absolute;
+  left: -10%;
+  top: 50%;
+  width: 120%;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--red);
+  opacity: .9;
+  z-index: 1;   /* the filtered photo is its own layer and would paint over the first stroke */
+}
+.crossed .ph::before { transform: rotate(52deg); }
+.crossed .ph::after { transform: rotate(-52deg); }
+
+/* ---------------------------------------------------------------- the notebook tab */
+
+.victim {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 14px;
+}
+.victim .polaroid { width: 58px; flex: none; transform: rotate(-2deg); }
+.victim .hand { font-size: 18px; line-height: 1.2; color: var(--ink); }
+
+.clue {
+  display: flex;
+  gap: 8px;
+  padding-top: 7px;
+}
+.clue .letter { width: 16px; flex: none; font-size: 16px; color: var(--rust); }
+.clue .where { font-size: 11.5px; letter-spacing: .04em; color: var(--label); text-transform: uppercase; }
+.clue .text { font-size: 14.5px; line-height: 1.32; color: var(--type); }
+
+.said {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  align-items: flex-start;
+}
+.said .polaroid { width: 58px; flex: none; }
+.said .words { font-family: var(--hand); font-size: 19px; line-height: 1.18; color: var(--ink); }
+.said .tag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 5px;
+  border: 2px solid var(--red);
+  color: var(--red);
+  font-family: var(--typed);
+  font-size: 11px;
+  letter-spacing: 1px;
+  vertical-align: 2px;
+}
+
+/* ---------------------------------------------------------------- the suspects tab */
+
+.faces {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 14px;
+  margin-top: 10px;
+}
+
+.face {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.face:disabled { cursor: default; }
+.face .polaroid { transform: rotate(var(--tilt, -1.5deg)); }
+.face:nth-child(even) .polaroid { --tilt: 1.5deg; }
+
+.face .name {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 0 6px;
+  font-family: var(--hand);
+  font-size: 19px;
+  line-height: 1.2;
+  color: var(--ink);
+  border: 2.5px solid transparent;
+  border-radius: 50%;
+}
+.face .role { margin-top: 2px; padding: 0 6px; font-size: 11.5px; line-height: 1.3; color: var(--label); }
+.face .ticks { padding: 0 6px; font-size: 11px; letter-spacing: .05em; color: var(--rust); text-transform: uppercase; }
+
+.face.cleared .polaroid img { filter: grayscale(1) contrast(.9) brightness(1.08) opacity(.7); }
+.face.cleared .name, .face.crossed .name { color: var(--faded); text-decoration: line-through; text-decoration-color: var(--red); }
+.face.circled .name { border-color: var(--red); transform: rotate(-2deg); }
+.face.circled .polaroid { box-shadow: 0 0 0 3px var(--red), 0 2px 5px rgba(0, 0, 0, .35); }
+
+/* ---------------------------------------------------------------- the vote tab */
+
+/* WHO: one row per face, like a ballot, so HOW and WHY fit on the same screen. */
+.option.suspect-row { min-height: 70px; padding: 4px 0; }
+.option.suspect-row .polaroid { flex: none; width: 50px; padding: 3px 3px 4px; }
+.option.suspect-row .stamp { font-size: 9px; letter-spacing: 1px; border-width: 2px; padding: 0 3px; }
+.option.suspect-row .what {
+  flex: 0 1 auto;
+  padding: 0 8px;
+  border: 2.5px solid transparent;
+  border-radius: 50%;
+}
+.option.suspect-row.chosen .what { border-color: var(--red); transform: rotate(-2deg); }
+.option.suspect-row .gap { flex: 1; }
+.option.suspect-row.cleared .what { color: var(--faded); text-decoration: line-through; text-decoration-color: var(--red); }
+.option.suspect-row.cleared .polaroid img { filter: grayscale(1) contrast(.9) brightness(1.08) opacity(.7); }
+.option:disabled { cursor: default; }
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  margin: 0;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.option .box {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--ink);
+  display: grid;
+  place-items: center;
+  font-family: var(--hand);
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--red);
+}
+.option .what { flex: 1; font-family: var(--hand); font-size: 20px; line-height: 1.15; color: var(--ink); }
+.option.chosen .what { color: var(--red); }
+.option .n { flex: none; min-width: 22px; font-size: 15px; color: var(--rust); text-align: right; }
+
+.tally-line { margin-top: 14px; font-size: 13px; color: var(--label); }
+.accusing {
+  margin-top: 12px;
+  padding: 6px 10px;
+  border: 2px solid var(--red);
+  color: var(--red);
+  font-family: var(--hand);
+  font-size: 18px;
+  line-height: 1.2;
+  transform: rotate(-1deg);
+}
+
+/* ---------------------------------------------------------------- whole-page messages */
+
+.message {
+  margin-top: 28vh;
+  font-family: var(--hand);
+  font-size: 24px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.message .small { display: block; margin-top: 10px; font-size: 18px; color: var(--label); }
+
+/* ---------------------------------------------------------------- the tabs */
+
+.tabs {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: calc(var(--tabs-h) + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: linear-gradient(#1d140d, #0d0805);
+  box-shadow: 0 -6px 14px rgba(0, 0, 0, .45);
+}
+.tabs button {
+  margin: 0;
+  padding: 10px 8px 4px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--tab);
+  font-family: var(--typed);
+  font-size: 17px;
+  cursor: pointer;
+}
+.tabs button[aria-selected="true"] { color: var(--gold); border-bottom-color: var(--red); }
+.tabs[hidden] { display: none; }
+
+button:focus-visible { outline: 2px dashed var(--red); outline-offset: 3px; }
+</style>
+</head>
+<body>
+
+<main class="paper" id="paper" aria-live="polite">
+  <h1>Max's notebook</h1>
+  <noscript><p class="message">Max's notebook needs JavaScript switched on.</p></noscript>
+  <div id="head"></div>
+  <div id="body"></div>
+</main>
+
+<nav class="tabs" id="tabs" role="tablist" aria-label="Notebook pages" hidden>
+  <button type="button" role="tab" id="tab-notebook" data-tab="notebook" aria-selected="true">Notebook</button>
+  <button type="button" role="tab" id="tab-suspects" data-tab="suspects" aria-selected="false">Suspects</button>
+  <button type="button" role="tab" id="tab-vote" data-tab="vote" aria-selected="false">Our vote</button>
+</nav>
+
+<!-- A local copy opened with ?mock serves a made-up Case 1 (config.js loads it; never deployed). -->
+<script>window.PAY_MOCK_SCRIPT = 'murder/notebook-mock.js';</script>
+<script src="config.js"></script>
+<script>
+/* -----------------------------------------------------------------------------
+ * Max's notebook (Murder at Last Orders). The contract is
+ * Darts/murder-at-last-orders-plan/phone-contract.md, section 5.
+ *
+ * The board shows a QR for notebook.html?c=<code>. This page asks the mystery-notebook
+ * Edge Function every 2.5 s for what the table has found, and sends this phone's
+ * WHO / HOW / WHY vote. It never holds the answer: the board publishes only what has been
+ * found. Nothing a person types is shown anywhere -- there is no text input at all -- and
+ * every word on the page comes from the board's published state, put in with textContent.
+ *
+ * Kept on this phone only (localStorage): a random voter id, and the crosses and circles a
+ * player puts on suspects. Neither is ever sent anywhere but the id with a vote.
+ * -------------------------------------------------------------------------- */
+(function () {
+  'use strict';
+
+  var CONFIG = window.PAY_CONFIG || {};
+  var POLL_MS = CONFIG.notebookPollMs || 2500;
+  var CLOSED_POLL_MS = 10000;
+  var TIMEOUT_MS = 8000;
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get('c') || CONFIG.mockCode || '';
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ------------------------------------------------------------------ storage that may be blocked
+
+  var memory = {};
+  function stored(key) {
+    try { var v = window.localStorage.getItem(key); if (v !== null) return v; } catch (e) { /* blocked */ }
+    return Object.prototype.hasOwnProperty.call(memory, key) ? memory[key] : null;
+  }
+  function store(key, value) {
+    memory[key] = value;
+    try { window.localStorage.setItem(key, value); } catch (e) { /* kept in memory only */ }
+  }
+
+  function newId() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+    var bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    return Array.prototype.map.call(bytes, function (b) { return (b + 256).toString(16).slice(1); }).join('');
+  }
+
+  var VOTER_KEY = 'ezra-notebook:voter';
+  var voter = stored(VOTER_KEY);
+  if (!voter || !/^[A-Za-z0-9-]{1,64}$/.test(voter)) {
+    voter = newId();
+    store(VOTER_KEY, voter);
+  }
+
+  /** The session the code names, read only to key this phone's own crosses; nothing trusts it. */
+  function sessionOf(c) {
+    try {
+      var body = c.slice(0, c.lastIndexOf('.')).replace(/-/g, '+').replace(/_/g, '/');
+      while (body.length % 4) body += '=';
+      var sid = JSON.parse(atob(body)).sid;
+      if (typeof sid === 'string' && sid) return sid.slice(0, 128);
+    } catch (e) { /* fall through */ }
+    return c.slice(-32);
+  }
+  var session = sessionOf(code);
+
+  // ------------------------------------------------------------------ reading the published state safely
+
+  function str(v) { return typeof v === 'string' ? v : (typeof v === 'number' && isFinite(v) ? String(v) : ''); }
+  function list(v) { return Array.isArray(v) ? v : []; }
+  function obj(v) { return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; }
+  function num(v) { return typeof v === 'number' && isFinite(v) ? v : null; }
+
+  /** Every element made here; text only ever through textContent. */
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = String(text);
+    return e;
+  }
+
+  var PORTRAIT_NAME = /^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/;
+  function portrait(name) {
+    var frame = el('div', 'polaroid');
+    var ph = el('div', 'ph');
+    if (PORTRAIT_NAME.test(str(name))) {
+      var img = document.createElement('img');
+      img.src = 'murder/portraits/' + str(name) + '.png';
+      img.alt = '';
+      img.decoding = 'async';
+      ph.appendChild(img);
+    }
+    frame.appendChild(ph);
+    return frame;
+  }
+
+  function capitalised(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+  function suspects() { return list(state && state.suspects).map(obj).filter(function (s) { return str(s.id); }); }
+  function suspect(id) {
+    var all = suspects();
+    for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i];
+    return null;
+  }
+  function caseId() { return str(obj(state && state.case).id) || 'case'; }
+
+  // ------------------------------------------------------------------ page state
+
+  var state = null;          // the board's published state, as last read
+  var tally = { who: {}, how: {}, why: {}, voters: 0 };
+  var mine = null;           // this phone's vote, as the server last had it (or as just chosen)
+  var mode = 'loading';      // loading | live | waiting | closed | bad
+  var everLive = false;
+  var lagging = false;       // the last ask failed: show "catching up" and keep the last state
+  var tab = 'notebook';
+  var voteDirty = false;     // chosen here, not yet confirmed by the server
+  var voteSeq = 0;
+  var sending = false;
+  var timer = null;
+
+  // ------------------------------------------------------------------ private marks: never sent
+
+  function marksKey() { return 'ezra-notebook:marks:' + session + ':' + caseId(); }
+  function marks() {
+    try { return obj(JSON.parse(stored(marksKey()) || '{}')); } catch (e) { return {}; }
+  }
+  function cycleMark(id) {
+    var m = marks();
+    var next = m[id] === 'cross' ? 'circle' : m[id] === 'circle' ? null : 'cross';
+    if (next) m[id] = next; else delete m[id];
+    store(marksKey(), JSON.stringify(m));
+    render(true);
+  }
+
+  // ------------------------------------------------------------------ talking to the Edge Function
+
+  function call(method, payload) {
+    if (typeof CONFIG.notebookTransport === 'function') {
+      return Promise.resolve(CONFIG.notebookTransport({ method: method, c: code, voter: voter, body: payload }));
+    }
+    if (!CONFIG.notebookUrl) return Promise.reject(new Error('no notebook endpoint configured'));
+
+    var url = CONFIG.notebookUrl;
+    var headers = { apikey: CONFIG.anonKey, authorization: 'Bearer ' + CONFIG.anonKey };
+    // No `cache: 'no-store'` here: Chrome then skips its preflight cache and sends an OPTIONS
+    // before every poll, doubling the calls. The function's own no-store keeps answers fresh.
+    var init = { method: method, headers: headers };
+    if (method === 'GET') {
+      url += '?c=' + encodeURIComponent(code) + '&voter=' + encodeURIComponent(voter);
+    } else {
+      headers['content-type'] = 'application/json';
+      init.body = JSON.stringify(payload);
+    }
+    var abort = typeof AbortController === 'function' ? new AbortController() : null;
+    if (abort) init.signal = abort.signal;
+    var stop = setTimeout(function () { if (abort) abort.abort(); }, TIMEOUT_MS);
+    return fetch(url, init).then(function (response) {
+      return response.json().catch(function () { return {}; }).then(function (data) {
+        return { status: response.status, data: data };
+      });
+    }).finally(function () { clearTimeout(stop); });
+  }
+
+  function adoptTally(t) {
+    t = obj(t);
+    tally = { who: obj(t.who), how: obj(t.how), why: obj(t.why), voters: num(t.voters) || 0 };
+  }
+
+  function poll() {
+    clearTimeout(timer);
+    if (mode === 'bad') return;
+    if (document.hidden) return;   // picked up again on visibilitychange
+    if (voteDirty && !sending) sendVote();
+
+    call('GET').then(function (res) {
+      var data = obj(res && res.data);
+      if (res.status === 200 && data.state && typeof data.state === 'object') {
+        state = data.state;
+        adoptTally(data.tally);
+        if (!voteDirty) mine = data.mine ? obj(data.mine) : null;
+        mode = 'live';
+        everLive = true;
+        lagging = false;
+      } else if (res.status === 404 && data.closed === true) {
+        // Before the board has published anything the notebook is not open yet; after, it has closed.
+        mode = everLive ? 'closed' : 'waiting';
+        lagging = false;
+      } else if (res.status === 400 || res.status === 401) {
+        mode = 'bad';
+      } else {
+        lagging = true;
+      }
+    }, function () {
+      lagging = true;
+    }).then(function () {
+      render(false);
+      if (mode !== 'bad') timer = setTimeout(poll, mode === 'closed' ? CLOSED_POLL_MS : POLL_MS);
+    });
+  }
+
+  function choose(field, id) {
+    if (mode !== 'live') return;
+    var next = obj(mine);
+    next = { who: str(next.who) || null, how: str(next.how) || null, why: str(next.why) || null };
+    next[field] = next[field] === id ? null : id;
+    mine = next;
+    voteDirty = true;
+    voteSeq++;
+    render(true);
+    sendVote();
+  }
+
+  function sendVote() {
+    if (sending) return;
+    sending = true;
+    var seq = voteSeq;
+    var v = obj(mine);
+    call('POST', { c: code, voter: voter, who: v.who || null, how: v.how || null, why: v.why || null })
+      .then(function (res) {
+        var data = obj(res && res.data);
+        if (res.status === 200) {
+          adoptTally(data.tally);
+          if (seq === voteSeq) voteDirty = false;
+          lagging = false;
+        } else if (res.status === 404 && data.closed === true) {
+          voteDirty = false;
+          mode = everLive ? 'closed' : 'waiting';
+        } else if (res.status === 400) {
+          // Not one of the choices any more (a new case started): take the server's word.
+          voteDirty = false;
+        } else {
+          lagging = true;   // tried again on the next poll
+        }
+      }, function () {
+        lagging = true;
+      })
+      .then(function () {
+        sending = false;
+        render(false);
+        if (voteDirty && seq !== voteSeq) sendVote();
+      });
+  }
+
+  // ------------------------------------------------------------------ drawing
+
+  var lastDrawn = '';
+
+  function render(force) {
+    var key = JSON.stringify([mode, lagging, tab, state, tally, mine, mode === 'live' ? marks() : null]);
+    if (!force && key === lastDrawn) return;
+    lastDrawn = key;
+
+    var head = $('head');
+    var body = $('body');
+    head.textContent = '';
+    body.textContent = '';
+    $('tabs').hidden = mode !== 'live';
+
+    if (mode === 'bad') {
+      body.appendChild(message('This link doesn’t open a notebook.', 'Scan the code on the board again.'));
+      return;
+    }
+    if (mode === 'closed') {
+      body.appendChild(message('The case is closed.', 'The front page is on the big screen.'));
+      return;
+    }
+    if (mode === 'waiting') {
+      body.appendChild(message('The case hasn’t begun.', 'This page fills in as soon as Max opens the case file.'));
+      return;
+    }
+    if (mode === 'loading') {
+      body.appendChild(message(lagging ? 'Max’s notebook is catching up…' : 'Opening the notebook…', null));
+      return;
+    }
+
+    drawHead(head);
+    if (tab === 'suspects') drawSuspects(body);
+    else if (tab === 'vote') drawVote(body);
+    else drawNotebook(body);
+
+    var tabs = $('tabs').querySelectorAll('button');
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].setAttribute('aria-selected', tabs[i].getAttribute('data-tab') === tab ? 'true' : 'false');
+    }
+  }
+
+  function message(big, small) {
+    var m = el('p', 'message', big);
+    if (small) m.appendChild(el('span', 'small', small));
+    return m;
+  }
+
+  function drawHead(head) {
+    var c = obj(state.case);
+    if (str(c.title)) head.appendChild(el('p', 'case-title', str(c.title)));
+    var bits = [];
+    if (num(c.number) !== null) bits.push('Case No. ' + c.number);
+    if (str(state.clock)) bits.push(str(state.clock));
+    if (num(state.minutesLeft) !== null) bits.push(Math.max(0, state.minutesLeft) + ' min left');
+    if (bits.length) head.appendChild(el('div', 'meta', bits.join(' · ')));
+    if (lagging) head.appendChild(el('div', 'lag', 'Max’s notebook is catching up…'));
+  }
+
+  function nowLine() {
+    var a = obj(state.action);
+    switch (state.phase) {
+      case 'briefing': return 'Now · Max is reading out the case';
+      case 'hub': return 'Now · choosing where to go next';
+      case 'throwing':
+        if (a.kind === 'search' && str(a.place)) return 'Now · searching ' + str(a.place).replace(/^The /, 'the ');
+        if (a.kind === 'interview') {
+          var s = suspect(str(a.suspect));
+          return 'Now · questioning ' + (s ? str(s.name) : 'a suspect');
+        }
+        return 'Now · throwing';
+      case 'revealing': return 'Now · opening the envelope';
+      case 'accusing': return 'Now · the accusation, on the touchscreen';
+      case 'over': return 'The case is decided';
+      default: return '';
+    }
+  }
+
+  function drawNotebook(body) {
+    var line = nowLine();
+    if (line) body.appendChild(el('div', 'now', line));
+
+    var victim = obj(state.victim);
+    var boardLine = str(obj(state.case).boardLine);
+    if (str(victim.name) || boardLine) {
+      var v = el('div', 'victim');
+      if (str(victim.portrait)) v.appendChild(portrait(victim.portrait));
+      var words = el('div', 'hand');
+      words.textContent = (str(victim.name) ? str(victim.name) + '. ' : '') + boardLine;
+      v.appendChild(words);
+      body.appendChild(v);
+    }
+
+    var found = list(state.found).map(obj).slice().reverse();
+    body.appendChild(el('div', 'label', 'CLUES SO FAR'));
+    if (found.length === 0) {
+      body.appendChild(el('p', 'quiet', 'Nothing found yet.'));
+    }
+    found.forEach(function (f) {
+      var row = el('div', 'clue');
+      row.appendChild(el('div', 'letter', str(f.letter)));
+      var col = el('div');
+      var where = [str(f.place), str(f.tier) ? str(f.tier) + ' envelope' : ''].filter(Boolean).join(' · ');
+      if (where) col.appendChild(el('div', 'where', where));
+      col.appendChild(el('div', 'text', str(f.text)));
+      row.appendChild(col);
+      body.appendChild(row);
+    });
+
+    var said = list(state.statements).map(obj).slice().reverse();
+    if (said.length) {
+      body.appendChild(el('div', 'label', 'QUESTIONED'));
+      said.forEach(function (st) {
+        var who = suspect(str(st.who));
+        var row = el('div', 'said');
+        if (who) row.appendChild(portrait(who.portrait));
+        var words = el('div', 'words');
+        var name = who ? capitalised(str(who.short) || str(who.name)) : '';
+        words.textContent = (name ? name + ': ' : '') + '“' + str(st.text) + '”';
+        if (st.kind === 'crack') words.appendChild(el('span', 'tag', 'CRACKED'));
+        row.appendChild(words);
+        body.appendChild(row);
+      });
+    }
+
+    var notes = list(state.notes).map(str).filter(Boolean);
+    var ezra = obj(state.ezra);
+    if (notes.length || ezra.onThisLevel === true) {
+      body.appendChild(el('div', 'label', 'MAX’S NOTES'));
+      notes.forEach(function (n) { body.appendChild(el('p', 'note', n)); });
+      if (ezra.onThisLevel === true) {
+        body.appendChild(el('p', 'quiet', ezra.used === true
+          ? 'You’ve asked Max. That was his one.'
+          : 'You can still ask Max to rule one out, once.'));
+      }
+    }
+  }
+
+  function drawSuspects(body) {
+    var label = el('div', 'label', 'SUSPECTS · ');
+    label.appendChild(el('span', 'aside', 'tap to cross out or circle. Only you see these.'));
+    body.appendChild(label);
+
+    var m = marks();
+    var grid = el('div', 'faces');
+    suspects().forEach(function (s) {
+      var cleared = s.cleared === true;
+      var mark = cleared ? null : m[s.id];
+      var b = el('button', 'face' + (cleared ? ' cleared' : '') + (mark === 'cross' ? ' crossed' : '') + (mark === 'circle' ? ' circled' : ''));
+      b.type = 'button';
+      b.disabled = cleared;
+      b.setAttribute('aria-label', str(s.name) + (cleared ? ', cleared' : mark === 'cross' ? ', crossed out' : mark === 'circle' ? ', circled' : ''));
+      var p = portrait(s.portrait);
+      if (cleared) p.querySelector('.ph').appendChild(el('span', 'stamp', 'CLEARED'));
+      b.appendChild(p);
+      b.appendChild(el('span', 'name', str(s.name)));
+      if (str(s.role)) b.appendChild(el('div', 'role', str(s.role)));
+      var ticks = [];
+      if (s.cracked === true) ticks.push('cracked');
+      else if (s.questioned === true) ticks.push('questioned');
+      if (ticks.length) b.appendChild(el('div', 'ticks', ticks.join(' · ')));
+      if (!cleared) b.addEventListener('click', function () { cycleMark(s.id); });
+      grid.appendChild(b);
+    });
+    body.appendChild(grid);
+    body.appendChild(el('p', 'quiet', 'CLEARED is the board’s stamp. Your crosses and circles stay on this phone.'));
+  }
+
+  function count(map, id) {
+    var n = num(obj(map)[id]);
+    return n && n > 0 ? n : 0;
+  }
+
+  function drawVote(body) {
+    var v = obj(mine);
+
+    if (state.phase === 'accusing') {
+      body.appendChild(el('div', 'accusing', 'The accusation is being made on the touchscreen now.'));
+    }
+
+    body.appendChild(el('div', 'label', 'WHO DID IT?'));
+    suspects().forEach(function (s) {
+      var chosen = v.who === s.id;
+      var cleared = s.cleared === true;
+      var n = count(tally.who, s.id);
+      var b = el('button', 'option suspect-row' + (chosen ? ' chosen' : '') + (cleared ? ' cleared' : ''));
+      b.type = 'button';
+      // A cleared suspect can't be picked, but a vote already on one can be taken back.
+      b.disabled = cleared && !chosen;
+      b.setAttribute('aria-pressed', chosen ? 'true' : 'false');
+      b.setAttribute('aria-label', str(s.name) + (cleared ? ', cleared' : '') + ', ' + n + (n === 1 ? ' vote' : ' votes'));
+      var p = portrait(s.portrait);
+      if (cleared) p.querySelector('.ph').appendChild(el('span', 'stamp', 'CLEARED'));
+      b.appendChild(p);
+      b.appendChild(el('span', 'what', str(s.name)));
+      b.appendChild(el('span', 'gap'));
+      b.appendChild(el('span', 'n', n ? n : ''));
+      b.addEventListener('click', function () { choose('who', s.id); });
+      body.appendChild(b);
+    });
+
+    optionList(body, 'HOW?', state.howRequired === true ? 'needed on this level' : 'a bonus', 'how', state.how, v.how, tally.how);
+    optionList(body, 'WHY?', 'a bonus', 'why', state.why, v.why, tally.why);
+
+    var voters = tally.voters;
+    body.appendChild(el('p', 'tally-line', voters === 1 ? '1 phone has voted.' : voters + ' phones have voted.'));
+    body.appendChild(el('p', 'quiet', 'Change your mind any time. The touchscreen makes the accusation.'));
+  }
+
+  function optionList(body, title, aside, field, options, chosenId, counts) {
+    var label = el('div', 'label', title + ' ');
+    label.appendChild(el('span', 'aside', '(' + aside + ')'));
+    body.appendChild(label);
+    list(options).map(obj).filter(function (o) { return str(o.id); }).forEach(function (o) {
+      var chosen = chosenId === o.id;
+      var b = el('button', 'option' + (chosen ? ' chosen' : ''));
+      b.type = 'button';
+      b.setAttribute('aria-pressed', chosen ? 'true' : 'false');
+      b.appendChild(el('span', 'box', chosen ? '✓' : ''));
+      b.appendChild(el('span', 'what', str(o.label)));
+      var n = count(counts, o.id);
+      b.appendChild(el('span', 'n', n ? n : ''));
+      b.addEventListener('click', function () { choose(field, o.id); });
+      body.appendChild(b);
+    });
+  }
+
+  // ------------------------------------------------------------------ tabs and start
+
+  function setTab(name) {
+    if (name !== 'notebook' && name !== 'suspects' && name !== 'vote') name = 'notebook';
+    if (name === tab) return;
+    tab = name;
+    try { window.history.replaceState(null, '', '#' + name); } catch (e) { /* not important */ }
+    render(true);
+    window.scrollTo(0, 0);
+  }
+
+  var fromHash = window.location.hash.replace('#', '');
+  if (fromHash === 'suspects' || fromHash === 'vote') tab = fromHash;
+  window.addEventListener('hashchange', function () { setTab(window.location.hash.replace('#', '')); });
+
+  var buttons = $('tabs').querySelectorAll('button');
+  for (var i = 0; i < buttons.length; i++) {
+    buttons[i].addEventListener('click', function (e) { setTab(e.currentTarget.getAttribute('data-tab')); });
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && mode !== 'bad') poll();
+  });
+
+  if (!code) {
+    mode = 'bad';
+    render(true);
+  } else {
+    render(true);
+    poll();
+  }
+})();
+</script>
+</body>
+</html>

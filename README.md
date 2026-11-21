@@ -78,6 +78,9 @@ signature first, figures second.
 | `staff/seal-codes.mjs` | encrypts a batch's codes into a staff page under its password |
 | `dashboard/index.html` | Hawktivity's sessions dashboard, behind Google sign-in |
 | `dashboard/mock.js` | made-up sessions for walking the dashboard on a laptop (`/dashboard/?mock`) |
+| `notebook.html` | Ezra's notebook for Murder at Last Orders: the case so far, private crosses on suspects, and the table's WHO / HOW / WHY vote. Polls the `mystery-notebook` Edge Function with the board's signed `note` code; no account, no typed text |
+| `murder/notebook-mock.js` | a made-up Case 1 for walking the notebook on a laptop (`notebook.html?mock=1`, `&case=briefing`, `accusing`, `closed`, `waiting`, `offline`, `bad`) |
+| `murder/portraits/` | the 22 suspect, victim and witness portraits the notebook shows, 270x336 greyscale |
 
 ### Staff voucher pages
 

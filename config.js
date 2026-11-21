@@ -61,6 +61,10 @@
     // after the #, and this is the only place the page sends it.
     storyUrl: project.url ? project.url + '/functions/v1/get-story' : '',
 
+    // Where notebook.html (Ezra's notebook, Murder at Last Orders) reads the case the table has
+    // found so far (GET) and sends a phone's vote (POST). Its code buys nothing.
+    notebookUrl: project.url ? project.url + '/functions/v1/mystery-notebook' : '',
+
     // The project itself, for pages that sign in rather than call one function: the staff
     // dashboard (dashboard/) signs Hawktivity people in with Google through Supabase Auth.
     supabaseUrl: project.url,
@@ -71,8 +75,10 @@
 
   // A local copy is driven from a fake so the screens can be walked through
   // without a Supabase project, Stripe or a real voucher. Deliberately gated on
-  // the hostname: a deployed copy has no route to this code at all.
+  // the hostname: a deployed copy has no route to this code at all. A page with fakes of its
+  // own names them in PAY_MOCK_SCRIPT before loading this file (notebook.html does).
   if (isLocal && new URLSearchParams(window.location.search).has('mock')) {
-    document.write('<script src="mock.js"><\/script>');
+    var mockScript = typeof window.PAY_MOCK_SCRIPT === 'string' ? window.PAY_MOCK_SCRIPT : 'mock.js';
+    document.write('<script src="' + mockScript + '"><\/script>');
   }
 })();
