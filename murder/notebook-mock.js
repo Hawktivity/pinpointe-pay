@@ -14,6 +14,8 @@
  *   waiting    the board has not published anything yet
  *   offline    one good read, then every ask fails ("catching up")
  *   bad        the code is refused (401)
+ * &phase= (briefing, hub, throwing, revealing, accusing) and &kind= (search, interview,
+ * ezra, chase) set what the table is doing now, for the line under the heading.
  * Votes work: tap to change them and the tally follows. A phone's crosses and circles are
  * seeded once (Major Pike crossed, Freddie circled) so the Suspects page shows both.
  * -------------------------------------------------------------------------- */
@@ -43,6 +45,9 @@
   ];
 
   function state() {
+    // &phase= and &kind= put the table mid-action, e.g. &phase=throwing&kind=search or
+    // &phase=revealing&kind=interview, to see each "Now" line.
+    var kind = params.get('kind') || 'none';
     var briefing = scenario === 'briefing';
     var accusing = scenario === 'accusing';
     return {
@@ -52,8 +57,8 @@
       level: 'novice',
       clock: briefing ? '9.00' : accusing ? '10.40' : '10.05',
       minutesLeft: briefing ? 120 : accusing ? 20 : 55,
-      phase: briefing ? 'briefing' : accusing ? 'accusing' : 'hub',
-      action: { kind: 'none', place: null, suspect: null },
+      phase: params.get('phase') || (briefing ? 'briefing' : accusing ? 'accusing' : 'hub'),
+      action: { kind: kind, place: kind === 'search' ? 'The cellar' : null, suspect: kind === 'interview' ? 'pike' : null },
       victim: { name: 'Silas Venn', portrait: 'c1-venn' },
       suspects: [
         { id: 'pike', number: 1, name: 'Major Pike', plate: 'MAJOR PIKE', short: 'the Major', portrait: 'c1-pike',
