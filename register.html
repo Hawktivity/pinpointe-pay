@@ -180,6 +180,10 @@ input:focus-visible {
   margin-top: .6rem;
 }
 
+/* The offers opt-in, under the email it would use: quiet, and only once there is an email. */
+.tick.offers { padding-top: .7rem; }
+.tick.offers span { font-size: .9rem; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: 1.4; color: var(--dim); }
+
 /* --- buttons ----------------------------------------------------------- */
 button {
   width: 100%;
@@ -441,12 +445,20 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
         <input id="photo" type="file" accept="image/*" hidden>
       </div>
 
-      <div class="field">
+      <!-- Hidden (and cleared) for an under-18: they are not sent clips, so nothing here is
+           promised to them. The offers box is a separate, unticked consent of its own -- never
+           the social media box below, and never assumed. The board shows the same words. -->
+      <div class="field" id="email-field">
         <label for="email">Email <span class="opt">optional</span></label>
         <input id="email" name="email" type="email" autocomplete="email"
                inputmode="email" enterkeyhint="next" maxlength="120">
-        <p class="hint" id="email-hint">Leave it blank and you still play. Put it in if you
-          want to keep your scores and history. Replay clips by email are coming soon.</p>
+        <p class="hint" id="email-hint">Get your night by email: a summary of your session and
+          videos of your best throws. We never sell your email and never spam you.</p>
+        <label class="tick offers" for="offersConsent" id="offers-field" hidden>
+          <input id="offersConsent" type="checkbox">
+          <span>Also send me the odd special offer from Hawktivity Darts. Unsubscribe any
+            time.</span>
+        </label>
       </div>
 
       <div class="field">
@@ -484,12 +496,14 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
     <p class="privacy">
       Your name, and your photo if you add one, go to the board so people can see
       who's playing. We ask your date of birth so under-18s get a parent's consent.
-      Everything you put in is kept only for this session and cleared when it ends
-      &mdash; unless you choose Remember me afterwards, which keeps your details and your
-      scores against your email. If you tick the social media box, we keep that answer and
-      when you gave it, so we know we may share clips of you; email darts@hawktivity.com to
-      change it. We won't market to you. Leave the optional fields blank and
-      the board still works exactly the same.
+      If you give an email, we use it to send you your session summary and clips, keep it
+      for 30 days for that, then delete it. We never sell it and never spam you. We only
+      send you the odd special offer if you tick that box, and then we keep your email until
+      you unsubscribe. Everything else is cleared when your session ends &mdash; unless you
+      choose Remember me afterwards, which keeps your details and your scores against your
+      email. If you tick the social media box, we keep that answer and when you gave it, so
+      we know we may share clips of you; email darts@hawktivity.com to change it. Leave the
+      optional fields blank and the board still works exactly the same.
     </p>
   </section>
 
@@ -669,6 +683,17 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
     // Never asked of an under-18; the server refuses it for one as well.
     el('social-field').hidden = minor;
     if (minor) { clearPhoto(); el('marketingConsent').checked = false; }
+    // No email for an under-18 either: they are not sent clips. The server drops one if sent.
+    el('email-field').hidden = minor;
+    if (minor) { el('email').value = ''; }
+    showOffers();
+  }
+
+  /** The offers box appears once there is an email it could go to, and goes with it. */
+  function showOffers() {
+    var hasEmail = !isMinor() && el('email').value.indexOf('@') > 0;
+    el('offers-field').hidden = !hasEmail;
+    if (!hasEmail) { el('offersConsent').checked = false; }
   }
 
   // --- date of birth: typed as DD/MM/YYYY, sent as YYYY-MM-DD ------------------
@@ -721,6 +746,8 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
     if (tidy !== field.value) { field.value = tidy; }
     onBirthDate();
   });
+
+  el('email').addEventListener('input', showOffers);
 
   var picker = el('dateOfBirthPicker');
   picker.max = isoToday();
@@ -840,12 +867,14 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
     var details = {
       firstName: firstName,
       lastName: el('lastName').value.trim(),
-      email: el('email').value.trim(),
+      email: isMinor() ? '' : el('email').value.trim(),
       mobileNumber: el('mobileNumber').value.trim(),
       dateOfBirth: birthDateIso(),
       acceptedDisclaimer: true,
       // Their own tick, separate from the rules. Exactly true or false; a minor is always false.
       marketingConsent: !isMinor() && el('marketingConsent').checked === true,
+      // The separate offers box: exactly true, from an adult, with an email to send to.
+      offersConsent: !isMinor() && el('email').value.trim() !== '' && el('offersConsent').checked === true,
       photo: isMinor() ? null : photoBase64
     };
 

@@ -61,6 +61,10 @@
     // after the #, and this is the only place the page sends it.
     storyUrl: project.url ? project.url + '/functions/v1/get-story' : '',
 
+    // Where clips.html (the end-of-session "add your email" QR) lists the guests its code offers
+    // and saves one guest's email. The venue-signed code is the only access check.
+    lateEmailUrl: project.url ? project.url + '/functions/v1/late-email' : '',
+
     // Where notebook.html (Ezra's notebook, Murder at Last Orders) reads the case the table has
     // found so far (GET) and sends a phone's vote (POST). Its code buys nothing.
     notebookUrl: project.url ? project.url + '/functions/v1/mystery-notebook' : '',
