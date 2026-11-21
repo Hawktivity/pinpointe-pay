@@ -58,6 +58,24 @@ body {
   text-transform: uppercase; color: var(--dimmer); margin-top: 9px;
 }
 
+/* ---- which board ------------------------------------------------------ */
+/* Two boards side by side in one venue print QR codes nobody can tell apart, so the board's
+   name is the first thing on the screen: the same name the board shows beside its code. */
+.board {
+  margin-top: 8px; padding: 13px 14px 14px; text-align: center;
+  border: 2px solid #3d3d47; border-radius: 8px; background: var(--ink-2);
+}
+.board-k {
+  font: 600 10.5px/1 var(--body); letter-spacing: .2em; text-transform: uppercase;
+  color: var(--dimmer);
+}
+.board-name {
+  font: 400 30px/1.15 var(--display); text-transform: uppercase; letter-spacing: .02em;
+  color: #fff; margin-top: 9px; overflow-wrap: anywhere;
+}
+.board-check { font: 500 12px/1.45 var(--body); color: var(--dim); margin-top: 7px; }
+.row .v.board-v { text-transform: uppercase; overflow-wrap: anywhere; }
+
 /* ---- headings and text ------------------------------------------------ */
 h1 {
   font: 400 34px/1.2 var(--display); text-transform: uppercase;
@@ -198,7 +216,14 @@ button:focus-visible, input:focus-visible {
 
   <!-- ============ what you're paying ============ -->
   <section id="view-pay" hidden>
-    <div class="venue" id="pay-venue">Suite</div>
+    <div class="venue" id="pay-venue">Lane</div>
+    <!-- Which board this code is for, when the board has a name (Nov 2026). Shown instead of
+         the "Lane 1a2b3c4d" line above, which nobody can match to a board. -->
+    <div class="board" id="pay-board" hidden>
+      <div class="board-k">You&rsquo;re paying for</div>
+      <div class="board-name" id="pay-board-name">&mdash;</div>
+      <div class="board-check">The same name is on the board, beside the code you scanned.</div>
+    </div>
 
     <div class="stack" style="margin-top:30px">
       <div>
@@ -273,6 +298,7 @@ button:focus-visible, input:focus-visible {
       </div>
 
       <div class="rows">
+        <div class="row" id="done-board-row" hidden><span class="k">Board</span><span class="v board-v" id="done-board">&mdash;</span></div>
         <div class="row"><span class="k" id="done-amount-label">Paid</span><span class="v" id="done-amount">&mdash;</span></div>
         <div class="row"><span class="k" id="done-minutes-label">Time bought</span><span class="v" id="done-minutes">&mdash;</span></div>
         <div class="row"><span class="k" id="done-by-label">Paid by</span><span class="v" id="done-by">&mdash;</span></div>
@@ -313,7 +339,11 @@ button:focus-visible, input:focus-visible {
     friend who would rather not wait.
   -->
   <section id="view-share" hidden>
-    <div class="venue" id="share-venue">Suite</div>
+    <div class="venue" id="share-venue">Lane</div>
+    <div class="board" id="share-board" hidden>
+      <div class="board-k">Board</div>
+      <div class="board-name" id="share-board-name">&mdash;</div>
+    </div>
 
     <div class="stack" style="margin-top:30px">
       <div>
@@ -595,7 +625,7 @@ button:focus-visible, input:focus-visible {
       return;
     }
 
-    el('pay-venue').textContent = 'Suite ' + (data.suiteId ? shortSuite(data.suiteId) : '');
+    nameBoard('pay', data);
     el('pay-amount').textContent = money(data.amountMinor, data.currency);
     el('pay-players').textContent = data.players;
     el('pay-minutes').textContent = duration(data.minutes);
@@ -663,6 +693,31 @@ button:focus-visible, input:focus-visible {
   /** A suite id is a uuid; only the readable tail is worth putting on screen. */
   function shortSuite(id) {
     return String(id).slice(0, 8);
+  }
+
+  /**
+   * The board's name, as it shows beside its QR -- "Metropolis board 1" (Nov 2026).
+   *
+   * Two boards side by side in one venue print codes nobody can tell apart, and a guest who
+   * scans the neighbour's code pays for the neighbour's game. describe sends the name; an
+   * answer that carries none (an older backend, a board with no name) is '' and the page
+   * says what it said before.
+   */
+  function boardNameOf(data) {
+    return (data && data.boardName) || (session && session.boardName) || '';
+  }
+
+  /**
+   * Puts the board's name at the top of a screen, or a "Lane 1a2b3c4d" line without one.
+   * Lane, not suite, in anything a guest reads (Richard, 21 Nov 2026): suites are only at
+   * Pinpointe. suiteId stays as the field's name; it is never shown.
+   */
+  function nameBoard(prefix, data) {
+    var name = boardNameOf(data);
+    el(prefix + '-board').hidden = !name;
+    el(prefix + '-board-name').textContent = name;
+    el(prefix + '-venue').hidden = !!name;
+    el(prefix + '-venue').textContent = 'Lane ' + (data.suiteId ? shortSuite(data.suiteId) : '');
   }
 
   // ---- 2. the board picking it up ------------------------------------------
@@ -736,6 +791,11 @@ button:focus-visible, input:focus-visible {
       : 'Already paid';
     // Otherwise a share payer's tab still says "Your share is paid" over a running board.
     document.title = el('done-title').textContent;
+
+    // Which board was paid for, so "Board unlocked" says which one.
+    var board = boardNameOf(data);
+    el('done-board-row').hidden = !board;
+    el('done-board').textContent = board;
 
     el('done-blurb').textContent = justPaid
       ? (kind === 'join'
@@ -1208,7 +1268,7 @@ button:focus-visible, input:focus-visible {
     var mine = data.share ? data.share.amountMinor : 0;
     var left = Math.max(0, f.remaining);
 
-    el('share-venue').textContent = 'Suite ' + (data.suiteId ? shortSuite(data.suiteId) : '');
+    nameBoard('share', data);
 
     // The group never finished -- an hour went by with nobody else paying, or the board moved
     // on to another group -- so the board never started and this guest's money is going back.
