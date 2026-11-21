@@ -216,9 +216,9 @@ button:focus-visible, input:focus-visible {
 
   <!-- ============ what you're paying ============ -->
   <section id="view-pay" hidden>
-    <div class="venue" id="pay-venue">Suite</div>
+    <div class="venue" id="pay-venue">Lane</div>
     <!-- Which board this code is for, when the board has a name (Nov 2026). Shown instead of
-         the "Suite 1a2b3c4d" line above, which nobody can match to a board. -->
+         the "Lane 1a2b3c4d" line above, which nobody can match to a board. -->
     <div class="board" id="pay-board" hidden>
       <div class="board-k">You&rsquo;re paying for</div>
       <div class="board-name" id="pay-board-name">&mdash;</div>
@@ -339,7 +339,7 @@ button:focus-visible, input:focus-visible {
     friend who would rather not wait.
   -->
   <section id="view-share" hidden>
-    <div class="venue" id="share-venue">Suite</div>
+    <div class="venue" id="share-venue">Lane</div>
     <div class="board" id="share-board" hidden>
       <div class="board-k">Board</div>
       <div class="board-name" id="share-board-name">&mdash;</div>
@@ -707,13 +707,17 @@ button:focus-visible, input:focus-visible {
     return (data && data.boardName) || (session && session.boardName) || '';
   }
 
-  /** Puts the board's name at the top of a screen, or the old "Suite 1a2b3c4d" line without one. */
+  /**
+   * Puts the board's name at the top of a screen, or a "Lane 1a2b3c4d" line without one.
+   * Lane, not suite, in anything a guest reads (Richard, 21 Nov 2026): suites are only at
+   * Pinpointe. suiteId stays as the field's name; it is never shown.
+   */
   function nameBoard(prefix, data) {
     var name = boardNameOf(data);
     el(prefix + '-board').hidden = !name;
     el(prefix + '-board-name').textContent = name;
     el(prefix + '-venue').hidden = !!name;
-    el(prefix + '-venue').textContent = 'Suite ' + (data.suiteId ? shortSuite(data.suiteId) : '');
+    el(prefix + '-venue').textContent = 'Lane ' + (data.suiteId ? shortSuite(data.suiteId) : '');
   }
 
   // ---- 2. the board picking it up ------------------------------------------
