@@ -542,6 +542,21 @@
     };
   }
 
+  // clips.html, the end-of-session "add your email" QR. Lists three guests; &case=expired
+  // shows an out-of-date code. Records the last add on window.lastLateEmail.
+  window.PAY_CONFIG.lateEmailTransport = function (request) {
+    if (scenario === 'expired') {
+      return later(body({ ok: false, reason: 'expired',
+        message: 'This code has expired. Ask at the bar if you missed it.' }, 400));
+    }
+    if (request.action === 'describe') {
+      return later(body({ ok: true, venue: 'The Rising Sun', expiresInSeconds: 1500,
+        players: [{ id: 101, name: 'Priya' }, { id: 102, name: 'Tom' }, { id: 103, name: 'Sam' }] }));
+    }
+    window.lastLateEmail = request;
+    return later(body({ ok: true, venue: 'The Rising Sun', name: 'Priya', applied: false }));
+  };
+
   // Obvious on screen, so a mocked run is never mistaken for a real one.
   window.addEventListener('DOMContentLoaded', function () {
     var flag = document.createElement('div');
