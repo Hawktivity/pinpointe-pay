@@ -689,21 +689,29 @@ button:focus-visible { outline: 2px dashed var(--red); outline-offset: 3px; }
     if (lagging) head.appendChild(el('div', 'lag', 'Max’s notebook is catching up…'));
   }
 
+  // What the table is doing, from the board's phase and action. The board publishes at the
+  // briefing, the case board, each search, questioning and chase, and the reveal (Johann,
+  // 20 Nov 2026: the phones said "reading out the case" through the whole first search). When
+  // the case is decided the board closes the notebook, and the page says so itself.
   function nowLine() {
     var a = obj(state.action);
+    var place = str(a.place).replace(/^The /, 'the ');
+    var s = a.kind === 'interview' ? suspect(str(a.suspect)) : null;
+    var who = s ? str(s.name) : '';
     switch (state.phase) {
       case 'briefing': return 'Now · Max is reading out the case';
       case 'hub': return 'Now · choosing where to go next';
       case 'throwing':
-        if (a.kind === 'search' && str(a.place)) return 'Now · searching ' + str(a.place).replace(/^The /, 'the ');
-        if (a.kind === 'interview') {
-          var s = suspect(str(a.suspect));
-          return 'Now · questioning ' + (s ? str(s.name) : 'a suspect');
-        }
+        if (a.kind === 'search' && place) return 'Now · searching ' + place;
+        if (a.kind === 'interview') return 'Now · questioning ' + (who || 'a suspect');
+        if (a.kind === 'chase') return 'Now · the chase: everyone throws to catch them';
         return 'Now · throwing';
-      case 'revealing': return 'Now · opening the envelope';
+      case 'revealing':
+        if (a.kind === 'search') return 'Now · what was found' + (place ? ' in ' + place : '');
+        if (a.kind === 'interview') return who ? 'Now · ' + who + '’s statement' : 'Now · a statement';
+        if (a.kind === 'ezra') return 'Now · Max rules out an innocent';
+        return 'Now · what was found';
       case 'accusing': return 'Now · the accusation, on the touchscreen';
-      case 'over': return 'The case is decided';
       default: return '';
     }
   }
