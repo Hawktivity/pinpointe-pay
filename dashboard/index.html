@@ -370,11 +370,12 @@ select, .small {
   var PAGE = 150;
 
   // The board's GameId -> name, as the story page names them (pinpointe-supabase
-  // supabase/functions/_shared/story-catalogue.ts), plus the two games being built.
+  // supabase/functions/_shared/story-catalogue.ts). A new game goes in both places.
   var GAME_NAMES = {
     1: 'Zero Hour', 2: '501', 3: '301', 4: 'Kill Shot', 5: 'Roulette', 6: 'Killer',
     7: 'Warships', 8: 'Hounds & Hares', 9: 'Casual Cricket', 10: 'Around the World',
-    11: 'Snakes & Ladders', 12: 'Smart Arrows'
+    11: 'Snakes & Ladders', 12: 'Smart Arrows', 13: "The Landlord's Tales",
+    14: 'Murder at Last Orders'
   };
   function gameName(id) { return GAME_NAMES[id] || (id == null ? 'Darts' : 'Game ' + id); }
 
