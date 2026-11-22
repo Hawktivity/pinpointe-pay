@@ -74,8 +74,9 @@ signature first, figures second.
 | `config.js` | which Supabase project to talk to, chosen by hostname |
 | `mock.js` | fake endpoints for walking the screens on a laptop |
 | `.nojekyll` | stops GitHub Pages running the files through Jekyll |
-| `staff/rising-sun.html` | the Rising Sun's free 15-minute voucher codes, for bar staff, behind a password |
-| `staff/seal-codes.mjs` | encrypts a batch's codes into a staff page under its password |
+| `dashboard/vouchers/index.html` | free-darts voucher codes for pub staff, every venue, behind Google sign-in |
+| `dashboard/vouchers/mock.js` | made-up venues and codes for walking the staff page on a laptop (`/dashboard/vouchers/?mock`) |
+| `staff/index.html`, `staff/rising-sun.html` | old and short staff addresses; both redirect to `/dashboard/vouchers/` |
 | `dashboard/index.html` | Hawktivity's sessions dashboard, behind Google sign-in |
 | `dashboard/mock.js` | made-up sessions for walking the dashboard on a laptop (`/dashboard/?mock`) |
 | `notebook.html` | Ezra's notebook for Murder at Last Orders: the case so far, private crosses on suspects, and the table's WHO / HOW / WHY vote. Polls the `mystery-notebook` Edge Function with the board's signed `note` code; no account, no typed text |
@@ -84,13 +85,26 @@ signature first, figures second.
 
 ### Staff voucher pages
 
-`pay.hawktivity.com/staff/rising-sun` lists a venue's voucher codes for its staff to hand
-out. This repository is public, so the codes are in the page only as AES-GCM ciphertext
-under a key derived from the staff password; the browser decrypts them once the password
-is typed. Every 30 seconds the page sends the SHA-256 of each code to the
-`vouchers_spent` database function and drops whichever come back used or revoked. To
-reseal a page with a new batch or password, run `staff/seal-codes.mjs` (usage at its top)
-with the CSV that `create_voucher_batch()` produced.
+`pay.hawktivity.com/staff/` (it redirects to `/dashboard/vouchers/`) lists free-darts codes for
+pub staff to hand out. People sign in with Google, exactly as on the sessions dashboard, and
+share its login. The page reads one database function, `staff_vouchers()`
+(pinpointe-supabase migration `20261122180000`), which returns only the venues the signed-in
+account may see and only codes that can still be spent:
+
+- a `hawktivity.com` Google account sees every venue, with a switch between them, and gets a
+  "Who can see codes" panel to add or remove anyone else;
+- any other Google account sees exactly the venues it has been added to (table
+  `staff_venue_access`), and nothing if none.
+
+The codes live in the database (`staff_voucher_codes`), never in this public repository. The
+page asks again every 30 seconds, so a code drops off as soon as a guest uses it. "Handed out"
+is remembered per phone. To put a new batch on the page, an operator runs
+`create_staff_voucher_batch(location, count, label, prefix, minutes)` in SQL; it never prints
+the codes. `add_staff_voucher_codes(batch, codes[])` puts an already-printed batch on it.
+
+Until 22 Nov 2026 the Rising Sun had its own page, `staff/rising-sun.html`, with its codes
+AES-sealed under a shared password. That address now opens the new page on the Rising Sun.
+The page sits under `/dashboard/` because that is where Google sign-in may return to.
 
 ### Sessions dashboard
 
