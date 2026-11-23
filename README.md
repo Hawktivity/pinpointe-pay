@@ -140,8 +140,11 @@ hawktivity.com; outside dashboard viewers and boards are refused:
   rows, and earlier rows;
 - `dashboard_set_price(...)`: a new price, either now (the active row is retired and the next
   version goes in active) or from a date and time in London (the next version goes in
-  inactive with `effective_from`). A save never changes an existing row's prices;
-- `dashboard_cancel_price(id)`: withdraws a scheduled price before it starts.
+  inactive with `effective_from`). A save never changes an existing row's prices. **Edit** on a
+  scheduled price fills the form with it, start included, and the save passes `p_replaces`
+  (migration `20261123210000`), so that price is retired in the same step;
+- `dashboard_cancel_price(id)`: **Delete** on a scheduled price, before it starts. The price on
+  the board now can be replaced but not deleted: a board always needs a price.
 
 A pg_cron job, `pricing-activate-due`, switches on any scheduled price within 5 minutes of its
 start. The page previews the board's welcome line and each length's price with the board's own

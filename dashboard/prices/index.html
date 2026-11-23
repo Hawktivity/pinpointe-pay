@@ -143,6 +143,8 @@ h2 {
 }
 .chip.live { background: #1d2a20; border-color: #2f5a39; color: #9fd8a9; }
 .chip.soon { background: #2e2615; border-color: #5c4a22; color: #f0cf8e; }
+/* A scheduled price open in the form, and the form while it edits one. */
+.card.editing { border-color: #8a6a2c; }
 
 /* The welcome line as the board shows it: white on near-black, the board's own spacing. */
 .board {
@@ -337,7 +339,9 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     <div id="coming" class="view" style="gap:14px" hidden></div>
 
     <section class="card" id="edit-card">
-      <div class="card-top"><h2>Change the price</h2></div>
+      <div class="card-top"><h2 id="form-title">Change the price</h2>
+        <button class="link" id="stop-editing" type="button" hidden>Stop editing</button></div>
+      <p class="hint" id="form-lede"></p>
       <form class="edit" id="edit" autocomplete="off" novalidate>
 
         <div class="field">
@@ -460,6 +464,7 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     failing: false,
     busy: false,
     dirty: false,        // the form has been touched since it was filled
+    editing: null,       // the scheduled price the form is editing, or null
     formFor: null        // venueId + active version the form was filled from
   };
 
@@ -778,7 +783,7 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
         type: 'button', 'aria-pressed': v.locationId === state.venueId ? 'true' : 'false',
         onclick: function () {
           if (v.locationId === state.venueId) return;
-          state.venueId = v.locationId; save(PICK_KEY, v.locationId); state.dirty = false;
+          state.venueId = v.locationId; save(PICK_KEY, v.locationId); state.dirty = false; state.editing = null;
           render();
         }
       }, [nameOf(v), h('small', { text: sub })]));
@@ -809,7 +814,9 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
         modelWords(a), h('br'),
         'Version ' + a.version + ' · since ' + when(a.effectiveFrom || a.createdAt) + by(a) + '.', h('br'),
         'Boards: ' + boards
-      ])
+      ]),
+      h('p', { cls: 'hint', text: 'To change it, use Change the price below. A board always needs a price, so this one ' +
+                                 'can be replaced but not deleted.' })
     ]));
   }
 
@@ -820,9 +827,12 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     box.hidden = !list.length;
     list.forEach(function (row) {
       var due = new Date(row.effectiveFrom) <= new Date();
-      var withdraw = h('button', { type: 'button', cls: 'small', text: 'Withdraw' });
-      withdraw.addEventListener('click', function () { cancel(row, withdraw); });
-      box.append(h('section', { cls: 'card' }, [
+      var editing = !!state.editing && state.editing.id === row.id;
+      var del = h('button', { type: 'button', cls: 'small', text: 'Delete' });
+      del.addEventListener('click', function () { cancel(row, del); });
+      var edit = h('button', { type: 'button', cls: 'small', text: editing ? 'Editing below' : 'Edit', disabled: editing,
+                               onclick: function () { startEdit(row); } });
+      box.append(h('section', { cls: 'card' + (editing ? ' editing' : '') }, [
         h('div', { cls: 'card-top' }, [
           h('h2', { text: 'From ' + when(row.effectiveFrom) }),
           h('span', { cls: 'chip soon', text: due ? 'Starting now' : 'Coming up' })
@@ -836,11 +846,7 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
           (due ? 'Its start has passed; the database switches it on within ' + (state.data.jobEveryMinutes || 5) + ' minutes.'
                : 'The database switches it on within ' + (state.data.jobEveryMinutes || 5) + ' minutes of its start.')
         ]),
-        h('div', { cls: 'row' }, [
-          withdraw,
-          h('button', { type: 'button', cls: 'small', text: 'Copy into the form',
-                        onclick: function () { fill(row); state.dirty = true; $('edit').scrollIntoView({ behavior: 'smooth' }); } })
-        ])
+        h('div', { cls: 'row' }, [edit, del])
       ]));
     });
   }
@@ -851,11 +857,16 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     $('hist-count').textContent = list.length ? '(' + list.length + ')' : '';
     var ul = $('hist-list');
     ul.textContent = '';
+    // A save that replaces a scheduled price retires it in the same moment the new row is made,
+    // so a price taken off before it started was changed if a row was made just then, else deleted.
+    var everyRow = v ? [].concat(v.active ? [v.active] : [], v.scheduled, v.history) : [];
     list.forEach(function (row) {
       var from = row.effectiveFrom || row.createdAt;
       var never = row.retiredAt && new Date(row.retiredAt) < new Date(from);
+      var next = never ? everyRow.filter(function (o) { return o.id !== row.id && o.createdAt === row.retiredAt; })[0] : null;
       var span = never
-        ? 'Withdrawn ' + when(row.retiredAt) + ', before its start (' + when(from) + ')'
+        ? (next ? 'Changed before it started (now version ' + next.version + '); was due ' + when(from)
+                : 'Deleted ' + when(row.retiredAt) + ', before its start (' + when(from) + ')')
         : when(from) + ' to ' + (row.retiredAt ? when(row.retiredAt) : '?');
       ul.append(h('li', {}, [
         h('div', { cls: 'x' }, [
@@ -885,6 +896,11 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
   function render() {
     var v = venue();
     document.title = v ? 'Darts prices · ' + nameOf(v) : 'Darts prices';
+    if (state.editing && !(v && v.scheduled.some(function (r) { return r.id === state.editing.id; }))) {
+      toast('The price you were editing has started, been changed or been deleted, so the form shows today’s price again.');
+      state.editing = null;
+      state.dirty = false;
+    }
     renderVenues();
     renderNow(v);
     renderComing(v);
@@ -905,7 +921,8 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
   // ---- the form ----------------------------------------------------------------------------
   var form = { model: 'per_group', lengths: [], overrides: {} };
 
-  function fill(row) {
+  // keepStart: a scheduled price being edited keeps its start date and time.
+  function fill(row, keepStart) {
     form.model = row ? row.model : 'per_group';
     form.lengths = row ? row.lengths.slice().sort(function (a, b) { return a - b; }) : [30, 60, 90];
     form.overrides = {};
@@ -914,12 +931,34 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     });
     $('rate').value = row ? poundsText(row.rateMinor) : '';
     $('note').value = row && row.note ? row.note : '';
-    document.querySelector('input[name="when"][value="now"]').checked = true;
-    $('start-date').value = '';
-    $('start-time').value = '00:00';
+    if (keepStart && row && row.effectiveFrom) {
+      var p = londonParts(Date.parse(row.effectiveFrom));
+      document.querySelector('input[name="when"][value="later"]').checked = true;
+      $('start-date').value = p.year + '-' + p.month + '-' + p.day;
+      $('start-time').value = p.hour + ':' + p.minute;
+    } else {
+      document.querySelector('input[name="when"][value="now"]').checked = true;
+      $('start-date').value = '';
+      $('start-time').value = '00:00';
+    }
     closeConfirm();
     showFormError('');
     drawForm();
+  }
+
+  function startEdit(row) {
+    state.editing = row;
+    fill(row, true);
+    state.dirty = true;
+    renderComing(venue());
+    $('edit-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function stopEdit() {
+    var v = venue();
+    state.editing = null;
+    state.dirty = false;
+    fill(v && v.active ? v.active : null);
+    renderComing(v);
   }
 
   function draft() {
@@ -1055,28 +1094,31 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     var tiles = $('pv-lengths');
     tiles.replaceWith(ok ? Object.assign(lengthTiles(row), { id: 'pv-lengths' }) : h('ul', { cls: 'lengths', id: 'pv-lengths' }));
 
-    // What changes against the price on the board now.
+    // What changes: against the scheduled price being edited, else the price on the board now.
+    var base = state.editing || active;
     var ch = $('pv-changes');
     ch.textContent = '';
-    if (ok && active) {
-      var all = active.lengths.concat(row.lengths).filter(function (m, i, a) { return a.indexOf(m) === i; }).sort(function (a, b) { return a - b; });
+    if (ok && base) {
+      var against = state.editing ? 'the price due ' + when(state.editing.effectiveFrom) : 'the price on the board now';
+      var all = base.lengths.concat(row.lengths).filter(function (m, i, a) { return a.indexOf(m) === i; }).sort(function (a, b) { return a - b; });
       var lines = [];
-      if (active.model !== row.model) {
-        lines.push(h('li', {}, ['Charge: ', h('span', { cls: 'was', text: active.model === 'per_group' ? 'the board' : 'per person' }), ' → ',
+      if (base.model !== row.model) {
+        lines.push(h('li', {}, ['Charge: ', h('span', { cls: 'was', text: base.model === 'per_group' ? 'the board' : 'per person' }), ' → ',
                                 h('b', { text: row.model === 'per_group' ? 'the board' : 'per person' })]));
       }
       all.forEach(function (m) {
-        var was = active.lengths.indexOf(m) >= 0 ? quote(active, m, 1).minor : null;
+        var was = base.lengths.indexOf(m) >= 0 ? quote(base, m, 1).minor : null;
         var now = row.lengths.indexOf(m) >= 0 ? quote(row, m, 1).minor : null;
-        if (was === now && active.model === row.model) return;
-        var wasEach = active.model === 'per_person' ? ' each' : '';
+        if (was === now && base.model === row.model) return;
+        var wasEach = base.model === 'per_person' ? ' each' : '';
         var nowEach = row.model === 'per_person' ? ' each' : '';
-        if (now == null) lines.push(h('li', {}, [spoken(m) + ': no longer sold (was ' + money(was, active.currency) + wasEach + ')']));
+        if (now == null) lines.push(h('li', {}, [spoken(m) + ': no longer sold (was ' + money(was, base.currency) + wasEach + ')']));
         else if (was == null) lines.push(h('li', {}, [spoken(m) + ': new, ', h('b', { text: money(now, row.currency) + nowEach })]));
-        else lines.push(h('li', {}, [spoken(m) + ': ', h('span', { cls: 'was', text: money(was, active.currency) + wasEach }), ' → ', h('b', { text: money(now, row.currency) + nowEach })]));
+        else lines.push(h('li', {}, [spoken(m) + ': ', h('span', { cls: 'was', text: money(was, base.currency) + wasEach }), ' → ', h('b', { text: money(now, row.currency) + nowEach })]));
       });
-      if (welcomeLine(active) !== line && !lines.length) lines.push(h('li', { text: 'Only the words on the welcome line change.' }));
-      if (!lines.length) lines.push(h('li', { text: 'Same as the price on the board now.' }));
+      if (welcomeLine(base) !== line && !lines.length) lines.push(h('li', { text: 'Only the words on the welcome line change.' }));
+      if (!lines.length) lines.push(h('li', { text: 'Same as ' + against + '.' }));
+      if (state.editing) lines.unshift(h('li', { text: 'Against ' + against + ':' }));
       lines.forEach(function (li) { ch.append(li); });
     }
 
@@ -1091,12 +1133,12 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
       warns.append(h('div', { cls: 'warn', text: 'The welcome line is ' + line.length + ' characters. 64 is what clears the SEE THE GAMES card on the board; longer can run into it. Shorter words are safer; check the board after it changes.' }));
     }
     // A length's own price is copied from today's and stays put when the hour changes.
-    if (ok && active && active.rateMinor !== row.rateMinor) {
+    if (ok && base && base.rateMinor !== row.rateMinor) {
       row.lengths.forEach(function (m) {
         var k = String(m);
-        if (hasOwnPrice(row, m) && active.overrides && active.overrides[k] === row.overrides[k]) {
+        if (hasOwnPrice(row, m) && base.overrides && base.overrides[k] === row.overrides[k]) {
           warns.append(h('div', { cls: 'warn', text: spoken(m) + ' keeps its own price of ' + money(row.overrides[k], row.currency) +
-            ' while the hour goes from ' + money(active.rateMinor, active.currency) + ' to ' + money(row.rateMinor, row.currency) +
+            ' while the hour goes from ' + money(base.rateMinor, base.currency) + ' to ' + money(row.rateMinor, row.currency) +
             '. Change it above if it should move with the hour.' }));
         }
       });
@@ -1109,12 +1151,26 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     $('start-date').disabled = !later;
     $('start-time').disabled = !later;
     $('start-date').min = londonToday();
+    var ed = state.editing;
+    var edWhen = ed ? when(ed.effectiveFrom) : '';
     $('when-hint').textContent = later
       ? (d.startsAt ? 'Starts ' + when(d.startsAt.toISOString()) + ' London time. The database switches it on within ' +
                       ((state.data && state.data.jobEveryMinutes) || 5) + ' minutes of that; until then the board keeps today’s price.'
                     : 'Pick a date. Midnight is the usual start.')
-      : 'Boards pick it up at their next welcome screen.';
-    $('save').textContent = later && d.startsAt ? 'Schedule for ' + when(d.startsAt.toISOString()) : 'Save: the board changes now';
+      : (ed ? 'It replaces the price due ' + edWhen + ', and boards pick it up at their next welcome screen.'
+            : 'Boards pick it up at their next welcome screen.');
+    if (ed) {
+      $('save').textContent = later ? 'Save changes to the ' + edWhen + ' price' : 'Save: start it now instead of ' + edWhen;
+    } else {
+      $('save').textContent = later && d.startsAt ? 'Schedule for ' + when(d.startsAt.toISOString()) : 'Save: the board changes now';
+    }
+    $('form-title').textContent = ed ? 'Edit the price due ' + edWhen : 'Change the price';
+    $('stop-editing').hidden = !ed;
+    $('edit-card').classList.toggle('editing', !!ed);
+    $('form-lede').textContent = ed
+      ? 'Change anything, including when it starts. Saving replaces this price; it stays under Earlier prices as changed.'
+      : 'Filled in with the price on the board now. Saving replaces it, now or from a date you pick, and the old price ' +
+        'is kept under Earlier prices.';
   }
 
   function touched() { state.dirty = true; closeConfirm(); showFormError(''); }
@@ -1148,11 +1204,20 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     if (wrong.length) { showFormError(wrong.join(' ')); markBad(); return; }
     showFormError('');
     var line = welcomeLine(d);
-    $('confirm-text').textContent = d.later
-      ? 'From ' + when(d.startsAt.toISOString()) + ', ' + nameOf(v) + '’s board will read “' + line + '”. Until then it keeps today’s price.'
-      : nameOf(v) + '’s board will read “' + line + '” from its next welcome screen.';
+    var ed = state.editing;
+    if (ed && d.later) {
+      $('confirm-text').textContent = 'The price due ' + when(ed.effectiveFrom) + ' is replaced. From ' + when(d.startsAt.toISOString()) +
+        ', ' + nameOf(v) + '’s board will read “' + line + '”. Until then it keeps today’s price.';
+    } else if (ed) {
+      $('confirm-text').textContent = nameOf(v) + '’s board will read “' + line + '” from its next welcome screen, instead of from ' +
+        when(ed.effectiveFrom) + '.';
+    } else {
+      $('confirm-text').textContent = d.later
+        ? 'From ' + when(d.startsAt.toISOString()) + ', ' + nameOf(v) + '’s board will read “' + line + '”. Until then it keeps today’s price.'
+        : nameOf(v) + '’s board will read “' + line + '” from its next welcome screen.';
+    }
     $('confirm-text').textContent += ' ' + pricingWords(d);
-    $('confirm-yes').textContent = d.later ? 'Yes, schedule it' : 'Yes, change the price now';
+    $('confirm-yes').textContent = ed ? 'Yes, save the changes' : d.later ? 'Yes, schedule it' : 'Yes, change the price now';
     $('save').hidden = true;
     $('confirm').hidden = false;
     $('confirm-yes').focus();
@@ -1163,8 +1228,9 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     if (!v) return;
     var d = draft();
     var btn = $('confirm-yes');
+    var ed = state.editing;
     btn.disabled = true;
-    rpc('dashboard_set_price', {
+    var args = {
       p_location_id: v.locationId,
       p_model: d.model,
       p_rate_minor: d.rateMinor,
@@ -1173,19 +1239,25 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
       p_note: d.note,
       p_starts_at: d.later ? d.startsAt.toISOString() : null,
       p_based_on: v.active ? v.active.version : null
-    }).then(function (r) {
+    };
+    // Only when editing, so a save still works against a database without the argument.
+    if (ed) args.p_replaces = ed.id;
+    rpc('dashboard_set_price', args).then(function (r) {
       btn.disabled = false;
       if (r.error) {
         if (r.error.code === '42501') { deny(); return; }
         closeConfirm();
         showFormError(r.error.message || 'The price wasn’t saved.');
-        if (r.error.code === '40001') fetchPrices();
+        if (r.error.code === '40001' || (ed && r.error.code === '22023' && /editing/.test(r.error.message || ''))) fetchPrices();
         return;
       }
       state.dirty = false;
+      state.editing = null;
       took(r.data);
-      toast(d.later ? 'Scheduled. ' + nameOf(v) + ' changes price ' + when(d.startsAt.toISOString()) + '.'
-                    : 'Saved. ' + nameOf(v) + '’s board shows the new price at its next welcome screen.');
+      toast(ed ? (d.later ? 'Saved. The price due ' + when(ed.effectiveFrom) + ' is replaced; the new one starts ' + when(d.startsAt.toISOString()) + '.'
+                          : 'Saved. ' + nameOf(v) + '’s board shows it at its next welcome screen.')
+               : d.later ? 'Scheduled. ' + nameOf(v) + ' changes price ' + when(d.startsAt.toISOString()) + '.'
+                         : 'Saved. ' + nameOf(v) + '’s board shows the new price at its next welcome screen.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }, function (e) {
       btn.disabled = false;
@@ -1197,22 +1269,25 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
 
   function cancel(row, button) {
     var v = venue();
-    if (!window.confirm('Withdraw the price due ' + when(row.effectiveFrom) + '? ' + (v ? nameOf(v) : 'The venue') + ' keeps its current price.')) return;
+    if (!window.confirm('Delete the price due ' + when(row.effectiveFrom) + '? ' + (v ? nameOf(v) : 'The venue') +
+                        ' keeps its current price, and nothing changes then.')) return;
     button.disabled = true;
     rpc('dashboard_cancel_price', { p_pricing_id: row.id }).then(function (r) {
       if (r.error) {
         button.disabled = false;
         if (r.error.code === '42501') { deny(); return; }
-        toast('Not withdrawn: ' + r.error.message);
+        toast('Not deleted: ' + r.error.message);
         fetchPrices();
         return;
       }
+      if (state.editing && state.editing.id === row.id) { state.editing = null; state.dirty = false; }
       took(r.data);
-      toast('Withdrawn. Nothing changes on ' + when(row.effectiveFrom) + '.');
-    }, function () { button.disabled = false; toast('Couldn’t reach the database. Nothing was withdrawn.'); });
+      toast('Deleted. Nothing changes on ' + when(row.effectiveFrom) + '.');
+    }, function () { button.disabled = false; toast('Couldn’t reach the database. Nothing was deleted.'); });
   }
 
-  $('refresh').addEventListener('click', function () { state.dirty = false; fetchPrices(); });
+  $('refresh').addEventListener('click', function () { state.dirty = false; state.editing = null; fetchPrices(); });
+  $('stop-editing').addEventListener('click', stopEdit);
   $('signout').addEventListener('click', signOut);
   $('denied-out').addEventListener('click', signOut);
   $('denied-switch').addEventListener('click', function () { signOut().then(function () { if (sb) signIn(); }); });
