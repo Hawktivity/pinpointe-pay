@@ -166,6 +166,8 @@ h2 {
 .lengths .s { font-size: 11px; color: var(--dimmer); line-height: 1.35; }
 .meta { font-size: 12px; color: var(--dimmer); line-height: 1.6; }
 .meta b { color: var(--dim); font-weight: 600; }
+/* Which lengths follow the hourly rate and which have their own price, said in words. */
+.say { font-size: 13px; line-height: 1.5; color: var(--paper); margin: 0; max-width: 62ch; }
 .empty { font-size: 14px; color: var(--dim); }
 
 /* ---- the form --------------------------------------------------------- */
@@ -350,7 +352,7 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
         <div class="field">
           <label for="rate">Price per hour</label>
           <div class="money" id="rate-box"><span>£</span><input id="rate" inputmode="decimal" placeholder="20.00" aria-describedby="rate-hint"></div>
-          <p class="hint" id="rate-hint">Lengths without their own price below are charged at this rate: 30 minutes is half of it.</p>
+          <p class="hint" id="rate-hint">Lengths without their own price below are charged at this rate.</p>
         </div>
 
         <div class="field">
@@ -508,6 +510,36 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
   }
   function atRate(row, minutes) {
     return Math.floor((row.rateMinor * minutes + Math.floor(row.ratePerMinutes / 2)) / row.ratePerMinutes);
+  }
+
+  // ---- a length's own price, said against the hour ---------------------------------------
+  // The venues sell 30 minutes for more than half the hour (£12 against £20 an hour, £18 against
+  // £30), so the page says so wherever a 30-minute price shows, rather than leave it to be
+  // worked out from the numbers.
+  function shareOfHour(m) {
+    return { 15: 'a quarter of the hour', 30: 'half the hour', 45: 'three quarters of the hour', 60: 'the hour',
+             90: 'an hour and a half', 120: 'two hours' }[m] || m + ' minutes';
+  }
+  function hasOwnPrice(row, m) { return !!row.overrides && row.overrides[String(m)] != null; }
+  // "more than half the hour (£10.00)"
+  function againstHour(row, m) {
+    var own = row.overrides[String(m)], rate = atRate(row, m);
+    var each = row.model === 'per_person' ? ' each' : '';
+    return (own > rate ? 'more than ' : own < rate ? 'less than ' : 'the same as ') + shareOfHour(m) +
+           ' (' + money(rate, row.currency) + each + ')';
+  }
+  function listWords(a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
+  // "1 hour and 90 min are charged at the hourly rate. 30 min has its own price, £12.00: more than
+  // half the hour (£10.00)."
+  function pricingWords(row) {
+    var rated = (row.lengths || []).filter(function (m) { return !hasOwnPrice(row, m); });
+    var out = [];
+    if (rated.length) out.push(listWords(rated.map(spoken)) + (rated.length > 1 ? ' are' : ' is') + ' charged at the hourly rate.');
+    (row.lengths || []).filter(function (m) { return hasOwnPrice(row, m); }).forEach(function (m) {
+      out.push(spoken(m) + ' has its own price, ' + money(row.overrides[String(m)], row.currency) +
+               (row.model === 'per_person' ? ' each' : '') + ': ' + againstHour(row, m) + '.');
+    });
+    return out.join(' ');
   }
 
   // ---- London time ------------------------------------------------------------------------
@@ -692,9 +724,9 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
       var q = quote(row, m, 1);
       var sub;
       if (row.model === 'per_person') {
-        sub = 'per person' + (q.set ? ' · its own price' : '') + ' · 4 players ' + money(quote(row, m, 4).minor, row.currency);
+        sub = 'per person' + (q.set ? ' · its own price, ' + againstHour(row, m) : '') + ' · 4 players ' + money(quote(row, m, 4).minor, row.currency);
       } else {
-        sub = q.set ? 'its own price (' + money(atRate(row, m), row.currency) + ' at the hourly rate)' : 'at the hourly rate';
+        sub = q.set ? 'its own price: ' + againstHour(row, m) : 'at the hourly rate';
       }
       return h('li', {}, [h('span', { cls: 'm', text: spoken(m) }),
                           h('span', { cls: 'p', text: money(q.minor, row.currency) }),
@@ -755,6 +787,7 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     body.append(h('div', { cls: 'view', style: 'gap:14px' }, [
       boardBox('The welcome line reads', a),
       lengthTiles(a),
+      h('p', { cls: 'say', text: pricingWords(a) }),
       h('p', { cls: 'meta' }, [
         modelWords(a), h('br'),
         'Version ' + a.version + ' · since ' + when(a.effectiveFrom || a.createdAt) + by(a) + '.', h('br'),
@@ -779,6 +812,7 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
         ]),
         boardBox('The welcome line will read', row),
         lengthTiles(row),
+        h('p', { cls: 'say', text: pricingWords(row) }),
         h('p', { cls: 'meta' }, [
           modelWords(row), h('br'),
           'Version ' + row.version + ' · saved ' + when(row.createdAt) + by(row) + '. ' +
@@ -985,9 +1019,15 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
       var set = row.overrides[String(m)] != null;
       var each = d.model === 'per_person' ? ' per person' : '';
       s.textContent = set
-        ? 'Its own price' + each + '. Blank it to charge the hourly rate' + (ok ? ' (' + money(atRate(row, m), d.currency) + ')' : '') + '.'
-        : (ok ? 'At the hourly rate: ' + money(atRate(row, m), d.currency) + each + '.' : 'At the hourly rate.');
+        ? (ok ? 'Its own price: ' + againstHour(row, m) + '. Blank it to charge the hourly rate.'
+              : 'Its own price. Blank it to charge the hourly rate.')
+        : (ok ? 'At the hourly rate: ' + money(atRate(row, m), d.currency) + each +
+                (m < 60 ? ', ' + shareOfHour(m) + '. Type a price to charge more.' : '.')
+              : 'At the hourly rate.');
     });
+    $('rate-hint').textContent = ok && row.lengths.length
+      ? 'The price for 1 hour. ' + pricingWords(row)
+      : 'The price for 1 hour. Lengths without their own price below are charged at this rate.';
 
     var line = ok ? welcomeLine(row) : '';
     $('pv-line').textContent = ok ? line : 'Type a price per hour to see it.';
@@ -1035,6 +1075,17 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     }
     if (d.note && d.note.indexOf('{price}') < 0 && /£\d/.test(d.note)) {
       warns.append(h('div', { cls: 'warn', text: 'The words name a price of their own. Use {price} for this one, so the words can’t disagree with what the board charges.' }));
+    }
+    // A length's own price is copied from today's and stays put when the hour changes.
+    if (ok && active && active.rateMinor !== row.rateMinor) {
+      row.lengths.forEach(function (m) {
+        var k = String(m);
+        if (hasOwnPrice(row, m) && active.overrides && active.overrides[k] === row.overrides[k]) {
+          warns.append(h('div', { cls: 'warn', text: spoken(m) + ' keeps its own price of ' + money(row.overrides[k], row.currency) +
+            ' while the hour goes from ' + money(active.rateMinor, active.currency) + ' to ' + money(row.rateMinor, row.currency) +
+            '. Change it above if it should move with the hour.' }));
+        }
+      });
     }
     if (v && !v.boards.length) {
       warns.append(h('div', { cls: 'warn', text: nameOf(v) + ' has no board yet, so nothing shows this price until one is set up there.' }));
@@ -1086,6 +1137,7 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     $('confirm-text').textContent = d.later
       ? 'From ' + when(d.startsAt.toISOString()) + ', ' + nameOf(v) + '’s board will read “' + line + '”. Until then it keeps today’s price.'
       : nameOf(v) + '’s board will read “' + line + '” from its next welcome screen.';
+    $('confirm-text').textContent += ' ' + pricingWords(d);
     $('confirm-yes').textContent = d.later ? 'Yes, schedule it' : 'Yes, change the price now';
     $('save').hidden = true;
     $('confirm').hidden = false;
