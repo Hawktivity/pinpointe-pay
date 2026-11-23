@@ -36,9 +36,15 @@
       row({ version: 2, model: 'per_group', rateMinor: 2000, lengths: [30, 60, 90], overrides: { 30: 1200 },
             isActive: true, effectiveFrom: '2026-11-23T14:02:32Z', createdAt: '2026-11-23T14:02:32Z' })
     ],
+    // As on prod at 15:38Z on 23 Nov: the launch price now, £30 from Mon 7 Dec.
     'mock-metropolis': [
       row({ version: 1, model: 'per_person', rateMinor: 1000, lengths: [15, 30, 60, 90],
-            isActive: true, createdAt: '2026-11-21T12:25:06Z' })
+            createdAt: '2026-11-21T12:25:06Z', retiredAt: '2026-11-23T15:31:19Z' }),
+      row({ version: 2, model: 'per_group', rateMinor: 2000, lengths: [30, 60, 90], overrides: { 30: 1200 },
+            note: 'Launch Special, to 6 Dec:  {price}', isActive: true,
+            effectiveFrom: '2026-11-23T15:31:19Z', createdAt: '2026-11-23T15:31:19Z', createdBy: 'richard@hawktivity.com' }),
+      row({ version: 3, model: 'per_group', rateMinor: 3000, lengths: [30, 60, 90], overrides: { 30: 1800 },
+            effectiveFrom: '2026-12-07T00:00:00Z', createdAt: '2026-11-23T15:38:12Z', createdBy: 'richard@hawktivity.com' })
     ],
     'cd243f94-1d65-4dc6-8f1f-63748d27d38e': [
       row({ version: 1, model: 'per_person', rateMinor: 1000, lengths: [15, 30, 60, 90],
@@ -112,8 +118,16 @@
     if (a.p_based_on != null && (!active || active.version !== a.p_based_on)) {
       return fail('40001', 'This venue\'s price changed while you were editing (now version ' + (active ? active.version : 'none') + '). Reload to see it.');
     }
-    var version = list.reduce(function (n, r) { return Math.max(n, r.version); }, 0) + 1;
     var now = iso(Date.now());
+    // An edit of a scheduled price replaces it in the same step (20261123210000).
+    if (a.p_replaces) {
+      var old = list.filter(function (r) { return r.id === a.p_replaces; })[0];
+      if (!old || !scheduled(old)) {
+        return fail('22023', 'The price you were editing has started, been changed or been deleted since. Reload to see it.');
+      }
+      old.retiredAt = now;
+    }
+    var version = list.reduce(function (n, r) { return Math.max(n, r.version); }, 0) + 1;
     var fresh = row({ version: version, model: a.p_model, rateMinor: a.p_rate_minor, lengths: lengths, overrides: overrides,
                       note: note, createdAt: now, createdBy: EMAIL });
     if (starts == null) {
