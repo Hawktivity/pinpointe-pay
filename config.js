@@ -65,6 +65,11 @@
     // and saves one guest's email. The venue-signed code is the only access check.
     lateEmailUrl: project.url ? project.url + '/functions/v1/late-email' : '',
 
+    // Where free.html (15 minutes free, per person) signs a guest up for their own emailed code,
+    // and where each adult at the board types it. The board's 15 MIN FREE code is the access
+    // check at the board; a sign-up from home only ever mints a code for the address typed.
+    freeUrl: project.url ? project.url + '/functions/v1/free-15' : '',
+
     // Where notebook.html (Ezra's notebook, Murder at Last Orders) reads the case the table has
     // found so far (GET) and sends a phone's vote (POST). Its code buys nothing.
     notebookUrl: project.url ? project.url + '/functions/v1/mystery-notebook' : '',

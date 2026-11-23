@@ -469,6 +469,25 @@ button:focus-visible, input:focus-visible {
   var code = codeFromUrl();
   var session = null;
 
+  // A board's 15 MIN FREE code (24 Nov 2026) is for free.html: every adult types their own
+  // emailed code there, and nothing is paid. Routing only -- free.html has the code checked
+  // before it shows anything, so reading the unverified flag here decides nothing but the page.
+  function isFreeCode(value) {
+    if (!value) return false;
+    try {
+      var body = value.slice(0, value.lastIndexOf('.')).replace(/-/g, '+').replace(/_/g, '/');
+      while (body.length % 4) body += '=';
+      var claims = JSON.parse(atob(body));
+      return !!claims && claims.f === 1;
+    } catch (e) {
+      return false;  // not a code this check understands: the page goes on as before
+    }
+  }
+  if (isFreeCode(code)) {
+    window.location.replace('free.html?c=' + encodeURIComponent(code));
+    return;
+  }
+
   // Stripe adds this on the way back, and only on the way back from a payment that went
   // through. It changes what this page does on load: not "what is this code worth" but
   // "has the money landed yet".
