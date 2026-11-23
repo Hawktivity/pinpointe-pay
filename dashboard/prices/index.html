@@ -364,8 +364,8 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
 
         <div class="field">
           <label for="note">Words on the welcome line <span class="hint">(optional)</span></label>
-          <input class="text" id="note" maxlength="120" placeholder="Launch {price}  ·  £30 from 7 Dec">
-          <p class="hint"><code>{price}</code> is replaced by the price (“£20 an hour”). Without it, the words go after the price. <span id="note-count">0</span>/120.</p>
+          <input class="text" id="note" maxlength="120" placeholder="Launch, to 6 Dec:  {price}">
+          <p class="hint"><code>{price}</code> stands for the lengths and their prices (“30 min £12 · 1 hour £20 · 90 min £30”), and then nothing else follows. Without it, the words go in front of the usual line. <span id="note-count">0</span>/120.</p>
         </div>
 
         <div class="field">
@@ -435,7 +435,8 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
   var LENGTH_CHOICES = [15, 30, 45, 60, 90, 120];
   var MAX_LENGTHS = 4;
   var NOTE_MAX = 120;
-  // The 1.42.39 board check (23 Nov 2026): a 70-character line ran into the SEE THE GAMES card.
+  // The welcome line's budget measured on the board (23 Nov 2026): 64 characters clears the SEE
+  // THE GAMES card; a 70-character line ran into it.
   var LONG_LINE = 64;
 
   var $ = function (id) { return document.getElementById(id); };
@@ -477,8 +478,9 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     if (m % 60 === 0 && m > 60) return (m / 60) + ' hours';
     return m + ' min';
   }
-  // PaymentWording.PriceLine
-  function priceLine(row) {
+  // "£20 an hour" / "£10.00 per person per hour": the hourly price in short, for the venue switch.
+  // (Until 1.42.41 this was how the board's welcome line began.)
+  function hourlyWords(row) {
     var hour = row.ratePerMinutes === 60;
     var price;
     if (row.model === 'per_group') {
@@ -489,16 +491,36 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
       var unit = hour ? 'hour' : row.ratePerMinutes + ' min';
       price = money(row.rateMinor, row.currency) + ' per person per ' + unit;
     }
+    return price;
+  }
+  // "£12", or "£7.50" when there are pence (PaymentWording.Money).
+  function shortMoney(minor, currency) {
+    var amount = money(minor, currency);
+    return minor % 100 === 0 && /\.00$/.test(amount) ? amount.slice(0, -3) : amount;
+  }
+  // PaymentWording.PriceLine as of board release 1.42.41: every length with its price, then
+  // "per lane, up to 8 players" for a board price or "per person" per player. {price} in the
+  // note stands for the priced lengths; a note without it goes in front of the line.
+  function priceLine(row, lengths, maxPlayers, lastEnd) {
+    if (!row || !lengths || !lengths.length) return '';
+    var priced = lengths.map(function (m) {
+      return spoken(m) + ' ' + shortMoney(quote(row, m, 1).minor, row.currency);
+    }).join(' · ');
+    var closing = lastEnd ? 'last game ends by ' + lastEnd : null;
     var note = (row.note || '').trim();
-    if (!note) return price;
-    return note.indexOf('{price}') >= 0 ? note.split('{price}').join(price) : price + '  ·  ' + note;
+    if (note && note.indexOf('{price}') >= 0) {
+      var noted = note.split('{price}').join(priced);
+      return closing ? noted + ' · ' + closing : noted;
+    }
+    var line = row.model === 'per_group'
+      ? priced + ' · ' + (closing || 'per lane, up to ' + maxPlayers + ' players')
+      : priced + ' per person' + (closing ? ' · ' + closing : '');
+    return note ? note + '  ' + line : line;
   }
-  // WelcomeScreenConsoleScreen.ShowPricing, outside the last hour before closing (which trims
-  // the lengths and says when the last game ends).
-  function welcomeLine(row) {
-    var lengths = row.lengths && row.lengths.length ? '  ·  ' + row.lengths.map(spoken).join(', ') : '';
-    return priceLine(row) + lengths;
-  }
+  // WelcomeScreenConsoleScreen.ShowPricing outside the last hour before closing (which drops
+  // the lengths that no longer fit and says when the last game ends). Boards allow 8 players
+  // unless their config says otherwise (PlayerLimit.Default).
+  function welcomeLine(row) { return priceLine(row, row.lengths || [], 8); }
   // PriceCalculator.Quote: an override per length, else rate x minutes / period, multiplied
   // first, divided once, rounded half up. A board price ignores the number of players.
   function quote(row, minutes, players) {
@@ -719,18 +741,13 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
   });
 
   // ---- drawing: the prices as they are ----------------------------------------------------
+  // One card per length, with its price and nothing else (Richard, 23 Nov 2026). Per person,
+  // the price is each player's.
   function lengthTiles(row) {
     return h('ul', { cls: 'lengths' }, (row.lengths || []).map(function (m) {
       var q = quote(row, m, 1);
-      var sub;
-      if (row.model === 'per_person') {
-        sub = 'per person' + (q.set ? ' · its own price, ' + againstHour(row, m) : '') + ' · 4 players ' + money(quote(row, m, 4).minor, row.currency);
-      } else {
-        sub = q.set ? 'its own price: ' + againstHour(row, m) : 'at the hourly rate';
-      }
       return h('li', {}, [h('span', { cls: 'm', text: spoken(m) }),
-                          h('span', { cls: 'p', text: money(q.minor, row.currency) }),
-                          h('span', { cls: 's', text: sub })]);
+                          h('span', { cls: 'p', text: money(q.minor, row.currency) + (row.model === 'per_person' ? ' each' : '') })]);
     }));
   }
   function boardBox(label, row) {
@@ -755,7 +772,7 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     var list = venues();
     seg.hidden = list.length < 2;
     list.forEach(function (v) {
-      var sub = v.active ? priceLine(Object.assign({}, v.active, { note: null })) : 'no price';
+      var sub = v.active ? hourlyWords(v.active) : 'no price';
       if (!v.boards.length) sub += ' · no board';
       seg.append(h('button', {
         type: 'button', 'aria-pressed': v.locationId === state.venueId ? 'true' : 'false',
@@ -1071,10 +1088,7 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
         ' on game release 1.42.39 or later. An older board charges added players £0.00 and gets stuck. Check the boards before saving.' }));
     }
     if (ok && line.length > LONG_LINE) {
-      warns.append(h('div', { cls: 'warn', text: 'The welcome line is ' + line.length + ' characters. In the 23 Nov board check a 70-character line ran into the SEE THE GAMES card. Shorter words are safer; check the board after it changes.' }));
-    }
-    if (d.note && d.note.indexOf('{price}') < 0 && /£\d/.test(d.note)) {
-      warns.append(h('div', { cls: 'warn', text: 'The words name a price of their own. Use {price} for this one, so the words can’t disagree with what the board charges.' }));
+      warns.append(h('div', { cls: 'warn', text: 'The welcome line is ' + line.length + ' characters. 64 is what clears the SEE THE GAMES card on the board; longer can run into it. Shorter words are safer; check the board after it changes.' }));
     }
     // A length's own price is copied from today's and stays put when the hour changes.
     if (ok && active && active.rateMinor !== row.rateMinor) {
