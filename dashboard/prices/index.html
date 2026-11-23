@@ -1,0 +1,1179 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#14141a">
+<title>Darts prices</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@500;600&family=Montserrat:wght@400;500;600;700&display=swap">
+<style>
+/* ---------------------------------------------------------------------------
+   What each venue's board charges, and changing it, for Hawktivity people.
+
+   Signed in with Google, sharing the sessions dashboard's login. Everything goes
+   through three database functions (pinpointe-supabase migration 20261123200000):
+   dashboard_prices() to read, dashboard_set_price() to save, dashboard_cancel_price()
+   to withdraw a price that hasn't started. A save never edits a price row: "now"
+   retires the active row and adds the next version; "from a date" adds it inactive
+   and a pg_cron job switches it on. Only hawktivity.com Google accounts get in, and
+   the database decides that, not this page.
+
+   A board (release 1.42.39 or later) re-reads its venue's active row at every
+   welcome screen, so a change here needs no game release and no restart.
+
+   The welcome-line preview copies the board's own rule, PaymentWording.PriceLine,
+   and the length prices copy PriceCalculator.Quote (pinpointe-social-suite,
+   Assets/PinPointeSocial/Scripts/Local/PaymentWording.cs and Pricing.cs). If either
+   changes there, change it here.
+
+   Same palette as the sessions dashboard.
+--------------------------------------------------------------------------- */
+:root {
+  --ink: #14141a;
+  --ink-2: #1b1b22;
+  --ink-3: #24242c;
+  --line: #2c2c34;
+  --brick: #a8433f;
+  --brick-lit: #c0504b;
+  --go: #3e9b4f;
+  --warn: #d08a2c;
+  --paper: #f0f0f2;
+  --dim: #9b9ba4;
+  --dimmer: #74747e;
+  --display: 'Anton', 'Arial Narrow', Impact, sans-serif;
+  --body: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background-color: var(--ink);
+  background-image: linear-gradient(168deg, #17171d 0%, #101015 100%);
+  background-attachment: fixed;
+  color: var(--paper);
+  font-family: var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+.shell {
+  max-width: 760px; margin: 0 auto;
+  padding: 22px max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px));
+}
+.view { display: flex; flex-direction: column; gap: 26px; }
+.center { text-align: center; color: var(--dim); padding-top: 18vh; font-size: 14px; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--paper); outline-offset: 2px;
+}
+p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--dim); max-width: 62ch; }
+b { color: var(--paper); font-weight: 600; }
+.eyebrow {
+  font: 600 11px/1 var(--body); letter-spacing: .18em; text-transform: uppercase; color: var(--dimmer);
+  display: flex; align-items: center; gap: 10px;
+}
+.envtag {
+  font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+  background: var(--warn); color: #111; padding: 4px 6px; border-radius: 4px;
+}
+h1 { font: 400 40px/1.02 var(--display); text-transform: uppercase; margin: 0; letter-spacing: .01em; }
+h2 {
+  font: 600 11px/1.2 var(--body); letter-spacing: .18em; text-transform: uppercase; color: var(--dim); margin: 0;
+}
+.head { display: flex; flex-direction: column; gap: 10px; }
+.gate { max-width: 440px; margin: 10vh auto 0; }
+
+.primary {
+  width: 100%; min-height: 52px; border: 0; border-radius: 12px;
+  background: var(--brick); color: #fff; font: 600 15px/1.2 var(--body); letter-spacing: .03em;
+  display: inline-flex; align-items: center; justify-content: center; gap: 12px; padding: 0 16px;
+}
+.primary:hover { background: var(--brick-lit); }
+.primary:disabled { opacity: .55; cursor: default; }
+.primary svg { width: 20px; height: 20px; background: #fff; border-radius: 50%; padding: 2px; }
+.ghost {
+  min-height: 52px; border: 1px solid var(--line); border-radius: 12px; background: var(--ink-2);
+  color: var(--paper); font: 600 14px/1 var(--body); padding: 0 18px;
+}
+.ghost:hover { background: var(--ink-3); }
+.link {
+  background: none; border: 0; padding: 6px 0;
+  font: 500 13px/1 var(--body); color: var(--dim);
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--dimmer);
+}
+.link:hover { color: var(--paper); }
+.small {
+  background: var(--ink-3); border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 12px; font: 600 12px/1 var(--body); color: var(--paper);
+}
+.small:hover { border-color: var(--dimmer); }
+.small:disabled { opacity: .5; cursor: default; }
+.error { color: #f0a29e; font-weight: 500; }
+
+/* ---- venue switch ----------------------------------------------------- */
+.seg {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px;
+  background: var(--ink-2); border: 1px solid var(--line); border-radius: 12px; padding: 4px;
+}
+.seg button {
+  min-height: 44px; border: 0; border-radius: 9px; background: none; color: var(--dim);
+  font: 600 13px/1.2 var(--body); padding: 6px 8px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+}
+.seg button small { font: 500 11px/1.2 var(--body); color: var(--dimmer); }
+.seg button[aria-pressed="true"] { background: var(--ink-3); color: var(--paper); box-shadow: inset 0 0 0 1px var(--line); }
+@media (max-width: 560px) { .seg { grid-auto-flow: row; } }
+
+/* ---- price cards ------------------------------------------------------ */
+.card {
+  background: var(--ink-2); border: 1px solid var(--line); border-radius: 14px;
+  padding: 18px; display: flex; flex-direction: column; gap: 14px;
+}
+.card-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.chip {
+  font: 600 10px/1 var(--body); letter-spacing: .14em; text-transform: uppercase;
+  border-radius: 999px; padding: 5px 9px; border: 1px solid var(--line); color: var(--dim);
+}
+.chip.live { background: #1d2a20; border-color: #2f5a39; color: #9fd8a9; }
+.chip.soon { background: #2e2615; border-color: #5c4a22; color: #f0cf8e; }
+
+/* The welcome line as the board shows it: white on near-black, the board's own spacing. */
+.board {
+  background: #0b0b0f; border: 1px solid #23232b; border-radius: 10px;
+  padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;
+}
+.board .lbl { font: 600 10px/1 var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--dimmer); }
+.board .line {
+  font: 500 17px/1.45 var(--body); color: #fff; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.board .count { font: 500 11px/1 var(--mono); color: var(--dimmer); }
+.board .count.long { color: var(--warn); }
+
+.lengths { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.lengths li {
+  background: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.lengths .m { font: 600 11px/1 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.lengths .p { font: 600 20px/1.1 var(--mono); color: var(--paper); font-variant-numeric: tabular-nums; }
+.lengths .s { font-size: 11px; color: var(--dimmer); line-height: 1.35; }
+.meta { font-size: 12px; color: var(--dimmer); line-height: 1.6; }
+.meta b { color: var(--dim); font-weight: 600; }
+.empty { font-size: 14px; color: var(--dim); }
+
+/* ---- the form --------------------------------------------------------- */
+form.edit { display: flex; flex-direction: column; gap: 20px; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field > label, .field > .label {
+  font: 600 11px/1.2 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--dim);
+}
+.hint { font-size: 12px; color: var(--dimmer); line-height: 1.5; max-width: 62ch; }
+.money {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 0 12px; min-height: 48px;
+  max-width: 180px;
+}
+.money:focus-within { border-color: var(--dimmer); }
+.money span { color: var(--dim); font: 600 16px/1 var(--mono); }
+.money input {
+  border: 0; background: none; outline: none; width: 100%; min-width: 0;
+  font: 600 18px/1 var(--mono); color: var(--paper); font-variant-numeric: tabular-nums;
+}
+.money input::placeholder { color: var(--dimmer); font-weight: 500; }
+.money.bad { border-color: #8a3532; }
+.text {
+  width: 100%; min-height: 48px; padding: 0 14px;
+  background: var(--ink); border: 1px solid var(--line); border-radius: 10px;
+  color: var(--paper); font: 500 15px/1 var(--body);
+}
+.text:focus { border-color: var(--dimmer); outline: none; }
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.picks { display: flex; flex-wrap: wrap; gap: 8px; }
+.picks button {
+  min-height: 42px; min-width: 76px; padding: 0 12px; border-radius: 10px;
+  background: var(--ink); border: 1px solid var(--line); color: var(--dim); font: 600 13px/1 var(--body);
+}
+.picks button[aria-pressed="true"] { background: #2a1c1b; border-color: var(--brick); color: var(--paper); }
+.picks button:disabled { opacity: .4; cursor: default; }
+
+.len-rows { display: flex; flex-direction: column; gap: 8px; }
+.len-row {
+  display: grid; grid-template-columns: 74px 160px 1fr; gap: 12px; align-items: center;
+}
+.len-row .m { font: 600 13px/1 var(--body); color: var(--paper); }
+.len-row .s { font-size: 12px; color: var(--dimmer); line-height: 1.4; }
+@media (max-width: 520px) {
+  .len-row { grid-template-columns: 64px 1fr; }
+  .len-row .s { grid-column: 1 / -1; }
+}
+
+.radio { display: flex; flex-direction: column; gap: 10px; }
+.radio label { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--paper); cursor: pointer; flex-wrap: wrap; }
+.radio input[type="radio"] { width: 18px; height: 18px; accent-color: var(--brick); margin: 0; }
+.radio input[type="date"], .radio input[type="time"] {
+  min-height: 42px; padding: 0 10px; background: var(--ink); border: 1px solid var(--line); border-radius: 10px;
+  color: var(--paper); font: 500 14px/1 var(--body);
+}
+.radio input:disabled { opacity: .5; }
+
+.changes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--dim); }
+.changes .was { color: var(--dimmer); text-decoration: line-through; }
+.changes b { font-family: var(--mono); }
+.warns { display: flex; flex-direction: column; gap: 8px; }
+.warn {
+  background: #2e2615; border: 1px solid #5c4a22; color: #f0cf8e; border-radius: 10px;
+  padding: 10px 12px; font-size: 13px; line-height: 1.5;
+}
+.confirm {
+  border: 1px solid var(--brick); background: #221716; border-radius: 12px; padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.confirm .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.confirm .actions .primary { flex: 1 1 220px; width: auto; }
+.confirm .actions .ghost { flex: 0 1 auto; }
+
+/* ---- history ---------------------------------------------------------- */
+details.history { border: 1px solid var(--line); border-radius: 14px; background: var(--ink-2); }
+details.history > summary {
+  list-style: none; cursor: pointer; padding: 16px 18px;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  font: 600 11px/1.2 var(--body); letter-spacing: .18em; text-transform: uppercase; color: var(--dim);
+}
+details.history > summary::-webkit-details-marker { display: none; }
+details.history > summary::after { content: "+"; font: 400 20px/1 var(--body); color: var(--dimmer); }
+details.history[open] > summary::after { content: "–"; }
+.hist { list-style: none; margin: 0; padding: 0 18px 12px; display: flex; flex-direction: column; }
+.hist li { padding: 12px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.hist .when { font-size: 12px; color: var(--dimmer); }
+.hist .l { font: 500 14px/1.45 var(--body); color: var(--paper); white-space: pre-wrap; overflow-wrap: anywhere; }
+.hist .x { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+
+/* ---- footer ----------------------------------------------------------- */
+footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+.status { display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 1.45; color: var(--dim); }
+.dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--dimmer); }
+.status.ok .dot { background: var(--go); }
+.status.bad .dot { background: var(--warn); }
+.status.bad { color: var(--warn); }
+.foot-actions { display: flex; gap: 22px; flex-wrap: wrap; align-items: center; }
+.who-line { font-size: 12px; color: var(--dimmer); overflow-wrap: anywhere; }
+
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  width: min(460px, calc(100% - 32px));
+  background: var(--paper); color: var(--ink); border-radius: 12px;
+  padding: 14px 16px; font: 500 14px/1.4 var(--body);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45); z-index: 10;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .toast { animation: rise .25s ease-out; }
+  @keyframes rise { from { opacity: 0; transform: translate(-50%, 8px); } }
+}
+</style>
+</head>
+<body>
+<main class="shell">
+
+  <div id="loading" class="center">Loading&hellip;</div>
+
+  <!-- Signed out --------------------------------------------------------- -->
+  <section class="view gate" id="signin" hidden>
+    <div class="head">
+      <div class="eyebrow">Hawktivity</div>
+      <h1>Darts prices</h1>
+      <p>What each venue’s board charges, and changing it. Sign in with your Hawktivity Google account.</p>
+    </div>
+    <button id="signin-btn" class="primary" type="button">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.2C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.8c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.5c-.5-1.4-.8-2.9-.8-4.5s.3-3.1.8-4.5l-7.9-6.2C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.8c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg>
+      Sign in with Google
+    </button>
+    <p id="signin-error" class="error" role="alert" hidden></p>
+    <p id="signin-note" hidden>This browser is blocking website data for this page, so it will ask you to sign in each time you open it.</p>
+  </section>
+
+  <!-- Signed in, not a Hawktivity account -------------------------------- -->
+  <section class="view gate" id="denied" hidden>
+    <div class="head">
+      <div class="eyebrow">Hawktivity</div>
+      <h1>Hawktivity only</h1>
+      <p><b id="denied-email">This account</b> can’t see or change prices. Only Hawktivity Google accounts can.</p>
+    </div>
+    <button id="denied-switch" class="primary" type="button">Use another Google account</button>
+    <div class="foot-actions">
+      <a class="link" href="../">Sessions dashboard</a>
+      <button id="denied-out" class="link" type="button">Sign out</button>
+    </div>
+  </section>
+
+  <!-- The prices ---------------------------------------------------------- -->
+  <section class="view" id="app" hidden>
+    <div class="head">
+      <div class="eyebrow">Hawktivity · Team <span id="envtag" class="envtag" hidden></span></div>
+      <h1>Darts prices</h1>
+      <p>What each venue’s board charges. A change reaches a board at its next welcome screen: no game release, no restart. A group already playing keeps what they paid for.</p>
+    </div>
+
+    <div class="seg" id="venue-seg" role="group" aria-label="Venue" hidden></div>
+
+    <section class="card" id="now-card">
+      <div class="card-top">
+        <h2 id="venue-title">On the board now</h2>
+        <span class="chip live">Now</span>
+      </div>
+      <div id="now-body"></div>
+    </section>
+
+    <div id="coming" class="view" style="gap:14px" hidden></div>
+
+    <section class="card" id="edit-card">
+      <div class="card-top"><h2>Change the price</h2></div>
+      <form class="edit" id="edit" autocomplete="off" novalidate>
+
+        <div class="field">
+          <span class="label">Charge</span>
+          <div class="picks" id="model-picks" role="group" aria-label="Charge">
+            <button type="button" data-model="per_group">The board, any group</button>
+            <button type="button" data-model="per_person">Per person</button>
+          </div>
+          <p class="hint" id="model-hint"></p>
+        </div>
+
+        <div class="field">
+          <label for="rate">Price per hour</label>
+          <div class="money" id="rate-box"><span>£</span><input id="rate" inputmode="decimal" placeholder="20.00" aria-describedby="rate-hint"></div>
+          <p class="hint" id="rate-hint">Lengths without their own price below are charged at this rate: 30 minutes is half of it.</p>
+        </div>
+
+        <div class="field">
+          <span class="label">Lengths on sale <span id="len-count"></span></span>
+          <div class="picks" id="len-picks" role="group" aria-label="Lengths on sale"></div>
+          <p class="hint">Up to four, which is what the board’s length screen has always shown. A free voucher still works for any length.</p>
+          <div class="len-rows" id="len-rows"></div>
+        </div>
+
+        <div class="field">
+          <label for="note">Words on the welcome line <span class="hint">(optional)</span></label>
+          <input class="text" id="note" maxlength="120" placeholder="Launch {price}  ·  £30 from 7 Dec">
+          <p class="hint"><code>{price}</code> is replaced by the price (“£20 an hour”). Without it, the words go after the price. <span id="note-count">0</span>/120.</p>
+        </div>
+
+        <div class="field">
+          <span class="label">Starts</span>
+          <div class="radio">
+            <label><input type="radio" name="when" value="now" checked> Now</label>
+            <label><input type="radio" name="when" value="later"> On
+              <input type="date" id="start-date" aria-label="Start date" disabled>
+              at <input type="time" id="start-time" step="300" value="00:00" aria-label="Start time" disabled>
+              <span class="hint">London time</span></label>
+          </div>
+          <p class="hint" id="when-hint"></p>
+        </div>
+
+        <div class="board" aria-live="polite">
+          <span class="lbl">The board’s welcome line will read</span>
+          <span class="line" id="pv-line"></span>
+          <span class="count" id="pv-count"></span>
+        </div>
+        <ul class="lengths" id="pv-lengths"></ul>
+        <ul class="changes" id="pv-changes"></ul>
+        <div class="warns" id="warns"></div>
+
+        <p class="error" id="form-error" role="alert" hidden></p>
+        <button class="primary" id="save" type="submit">Save</button>
+
+        <div class="confirm" id="confirm" hidden>
+          <p id="confirm-text"></p>
+          <div class="actions">
+            <button class="primary" id="confirm-yes" type="button">Yes, change the price</button>
+            <button class="ghost" id="confirm-no" type="button">Back</button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <details class="history" id="history">
+      <summary>Earlier prices <span id="hist-count"></span></summary>
+      <ul class="hist" id="hist-list"></ul>
+    </details>
+
+    <footer>
+      <div class="status" id="status" role="status"><span class="dot"></span><span id="status-text">Loading…</span></div>
+      <div class="foot-actions">
+        <button class="link" id="refresh" type="button">Reload</button>
+        <a class="link" id="dash-link" href="../">Sessions dashboard</a>
+        <button class="link" id="signout" type="button">Sign out</button>
+      </div>
+      <div class="who-line" id="who-line"></div>
+    </footer>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="../../config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"
+        integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o"
+        crossorigin="anonymous"></script>
+<script>
+(function () {
+  'use strict';
+
+  var CFG = window.PAY_CONFIG || {};
+  var MOCK = window.PRICES_MOCK || null;
+  var PICK_KEY = 'darts-prices:venue';
+  var LENGTH_CHOICES = [15, 30, 45, 60, 90, 120];
+  var MAX_LENGTHS = 4;
+  var NOTE_MAX = 120;
+  // The 1.42.39 board check (23 Nov 2026): a 70-character line ran into the SEE THE GAMES card.
+  var LONG_LINE = 64;
+
+  var $ = function (id) { return document.getElementById(id); };
+  function h(tag, attrs, kids) {
+    var el = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) {
+      if (k === 'text') el.textContent = attrs[k];
+      else if (k === 'cls') el.className = attrs[k];
+      else if (k.slice(0, 2) === 'on') el.addEventListener(k.slice(2), attrs[k]);
+      else if (attrs[k] != null && attrs[k] !== false) el.setAttribute(k, attrs[k] === true ? '' : attrs[k]);
+    });
+    (kids || []).forEach(function (c) { if (c != null) el.append(c); });
+    return el;
+  }
+
+  var state = {
+    email: '',
+    data: null,          // dashboard_prices()
+    venueId: null,
+    lastOk: null,
+    failing: false,
+    busy: false,
+    dirty: false,        // the form has been touched since it was filled
+    formFor: null        // venueId + active version the form was filled from
+  };
+
+  // ---- the board's own arithmetic and words ---------------------------------------------
+  // PriceCalculator.Format: invariant culture, an explicit symbol, a code when unknown.
+  function money(minor, currency) {
+    var cur = String(currency || '').toUpperCase();
+    var symbol = { GBP: '£', EUR: '€', USD: '$', CAD: '$' }[cur];
+    var neg = minor < 0; minor = Math.abs(minor);
+    var amount = (neg ? '-' : '') + Math.floor(minor / 100) + '.' + String(minor % 100).padStart(2, '0');
+    return symbol ? symbol + amount : (cur || '?') + ' ' + amount;
+  }
+  // SessionLengthScreen.Duration(m).Spoken
+  function spoken(m) {
+    if (m === 60) return '1 hour';
+    if (m % 60 === 0 && m > 60) return (m / 60) + ' hours';
+    return m + ' min';
+  }
+  // PaymentWording.PriceLine
+  function priceLine(row) {
+    var hour = row.ratePerMinutes === 60;
+    var price;
+    if (row.model === 'per_group') {
+      var amount = money(row.rateMinor, row.currency);
+      if (row.rateMinor % 100 === 0 && /\.00$/.test(amount)) amount = amount.slice(0, -3);
+      price = hour ? amount + ' an hour' : amount + ' per ' + row.ratePerMinutes + ' min';
+    } else {
+      var unit = hour ? 'hour' : row.ratePerMinutes + ' min';
+      price = money(row.rateMinor, row.currency) + ' per person per ' + unit;
+    }
+    var note = (row.note || '').trim();
+    if (!note) return price;
+    return note.indexOf('{price}') >= 0 ? note.split('{price}').join(price) : price + '  ·  ' + note;
+  }
+  // WelcomeScreenConsoleScreen.ShowPricing, outside the last hour before closing (which trims
+  // the lengths and says when the last game ends).
+  function welcomeLine(row) {
+    var lengths = row.lengths && row.lengths.length ? '  ·  ' + row.lengths.map(spoken).join(', ') : '';
+    return priceLine(row) + lengths;
+  }
+  // PriceCalculator.Quote: an override per length, else rate x minutes / period, multiplied
+  // first, divided once, rounded half up. A board price ignores the number of players.
+  function quote(row, minutes, players) {
+    var heads = row.model === 'per_person' ? players : 1;
+    var o = row.overrides ? row.overrides[String(minutes)] : null;
+    if (o != null) return { minor: o * heads, set: true };
+    var num = row.rateMinor * minutes * heads;
+    return { minor: Math.floor((num + Math.floor(row.ratePerMinutes / 2)) / row.ratePerMinutes), set: false };
+  }
+  function atRate(row, minutes) {
+    return Math.floor((row.rateMinor * minutes + Math.floor(row.ratePerMinutes / 2)) / row.ratePerMinutes);
+  }
+
+  // ---- London time ------------------------------------------------------------------------
+  var LONDON = 'Europe/London';
+  function londonParts(ms) {
+    var f = new Intl.DateTimeFormat('en-GB', { timeZone: LONDON, year: 'numeric', month: '2-digit', day: '2-digit',
+                                               hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    var o = {};
+    f.formatToParts(new Date(ms)).forEach(function (p) { o[p.type] = p.value; });
+    return o;
+  }
+  // A wall-clock date and time in London to the instant it names.
+  function londonToUtc(date, time) {
+    var d = date.split('-').map(Number), t = time.split(':').map(Number);
+    var wall = Date.UTC(d[0], d[1] - 1, d[2], t[0], t[1]);
+    var guess = wall;
+    for (var i = 0; i < 2; i++) {
+      var p = londonParts(guess);
+      var shown = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute);
+      guess = guess - (shown - wall);
+    }
+    return new Date(guess);
+  }
+  function londonToday() { var p = londonParts(Date.now()); return p.year + '-' + p.month + '-' + p.day; }
+  function when(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    var thisYear = londonParts(Date.now()).year === londonParts(d.getTime()).year;
+    return d.toLocaleString('en-GB', { timeZone: LONDON, weekday: 'short', day: 'numeric', month: 'short',
+                                       year: thisYear ? undefined : 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+  function clock(d) { return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
+
+  // ---- small helpers --------------------------------------------------------------------
+  function load(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+  function save(key, value) { try { localStorage.setItem(key, value); } catch (e) { /* private mode */ } }
+  var toastTimer = null;
+  function toast(text) {
+    var t = $('toast');
+    t.textContent = text; t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 6000);
+  }
+  var VIEWS = ['loading', 'signin', 'denied', 'app'];
+  function show(id) { VIEWS.forEach(function (v) { $(v).hidden = v !== id; }); }
+  // "20", "20.5", "£20.50" -> 2050; anything else -> NaN. Blank -> null.
+  function pence(text) {
+    var s = String(text || '').replace(/[£\s,]/g, '');
+    if (!s) return null;
+    var m = /^(\d{1,4})(?:\.(\d{1,2}))?$/.exec(s);
+    if (!m) return NaN;
+    return Number(m[1]) * 100 + Number(((m[2] || '') + '00').slice(0, 2));
+  }
+  function poundsText(minor) { return minor == null ? '' : money(minor, 'GBP').slice(1); }
+
+  // ---- auth (the dashboard's: Google, implicit flow, its storage key) ----------------------
+  var returningFromGoogle = /(^|[#&?])(access_token|code)=/.test(location.hash + '&' + location.search);
+  var storageWorks = (function () {
+    try { localStorage.setItem('dp-probe', '1'); localStorage.removeItem('dp-probe'); return true; }
+    catch (e) { return false; }
+  })();
+  var sb = null;
+  if (!MOCK && window.supabase && CFG.supabaseUrl) {
+    sb = window.supabase.createClient(CFG.supabaseUrl, CFG.anonKey, {
+      auth: { flowType: 'implicit', persistSession: true, autoRefreshToken: true, detectSessionInUrl: true,
+              storageKey: 'hawktivity-dashboard-auth' }
+    });
+  }
+  function signIn() {
+    $('signin-btn').disabled = true;
+    sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: location.origin + location.pathname, queryParams: { prompt: 'select_account' } }
+    }).then(function (r) {
+      if (r.error) { $('signin-btn').disabled = false; showSigninError(r.error.message); }
+    });
+  }
+  function signOut() {
+    state.data = null; currentUser = null;
+    if (MOCK) { show('signin'); return Promise.resolve(); }
+    return sb.auth.signOut().then(function () { show('signin'); $('signin-btn').disabled = false; });
+  }
+  function showSigninError(msg) { var e = $('signin-error'); e.textContent = msg; e.hidden = !msg; }
+
+  var currentUser = null;
+  function onSession(session) {
+    if (location.hash.indexOf('access_token') >= 0) history.replaceState(null, '', location.pathname + location.search);
+    if (!session) {
+      currentUser = null;
+      show('signin');
+      $('signin-btn').disabled = false;
+      if (returningFromGoogle) {
+        showSigninError('Google signed you in, but this browser did not keep the login. Open the link in Safari or Chrome itself rather than inside WhatsApp, and allow cookies and website data for this site, then try again.');
+      }
+      returningFromGoogle = false;
+      $('signin-note').hidden = storageWorks;
+      return;
+    }
+    returningFromGoogle = false;
+    if (currentUser === session.user.id) return;          // a token refresh, not a new person
+    currentUser = session.user.id;
+    state.email = session.user.email || '';
+    enter();
+  }
+
+  // ---- the database ----------------------------------------------------------------------
+  function rpc(name, args) {
+    if (MOCK) return Promise.resolve(MOCK.call(name, args || {}));
+    return sb.rpc(name, args || {});
+  }
+
+  function venues() { return (state.data && state.data.venues) || []; }
+  // A venue with no board and no story settings has only its location id for a name.
+  function nameOf(v) { return v.name && v.name !== v.locationId ? v.name : 'Venue ' + String(v.locationId).slice(0, 8); }
+  function venue() {
+    var list = venues();
+    for (var i = 0; i < list.length; i++) if (list[i].locationId === state.venueId) return list[i];
+    return null;
+  }
+
+  function fetchPrices() {
+    if (state.busy) return Promise.resolve();
+    state.busy = true;
+    return rpc('dashboard_prices').then(function (r) {
+      if (r.error) {
+        if (r.error.code === '42501') { deny(); return; }
+        throw r.error;
+      }
+      took(r.data);
+    }).catch(function (e) {
+      state.failing = true;
+      if (!state.data) {
+        show('app');
+        $('now-body').textContent = 'Couldn’t load the prices. Tap Reload to try again.';
+        $('edit-card').hidden = true;
+        $('history').hidden = true;
+      }
+      console.warn('dashboard_prices failed', e);
+    }).then(function () {
+      state.busy = false;
+      renderStatus();
+    });
+  }
+
+  // A fresh answer from the database: keep the venue, refill the form only if nobody is editing
+  // it or it was filled from a price that has since changed underneath it... in which case say so.
+  function took(data) {
+    state.data = data || { venues: [] };
+    state.email = state.data.email || state.email;
+    state.lastOk = new Date();
+    state.failing = false;
+    var ids = venues().map(function (v) { return v.locationId; });
+    if (ids.indexOf(state.venueId) < 0) {
+      var pref = load(PICK_KEY);
+      state.venueId = ids.indexOf(pref) >= 0 ? pref : (ids[0] || null);
+    }
+    show('app');
+    render();
+  }
+
+  function deny() {
+    $('denied-email').textContent = state.email || 'This account';
+    show('denied');
+  }
+
+  function enter() {
+    if (CFG.environment && CFG.environment !== 'prod') {
+      $('envtag').textContent = MOCK ? 'mock' : CFG.environment; $('envtag').hidden = false;
+    }
+    if (MOCK) $('dash-link').href = '../?mock';
+    show('loading');
+    fetchPrices();
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && currentUser && !$('app').hidden) fetchPrices();
+  });
+
+  // ---- drawing: the prices as they are ----------------------------------------------------
+  function lengthTiles(row) {
+    return h('ul', { cls: 'lengths' }, (row.lengths || []).map(function (m) {
+      var q = quote(row, m, 1);
+      var sub;
+      if (row.model === 'per_person') {
+        sub = 'per person' + (q.set ? ' · its own price' : '') + ' · 4 players ' + money(quote(row, m, 4).minor, row.currency);
+      } else {
+        sub = q.set ? 'its own price (' + money(atRate(row, m), row.currency) + ' at the hourly rate)' : 'at the hourly rate';
+      }
+      return h('li', {}, [h('span', { cls: 'm', text: spoken(m) }),
+                          h('span', { cls: 'p', text: money(q.minor, row.currency) }),
+                          h('span', { cls: 's', text: sub })]);
+    }));
+  }
+  function boardBox(label, row) {
+    var line = welcomeLine(row);
+    return h('div', { cls: 'board' }, [
+      h('span', { cls: 'lbl', text: label }),
+      h('span', { cls: 'line', text: line }),
+      h('span', { cls: 'count' + (line.length > LONG_LINE ? ' long' : ''),
+                  text: line.length + ' characters' + (line.length > LONG_LINE ? ': long enough to reach the SEE THE GAMES card' : '') })
+    ]);
+  }
+  function modelWords(row) {
+    return row.model === 'per_group'
+      ? 'The board as a whole: one price for the group, up to 8 players, extra players join free.'
+      : 'Per person: the price is for each player.';
+  }
+  function by(row) { return row.createdBy ? ' by ' + row.createdBy : ''; }
+
+  function renderVenues() {
+    var seg = $('venue-seg');
+    seg.textContent = '';
+    var list = venues();
+    seg.hidden = list.length < 2;
+    list.forEach(function (v) {
+      var sub = v.active ? priceLine(Object.assign({}, v.active, { note: null })) : 'no price';
+      if (!v.boards.length) sub += ' · no board';
+      seg.append(h('button', {
+        type: 'button', 'aria-pressed': v.locationId === state.venueId ? 'true' : 'false',
+        onclick: function () {
+          if (v.locationId === state.venueId) return;
+          state.venueId = v.locationId; save(PICK_KEY, v.locationId); state.dirty = false;
+          render();
+        }
+      }, [nameOf(v), h('small', { text: sub })]));
+    });
+  }
+
+  function renderNow(v) {
+    var body = $('now-body');
+    body.textContent = '';
+    $('venue-title').textContent = v ? nameOf(v) + ' · on the board now' : 'On the board now';
+    if (!v) { body.append(h('p', { cls: 'empty', text: 'No venues yet.' })); return; }
+    var boards = v.boards.length
+      ? v.boards.map(function (b) { return b.name + (b.isTest ? ' (test)' : ''); }).join(', ')
+      : 'No board at this venue yet.';
+    if (!v.active) {
+      body.append(h('div', { cls: 'view', style: 'gap:14px' }, [
+        h('p', { cls: 'empty', text: 'No price yet. Until it has one, its board can’t sell time.' }),
+        h('p', { cls: 'meta', text: 'Boards: ' + boards })
+      ]));
+      return;
+    }
+    var a = v.active;
+    body.append(h('div', { cls: 'view', style: 'gap:14px' }, [
+      boardBox('The welcome line reads', a),
+      lengthTiles(a),
+      h('p', { cls: 'meta' }, [
+        modelWords(a), h('br'),
+        'Version ' + a.version + ' · since ' + when(a.effectiveFrom || a.createdAt) + by(a) + '.', h('br'),
+        'Boards: ' + boards
+      ])
+    ]));
+  }
+
+  function renderComing(v) {
+    var box = $('coming');
+    box.textContent = '';
+    var list = v ? v.scheduled : [];
+    box.hidden = !list.length;
+    list.forEach(function (row) {
+      var due = new Date(row.effectiveFrom) <= new Date();
+      var withdraw = h('button', { type: 'button', cls: 'small', text: 'Withdraw' });
+      withdraw.addEventListener('click', function () { cancel(row, withdraw); });
+      box.append(h('section', { cls: 'card' }, [
+        h('div', { cls: 'card-top' }, [
+          h('h2', { text: 'From ' + when(row.effectiveFrom) }),
+          h('span', { cls: 'chip soon', text: due ? 'Starting now' : 'Coming up' })
+        ]),
+        boardBox('The welcome line will read', row),
+        lengthTiles(row),
+        h('p', { cls: 'meta' }, [
+          modelWords(row), h('br'),
+          'Version ' + row.version + ' · saved ' + when(row.createdAt) + by(row) + '. ' +
+          (due ? 'Its start has passed; the database switches it on within ' + (state.data.jobEveryMinutes || 5) + ' minutes.'
+               : 'The database switches it on within ' + (state.data.jobEveryMinutes || 5) + ' minutes of its start.')
+        ]),
+        h('div', { cls: 'row' }, [
+          withdraw,
+          h('button', { type: 'button', cls: 'small', text: 'Copy into the form',
+                        onclick: function () { fill(row); state.dirty = true; $('edit').scrollIntoView({ behavior: 'smooth' }); } })
+        ])
+      ]));
+    });
+  }
+
+  function renderHistory(v) {
+    var list = v ? v.history : [];
+    $('history').hidden = !list.length;
+    $('hist-count').textContent = list.length ? '(' + list.length + ')' : '';
+    var ul = $('hist-list');
+    ul.textContent = '';
+    list.forEach(function (row) {
+      var from = row.effectiveFrom || row.createdAt;
+      var never = row.retiredAt && new Date(row.retiredAt) < new Date(from);
+      var span = never
+        ? 'Withdrawn ' + when(row.retiredAt) + ', before its start (' + when(from) + ')'
+        : when(from) + ' to ' + (row.retiredAt ? when(row.retiredAt) : '?');
+      ul.append(h('li', {}, [
+        h('div', { cls: 'x' }, [
+          h('span', { cls: 'when', text: 'Version ' + row.version + ' · ' + span }),
+          h('button', { type: 'button', cls: 'link', text: 'Copy into the form',
+                        onclick: function () { fill(row); state.dirty = true; $('edit').scrollIntoView({ behavior: 'smooth' }); } })
+        ]),
+        h('span', { cls: 'l', text: welcomeLine(row) }),
+        h('span', { cls: 'when', text: (row.model === 'per_group' ? 'Board price' : 'Per person') + ' · ' +
+          (row.lengths || []).map(function (m) { return spoken(m) + ' ' + money(quote(row, m, 1).minor, row.currency); }).join(', ') +
+          (row.createdBy ? ' · saved by ' + row.createdBy : '') })
+      ]));
+    });
+  }
+
+  function renderStatus() {
+    var status = $('status'), text = $('status-text');
+    status.classList.toggle('ok', !!state.lastOk && !state.failing);
+    status.classList.toggle('bad', state.failing);
+    if (state.failing && state.lastOk) text.textContent = 'Can’t reach the database. Showing prices as they were at ' + clock(state.lastOk) + '.';
+    else if (state.failing) text.textContent = 'Can’t reach the database. Check the connection and tap Reload.';
+    else if (state.lastOk) text.textContent = 'Up to date at ' + clock(state.lastOk) + '.';
+    else text.textContent = 'Loading…';
+    $('who-line').textContent = state.email ? 'Signed in as ' + state.email : '';
+  }
+
+  function render() {
+    var v = venue();
+    document.title = v ? 'Darts prices · ' + nameOf(v) : 'Darts prices';
+    renderVenues();
+    renderNow(v);
+    renderComing(v);
+    renderHistory(v);
+    $('edit-card').hidden = !v;
+    // Fill the form from the active price unless someone is part-way through editing.
+    var key = v ? v.locationId + '#' + (v.active ? v.active.version : 0) : null;
+    if (!state.dirty || state.formFor === null || state.formFor.split('#')[0] !== (v && v.locationId)) {
+      fill(v && v.active ? v.active : null);
+      state.dirty = false;
+    } else if (state.formFor !== key) {
+      showFormError('This venue’s price changed since you started editing. Check the price above, then save again or tap Reload to start over.');
+    }
+    state.formFor = key;
+    renderStatus();
+  }
+
+  // ---- the form ----------------------------------------------------------------------------
+  var form = { model: 'per_group', lengths: [], overrides: {} };
+
+  function fill(row) {
+    form.model = row ? row.model : 'per_group';
+    form.lengths = row ? row.lengths.slice().sort(function (a, b) { return a - b; }) : [30, 60, 90];
+    form.overrides = {};
+    if (row && row.overrides) Object.keys(row.overrides).forEach(function (k) {
+      if (row.overrides[k] != null) form.overrides[k] = poundsText(row.overrides[k]);
+    });
+    $('rate').value = row ? poundsText(row.rateMinor) : '';
+    $('note').value = row && row.note ? row.note : '';
+    document.querySelector('input[name="when"][value="now"]').checked = true;
+    $('start-date').value = '';
+    $('start-time').value = '00:00';
+    closeConfirm();
+    showFormError('');
+    drawForm();
+  }
+
+  function draft() {
+    var v = venue();
+    var currency = v && v.active ? v.active.currency : 'GBP';
+    var overrides = {};
+    form.lengths.forEach(function (m) {
+      var p = pence(form.overrides[String(m)]);
+      if (p != null) overrides[String(m)] = p;
+    });
+    var later = document.querySelector('input[name="when"]:checked').value === 'later';
+    var startsAt = null;
+    if (later && $('start-date').value && $('start-time').value) startsAt = londonToUtc($('start-date').value, $('start-time').value);
+    return {
+      model: form.model, currency: currency, rateMinor: pence($('rate').value), ratePerMinutes: 60,
+      lengths: form.lengths.slice(), overrides: overrides, note: $('note').value.trim() || null,
+      later: later, startsAt: startsAt
+    };
+  }
+
+  // Everything wrong with the draft, in words. The database checks the same and more.
+  function problems(d) {
+    var out = [];
+    if (d.rateMinor == null) out.push('Type the price per hour.');
+    else if (isNaN(d.rateMinor) || d.rateMinor < 1 || d.rateMinor > 100000) out.push('The price per hour must be between £0.01 and £1,000, like 20 or 20.50.');
+    if (!d.lengths.length) out.push('Choose at least one length.');
+    Object.keys(d.overrides).forEach(function (k) {
+      var p = d.overrides[k];
+      if (isNaN(p) || p < 1 || p > 100000) out.push('The price for ' + spoken(Number(k)) + ' must be between £0.01 and £1,000.');
+    });
+    if (d.note && d.note.length > NOTE_MAX) out.push('The words can be at most ' + NOTE_MAX + ' characters.');
+    if (d.later) {
+      if (!d.startsAt) out.push('Pick the date and time it starts.');
+      else if (d.startsAt <= new Date()) out.push('That start has already passed. Pick a later one, or choose Now.');
+    }
+    return out;
+  }
+
+  function drawForm() {
+    var v = venue();
+    var active = v && v.active;
+
+    Array.prototype.forEach.call(document.querySelectorAll('#model-picks button'), function (b) {
+      b.setAttribute('aria-pressed', b.dataset.model === form.model ? 'true' : 'false');
+    });
+    $('model-hint').textContent = form.model === 'per_group'
+      ? 'One price for the board, whoever plays: up to 8 players, extra players join free.'
+      : 'Each player pays the price. Four players pay four times as much.';
+
+    // Lengths: the usual choices, plus any the venue sells that aren't among them.
+    var choices = LENGTH_CHOICES.slice();
+    form.lengths.concat(active ? active.lengths : []).forEach(function (m) { if (choices.indexOf(m) < 0) choices.push(m); });
+    choices.sort(function (a, b) { return a - b; });
+    var picks = $('len-picks');
+    picks.textContent = '';
+    choices.forEach(function (m) {
+      var on = form.lengths.indexOf(m) >= 0;
+      picks.append(h('button', {
+        type: 'button', 'aria-pressed': on ? 'true' : 'false', text: spoken(m),
+        disabled: !on && form.lengths.length >= MAX_LENGTHS,
+        onclick: function () {
+          if (on) form.lengths = form.lengths.filter(function (x) { return x !== m; });
+          else form.lengths = form.lengths.concat([m]).sort(function (a, b) { return a - b; });
+          touched();
+          drawForm();
+        }
+      }));
+    });
+    $('len-count').textContent = '(' + form.lengths.length + ' of ' + MAX_LENGTHS + ')';
+
+    // One row per length sold: its own price, or blank for the hourly rate.
+    var rows = $('len-rows');
+    var focused = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.len : null;
+    rows.textContent = '';
+    var d = draft();
+    form.lengths.forEach(function (m) {
+      var key = String(m);
+      var input = h('input', { inputmode: 'decimal', 'data-len': key, 'aria-label': 'Price for ' + spoken(m),
+                               placeholder: isNaN(d.rateMinor) || d.rateMinor == null ? '' : poundsText(atRate(d, m)) });
+      input.value = form.overrides[key] || '';
+      input.addEventListener('input', function () { form.overrides[key] = input.value; touched(); drawPreview(); markBad(); });
+      var bad = !isNaN(pence(input.value)) ? false : true;
+      var box = h('div', { cls: 'money' + (bad ? ' bad' : '') }, [h('span', { text: '£' }), input]);
+      rows.append(h('div', { cls: 'len-row' }, [
+        h('span', { cls: 'm', text: spoken(m) }), box,
+        h('span', { cls: 's', 'data-hint': key })
+      ]));
+      if (focused === key) { input.focus(); }
+    });
+    drawPreview();
+  }
+
+  function markBad() {
+    $('rate-box').classList.toggle('bad', isNaN(pence($('rate').value)));
+    Array.prototype.forEach.call(document.querySelectorAll('#len-rows input'), function (i) {
+      i.parentNode.classList.toggle('bad', isNaN(pence(i.value)));
+    });
+  }
+
+  function drawPreview() {
+    var v = venue();
+    var active = v && v.active;
+    var d = draft();
+    var ok = d.rateMinor != null && !isNaN(d.rateMinor) && d.rateMinor > 0;
+    var row = Object.assign({}, d, { rateMinor: ok ? d.rateMinor : 0 });
+    Object.keys(row.overrides).forEach(function (k) { if (isNaN(row.overrides[k])) delete row.overrides[k]; });
+
+    // Placeholders and hints under each length follow the rate as it is typed.
+    Array.prototype.forEach.call(document.querySelectorAll('#len-rows input'), function (i) {
+      i.placeholder = ok ? poundsText(atRate(row, Number(i.dataset.len))) : '';
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#len-rows [data-hint]'), function (s) {
+      var m = Number(s.dataset.hint);
+      var set = row.overrides[String(m)] != null;
+      var each = d.model === 'per_person' ? ' per person' : '';
+      s.textContent = set
+        ? 'Its own price' + each + '. Blank it to charge the hourly rate' + (ok ? ' (' + money(atRate(row, m), d.currency) + ')' : '') + '.'
+        : (ok ? 'At the hourly rate: ' + money(atRate(row, m), d.currency) + each + '.' : 'At the hourly rate.');
+    });
+
+    var line = ok ? welcomeLine(row) : '';
+    $('pv-line').textContent = ok ? line : 'Type a price per hour to see it.';
+    $('pv-count').textContent = ok ? line.length + ' characters' + (line.length > LONG_LINE ? ': long enough to reach the SEE THE GAMES card' : '') : '';
+    $('pv-count').classList.toggle('long', ok && line.length > LONG_LINE);
+    $('note-count').textContent = $('note').value.length;
+
+    var tiles = $('pv-lengths');
+    tiles.replaceWith(ok ? Object.assign(lengthTiles(row), { id: 'pv-lengths' }) : h('ul', { cls: 'lengths', id: 'pv-lengths' }));
+
+    // What changes against the price on the board now.
+    var ch = $('pv-changes');
+    ch.textContent = '';
+    if (ok && active) {
+      var all = active.lengths.concat(row.lengths).filter(function (m, i, a) { return a.indexOf(m) === i; }).sort(function (a, b) { return a - b; });
+      var lines = [];
+      if (active.model !== row.model) {
+        lines.push(h('li', {}, ['Charge: ', h('span', { cls: 'was', text: active.model === 'per_group' ? 'the board' : 'per person' }), ' → ',
+                                h('b', { text: row.model === 'per_group' ? 'the board' : 'per person' })]));
+      }
+      all.forEach(function (m) {
+        var was = active.lengths.indexOf(m) >= 0 ? quote(active, m, 1).minor : null;
+        var now = row.lengths.indexOf(m) >= 0 ? quote(row, m, 1).minor : null;
+        if (was === now && active.model === row.model) return;
+        var wasEach = active.model === 'per_person' ? ' each' : '';
+        var nowEach = row.model === 'per_person' ? ' each' : '';
+        if (now == null) lines.push(h('li', {}, [spoken(m) + ': no longer sold (was ' + money(was, active.currency) + wasEach + ')']));
+        else if (was == null) lines.push(h('li', {}, [spoken(m) + ': new, ', h('b', { text: money(now, row.currency) + nowEach })]));
+        else lines.push(h('li', {}, [spoken(m) + ': ', h('span', { cls: 'was', text: money(was, active.currency) + wasEach }), ' → ', h('b', { text: money(now, row.currency) + nowEach })]));
+      });
+      if (welcomeLine(active) !== line && !lines.length) lines.push(h('li', { text: 'Only the words on the welcome line change.' }));
+      if (!lines.length) lines.push(h('li', { text: 'Same as the price on the board now.' }));
+      lines.forEach(function (li) { ch.append(li); });
+    }
+
+    // Warnings worth reading before saving.
+    var warns = $('warns');
+    warns.textContent = '';
+    if (form.model === 'per_group' && (!active || active.model !== 'per_group')) {
+      warns.append(h('div', { cls: 'warn', text: 'A board price needs every board at ' + (v ? nameOf(v) : 'this venue') +
+        ' on game release 1.42.39 or later. An older board charges added players £0.00 and gets stuck. Check the boards before saving.' }));
+    }
+    if (ok && line.length > LONG_LINE) {
+      warns.append(h('div', { cls: 'warn', text: 'The welcome line is ' + line.length + ' characters. In the 23 Nov board check a 70-character line ran into the SEE THE GAMES card. Shorter words are safer; check the board after it changes.' }));
+    }
+    if (d.note && d.note.indexOf('{price}') < 0 && /£\d/.test(d.note)) {
+      warns.append(h('div', { cls: 'warn', text: 'The words name a price of their own. Use {price} for this one, so the words can’t disagree with what the board charges.' }));
+    }
+    if (v && !v.boards.length) {
+      warns.append(h('div', { cls: 'warn', text: nameOf(v) + ' has no board yet, so nothing shows this price until one is set up there.' }));
+    }
+
+    var later = d.later;
+    $('start-date').disabled = !later;
+    $('start-time').disabled = !later;
+    $('start-date').min = londonToday();
+    $('when-hint').textContent = later
+      ? (d.startsAt ? 'Starts ' + when(d.startsAt.toISOString()) + ' London time. The database switches it on within ' +
+                      ((state.data && state.data.jobEveryMinutes) || 5) + ' minutes of that; until then the board keeps today’s price.'
+                    : 'Pick a date. Midnight is the usual start.')
+      : 'Boards pick it up at their next welcome screen.';
+    $('save').textContent = later && d.startsAt ? 'Schedule for ' + when(d.startsAt.toISOString()) : 'Save: the board changes now';
+  }
+
+  function touched() { state.dirty = true; closeConfirm(); showFormError(''); }
+  function showFormError(text) { var e = $('form-error'); e.textContent = text; e.hidden = !text; }
+  function closeConfirm() { $('confirm').hidden = true; $('save').hidden = false; }
+
+  Array.prototype.forEach.call(document.querySelectorAll('#model-picks button'), function (b) {
+    b.addEventListener('click', function () { form.model = b.dataset.model; touched(); drawForm(); });
+  });
+  $('rate').addEventListener('input', function () { touched(); drawPreview(); markBad(); });
+  $('note').addEventListener('input', function () { touched(); drawPreview(); });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="when"]'), function (r) {
+    r.addEventListener('change', function () {
+      if (r.value === 'later' && !$('start-date').value) {
+        // Tomorrow, London, as a starting point.
+        var p = londonParts(Date.now() + 86400000);
+        $('start-date').value = p.year + '-' + p.month + '-' + p.day;
+      }
+      touched(); drawPreview();
+    });
+  });
+  $('start-date').addEventListener('input', function () { touched(); drawPreview(); });
+  $('start-time').addEventListener('input', function () { touched(); drawPreview(); });
+
+  $('edit').addEventListener('submit', function (event) {
+    event.preventDefault();
+    var v = venue();
+    if (!v) return;
+    var d = draft();
+    var wrong = problems(d);
+    if (wrong.length) { showFormError(wrong.join(' ')); markBad(); return; }
+    showFormError('');
+    var line = welcomeLine(d);
+    $('confirm-text').textContent = d.later
+      ? 'From ' + when(d.startsAt.toISOString()) + ', ' + nameOf(v) + '’s board will read “' + line + '”. Until then it keeps today’s price.'
+      : nameOf(v) + '’s board will read “' + line + '” from its next welcome screen.';
+    $('confirm-yes').textContent = d.later ? 'Yes, schedule it' : 'Yes, change the price now';
+    $('save').hidden = true;
+    $('confirm').hidden = false;
+    $('confirm-yes').focus();
+  });
+  $('confirm-no').addEventListener('click', function () { closeConfirm(); $('save').focus(); });
+  $('confirm-yes').addEventListener('click', function () {
+    var v = venue();
+    if (!v) return;
+    var d = draft();
+    var btn = $('confirm-yes');
+    btn.disabled = true;
+    rpc('dashboard_set_price', {
+      p_location_id: v.locationId,
+      p_model: d.model,
+      p_rate_minor: d.rateMinor,
+      p_lengths: d.lengths,
+      p_overrides: d.overrides,
+      p_note: d.note,
+      p_starts_at: d.later ? d.startsAt.toISOString() : null,
+      p_based_on: v.active ? v.active.version : null
+    }).then(function (r) {
+      btn.disabled = false;
+      if (r.error) {
+        if (r.error.code === '42501') { deny(); return; }
+        closeConfirm();
+        showFormError(r.error.message || 'The price wasn’t saved.');
+        if (r.error.code === '40001') fetchPrices();
+        return;
+      }
+      state.dirty = false;
+      took(r.data);
+      toast(d.later ? 'Scheduled. ' + nameOf(v) + ' changes price ' + when(d.startsAt.toISOString()) + '.'
+                    : 'Saved. ' + nameOf(v) + '’s board shows the new price at its next welcome screen.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, function (e) {
+      btn.disabled = false;
+      closeConfirm();
+      showFormError('Couldn’t reach the database, so nothing was saved. Check the connection and try again.');
+      console.warn(e);
+    });
+  });
+
+  function cancel(row, button) {
+    var v = venue();
+    if (!window.confirm('Withdraw the price due ' + when(row.effectiveFrom) + '? ' + (v ? nameOf(v) : 'The venue') + ' keeps its current price.')) return;
+    button.disabled = true;
+    rpc('dashboard_cancel_price', { p_pricing_id: row.id }).then(function (r) {
+      if (r.error) {
+        button.disabled = false;
+        if (r.error.code === '42501') { deny(); return; }
+        toast('Not withdrawn: ' + r.error.message);
+        fetchPrices();
+        return;
+      }
+      took(r.data);
+      toast('Withdrawn. Nothing changes on ' + when(row.effectiveFrom) + '.');
+    }, function () { button.disabled = false; toast('Couldn’t reach the database. Nothing was withdrawn.'); });
+  }
+
+  $('refresh').addEventListener('click', function () { state.dirty = false; fetchPrices(); });
+  $('signout').addEventListener('click', signOut);
+  $('denied-out').addEventListener('click', signOut);
+  $('denied-switch').addEventListener('click', function () { signOut().then(function () { if (sb) signIn(); }); });
+  $('signin-btn').addEventListener('click', function () { signIn(); });
+
+  // An error coming back from Google or Supabase lands in the address bar.
+  var qs = new URLSearchParams(location.search + '&' + location.hash.replace(/^#/, ''));
+  if (qs.get('error_description') || qs.get('error')) {
+    showSigninError('Sign-in failed: ' + (qs.get('error_description') || qs.get('error')));
+    history.replaceState(null, '', location.pathname);
+  }
+
+  if (MOCK) {
+    currentUser = 'mock';
+    state.email = MOCK.email;
+    enter();
+  } else if (!sb) {
+    show('signin');
+    showSigninError('This copy of the page has no database to talk to.');
+    $('signin-btn').disabled = true;
+  } else {
+    sb.auth.onAuthStateChange(function (event, session) {
+      // Out of the callback: supabase-js holds a lock while it runs.
+      setTimeout(function () { onSession(session); }, 0);
+    });
+  }
+})();
+</script>
+</body>
+</html>
