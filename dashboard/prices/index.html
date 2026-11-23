@@ -175,7 +175,7 @@ h2 {
 /* ---- the form --------------------------------------------------------- */
 form.edit { display: flex; flex-direction: column; gap: 20px; }
 .field { display: flex; flex-direction: column; gap: 8px; }
-.field > label, .field > .label {
+.field > label, .field > .label, #tt-box > .label {
   font: 600 11px/1.2 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--dim);
 }
 .hint { font-size: 12px; color: var(--dimmer); line-height: 1.5; max-width: 62ch; }
@@ -243,6 +243,37 @@ form.edit { display: flex; flex-direction: column; gap: 20px; }
 .confirm .actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .confirm .actions .primary { flex: 1 1 220px; width: auto; }
 .confirm .actions .ghost { flex: 0 1 auto; }
+
+/* ---- bands, the week and special dates ----------------------------------- */
+.band-card { border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; background: var(--ink); }
+.band-card .top { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.band-card .text { max-width: 220px; min-height: 42px; }
+.band-card .len-row { grid-template-columns: 74px 160px 1fr; }
+.swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; display: inline-block; }
+.rule {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--ink);
+}
+.rule select, .rule input[type="date"] {
+  min-height: 38px; padding: 0 8px; background: var(--ink-2); border: 1px solid var(--line); border-radius: 8px;
+  color: var(--paper); font: 500 13px/1 var(--body);
+}
+.days { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.days button {
+  min-width: 38px; min-height: 34px; padding: 0 6px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--ink-2); color: var(--dim); font: 600 12px/1 var(--body);
+}
+.days button[aria-pressed="true"] { background: #2a1c1b; border-color: var(--brick); color: var(--paper); }
+.week { display: grid; grid-template-columns: 34px repeat(48, minmax(0, 1fr)); row-gap: 2px; font: 500 10px/1 var(--body); color: var(--dimmer); }
+.week .d { align-self: center; }
+.week .c { height: 16px; }
+.week .c.hour { box-shadow: inset 1px 0 0 rgba(0, 0, 0, .35); }
+.week .hh { grid-column: span 6; padding-top: 4px; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--dim); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.band-lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--dim); }
+.band-lines li { display: flex; gap: 8px; align-items: baseline; }
+.band-lines b { white-space: nowrap; }
 
 /* ---- history ---------------------------------------------------------- */
 details.history { border: 1px solid var(--line); border-radius: 14px; background: var(--ink-2); }
@@ -372,6 +403,24 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
           <p class="hint"><code>{price}</code> stands for the lengths and their prices (“30 min £12 · 1 hour £20 · 90 min £30”), and then nothing else follows. Without it, the words go in front of the usual line. <span id="note-count">0</span>/120.</p>
         </div>
 
+        <div class="field" id="bands-field">
+          <span class="label">Peak and off-peak</span>
+          <p class="hint" id="bands-hint"></p>
+          <div class="rules" id="bands-box"></div>
+          <div><button type="button" class="small" id="add-band">+ Add a band</button></div>
+          <div class="view" id="tt-box" style="gap:12px" hidden>
+            <span class="label">When each band applies (London time)</span>
+            <p class="hint">Any time no rule covers is the main price. Where two rules cover the same time, the lower one wins.</p>
+            <div class="rules" id="weekly-rows"></div>
+            <div><button type="button" class="small" id="add-hours">+ Add days and hours</button></div>
+            <div id="week-grid"></div>
+            <span class="label">Special dates</span>
+            <p class="hint">A date beats the week: the band you pick applies all day, every length.</p>
+            <div class="rules" id="date-rows"></div>
+            <div><button type="button" class="small" id="add-date">+ Add a date</button></div>
+          </div>
+        </div>
+
         <div class="field">
           <span class="label">Starts</span>
           <div class="radio">
@@ -385,11 +434,12 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
         </div>
 
         <div class="board" aria-live="polite">
-          <span class="lbl">The board’s welcome line will read</span>
+          <span class="lbl" id="pv-label">The board’s welcome line will read</span>
           <span class="line" id="pv-line"></span>
           <span class="count" id="pv-count"></span>
         </div>
         <ul class="lengths" id="pv-lengths"></ul>
+        <div class="view" id="pv-bands" style="gap:12px"></div>
         <ul class="changes" id="pv-changes"></ul>
         <div class="warns" id="warns"></div>
 
@@ -442,6 +492,12 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
   // The welcome line's budget measured on the board (23 Nov 2026): 64 characters clears the SEE
   // THE GAMES card; a 70-character line ran into it.
   var LONG_LINE = 64;
+
+  var MAX_BANDS = 4;
+  var BASE_COLOUR = '#4a4a55';
+  var BAND_COLOURS = ['#c0504b', '#d08a2c', '#3987e5', '#199e70'];
+  var DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  var NEW_BAND_NAMES = ['Peak', 'Late', 'Daytime', 'Weekend'];
 
   var $ = function (id) { return document.getElementById(id); };
   function h(tag, attrs, kids) {
@@ -567,6 +623,91 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
                (row.model === 'per_person' ? ' each' : '') + ': ' + againstHour(row, m) + '.');
     });
     return out.join(' ');
+  }
+
+  // ---- bands: which price applies when ------------------------------------------------------
+  // As pricing_band_at (pinpointe-supabase 20261123220000) and the board's PricingPlan: a date
+  // rule beats the week, the last matching rule wins, and any other moment is the main band.
+  function hasBands(row) { return !!row && !!row.timetable && !!row.bands && row.bands.length > 0; }
+  function weeklyBandName(tt, dow, time) {
+    var name = null;
+    (tt.weekly || []).forEach(function (r) {
+      if (r.days.indexOf(dow) >= 0 && time >= r.from && time < r.to) name = r.band;
+    });
+    return name;
+  }
+  function bandAt(row, ms) {
+    if (!hasBands(row)) return null;
+    var tt = row.timetable;
+    var p = londonParts(ms);
+    var day = p.year + '-' + p.month + '-' + p.day;
+    var dow = (new Date(Date.UTC(+p.year, +p.month - 1, +p.day)).getUTCDay() + 6) % 7 + 1;
+    var name = null;
+    (tt.dates || []).forEach(function (r) { if (day >= r.from && day <= r.to) name = r.band; });
+    if (name == null) name = weeklyBandName(tt, dow, p.hour + ':' + p.minute);
+    return bandNamed(row, name);
+  }
+  function bandNamed(row, name) {
+    var band = (row.bands || []).filter(function (b) { return b.name === name; })[0];
+    return band ? { name: band.name, rateMinor: band.rateMinor, overrides: band.overrides || {}, index: row.bands.indexOf(band) }
+                : { name: row.timetable ? row.timetable.base : null, rateMinor: row.rateMinor, overrides: row.overrides || {}, index: -1 };
+  }
+  // The price list as it charges in one band.
+  function asBand(row, band) {
+    return band ? Object.assign({}, row, { rateMinor: band.rateMinor, overrides: band.overrides || {} }) : row;
+  }
+  function colourOf(row, name) {
+    var i = (row.bands || []).map(function (b) { return b.name; }).indexOf(name);
+    return i < 0 ? BASE_COLOUR : BAND_COLOURS[i % BAND_COLOURS.length];
+  }
+  // "30 min £18 · 1 hour £30 · 90 min £45"
+  function lengthPrices(row) {
+    return (row.lengths || []).map(function (m) {
+      return spoken(m) + ' ' + shortMoney(quote(row, m, 1).minor, row.currency) + (row.model === 'per_person' ? ' each' : '');
+    }).join(' · ');
+  }
+  function dayRange(r) {
+    var f = new Date(r.from + 'T12:00:00Z'), t = new Date(r.to + 'T12:00:00Z');
+    var o = { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' };
+    return r.from === r.to ? f.toLocaleDateString('en-GB', o) : f.toLocaleDateString('en-GB', o) + ' to ' + t.toLocaleDateString('en-GB', o);
+  }
+  // The week as a grid: a row per day, a cell per half hour, coloured by band.
+  function weekGrid(row) {
+    var tt = row.timetable;
+    var grid = h('div', { cls: 'week', role: 'img', 'aria-label': 'Which band applies at each half hour of the week' });
+    grid.append(h('span'));
+    for (var hh = 0; hh < 24; hh += 3) grid.append(h('span', { cls: 'hh', text: String(hh).padStart(2, '0') }));
+    for (var dow = 1; dow <= 7; dow++) {
+      grid.append(h('span', { cls: 'd', text: DAY_NAMES[dow - 1] }));
+      for (var c = 0; c < 48; c++) {
+        var time = String(Math.floor(c / 2)).padStart(2, '0') + ':' + (c % 2 ? '30' : '00');
+        var name = weeklyBandName(tt, dow, time) || tt.base;
+        var cell = h('span', { cls: 'c' + (c % 2 ? '' : ' hour'), title: DAY_NAMES[dow - 1] + ' ' + time + ': ' + name });
+        cell.style.background = colourOf(row, name);
+        grid.append(cell);
+      }
+    }
+    return grid;
+  }
+  function legend(row) {
+    return h('div', { cls: 'legend' }, [row.timetable.base].concat(row.bands.map(function (b) { return b.name; })).map(function (n) {
+      var sw = h('i', { cls: 'swatch' }); sw.style.background = colourOf(row, n);
+      return h('span', {}, [sw, n + (n === row.timetable.base ? ' (main)' : '')]);
+    }));
+  }
+  // On the price cards: each band's prices, the week, and the special dates.
+  function bandsSummary(row) {
+    if (!hasBands(row)) return null;
+    var names = [row.timetable.base].concat(row.bands.map(function (b) { return b.name; }));
+    var lines = h('ul', { cls: 'band-lines' }, names.map(function (n) {
+      var sw = h('i', { cls: 'swatch' }); sw.style.background = colourOf(row, n);
+      return h('li', {}, [sw, h('b', { text: n }), lengthPrices(asBand(row, bandNamed(row, n)))]);
+    }));
+    var dates = (row.timetable.dates || []).map(function (r) { return dayRange(r) + ': ' + r.band + ' all day'; });
+    return h('div', { cls: 'view', style: 'gap:10px' }, [
+      lines, weekGrid(row), legend(row),
+      dates.length ? h('p', { cls: 'meta', text: 'Special dates: ' + dates.join('; ') + '.' }) : null
+    ]);
   }
 
   // ---- London time ------------------------------------------------------------------------
@@ -777,7 +918,8 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     var list = venues();
     seg.hidden = list.length < 2;
     list.forEach(function (v) {
-      var sub = v.active ? hourlyWords(v.active) : 'no price';
+      var nowBand = v.active ? bandAt(v.active, Date.now()) : null;
+      var sub = v.active ? hourlyWords(asBand(v.active, nowBand)) + (nowBand ? ' · ' + nowBand.name + ' now' : '') : 'no price';
       if (!v.boards.length) sub += ' · no board';
       seg.append(h('button', {
         type: 'button', 'aria-pressed': v.locationId === state.venueId ? 'true' : 'false',
@@ -806,10 +948,13 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
       return;
     }
     var a = v.active;
+    var bandNow = bandAt(a, Date.now());
+    var shown = asBand(a, bandNow);
     body.append(h('div', { cls: 'view', style: 'gap:14px' }, [
-      boardBox('The welcome line reads', a),
-      lengthTiles(a),
-      h('p', { cls: 'say', text: pricingWords(a) }),
+      boardBox(bandNow ? 'Now (' + bandNow.name + '), the welcome line reads' : 'The welcome line reads', shown),
+      lengthTiles(shown),
+      h('p', { cls: 'say', text: pricingWords(shown) }),
+      bandsSummary(a),
       h('p', { cls: 'meta' }, [
         modelWords(a), h('br'),
         'Version ' + a.version + ' · since ' + when(a.effectiveFrom || a.createdAt) + by(a) + '.', h('br'),
@@ -837,9 +982,11 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
           h('h2', { text: 'From ' + when(row.effectiveFrom) }),
           h('span', { cls: 'chip soon', text: due ? 'Starting now' : 'Coming up' })
         ]),
-        boardBox('The welcome line will read', row),
-        lengthTiles(row),
-        h('p', { cls: 'say', text: pricingWords(row) }),
+        boardBox(hasBands(row) ? 'At its start (' + bandAt(row, Date.parse(row.effectiveFrom)).name + '), the welcome line will read'
+                               : 'The welcome line will read', asBand(row, bandAt(row, Date.parse(row.effectiveFrom)))),
+        lengthTiles(asBand(row, bandAt(row, Date.parse(row.effectiveFrom)))),
+        h('p', { cls: 'say', text: pricingWords(asBand(row, bandAt(row, Date.parse(row.effectiveFrom)))) }),
+        bandsSummary(row),
         h('p', { cls: 'meta' }, [
           modelWords(row), h('br'),
           'Version ' + row.version + ' · saved ' + when(row.createdAt) + by(row) + '. ' +
@@ -875,7 +1022,8 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
                         onclick: function () { fill(row); state.dirty = true; $('edit').scrollIntoView({ behavior: 'smooth' }); } })
         ]),
         h('span', { cls: 'l', text: welcomeLine(row) }),
-        h('span', { cls: 'when', text: (row.model === 'per_group' ? 'Board price' : 'Per person') + ' · ' +
+        h('span', { cls: 'when', text: (row.model === 'per_group' ? 'Board price' : 'Per person') +
+          (hasBands(row) ? ' · ' + row.timetable.base + ' and ' + row.bands.map(function (b) { return b.name; }).join(', ') : '') + ' · ' +
           (row.lengths || []).map(function (m) { return spoken(m) + ' ' + money(quote(row, m, 1).minor, row.currency); }).join(', ') +
           (row.createdBy ? ' · saved by ' + row.createdBy : '') })
       ]));
@@ -919,7 +1067,7 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
   }
 
   // ---- the form ----------------------------------------------------------------------------
-  var form = { model: 'per_group', lengths: [], overrides: {} };
+  var form = { model: 'per_group', lengths: [], overrides: {}, base: 'Off-peak', bands: [], weekly: [], dates: [] };
 
   // keepStart: a scheduled price being edited keeps its start date and time.
   function fill(row, keepStart) {
@@ -931,6 +1079,15 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     });
     $('rate').value = row ? poundsText(row.rateMinor) : '';
     $('note').value = row && row.note ? row.note : '';
+    var tt = hasBands(row) ? row.timetable : null;
+    form.base = tt ? tt.base : 'Off-peak';
+    form.bands = tt ? row.bands.map(function (b) {
+      var ov = {};
+      Object.keys(b.overrides || {}).forEach(function (k) { if (b.overrides[k] != null) ov[k] = poundsText(b.overrides[k]); });
+      return { name: b.name, rate: poundsText(b.rateMinor), overrides: ov };
+    }) : [];
+    form.weekly = tt ? (tt.weekly || []).map(function (r) { return { band: r.band, days: r.days.slice(), from: r.from, to: r.to }; }) : [];
+    form.dates = tt ? (tt.dates || []).map(function (r) { return { from: r.from, to: r.to, band: r.band }; }) : [];
     if (keepStart && row && row.effectiveFrom) {
       var p = londonParts(Date.parse(row.effectiveFrom));
       document.querySelector('input[name="when"][value="later"]').checked = true;
@@ -972,10 +1129,21 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     var later = document.querySelector('input[name="when"]:checked').value === 'later';
     var startsAt = null;
     if (later && $('start-date').value && $('start-time').value) startsAt = londonToUtc($('start-date').value, $('start-time').value);
+    var bands = form.bands.map(function (b) {
+      var ov = {};
+      form.lengths.forEach(function (m) { var v = pence(b.overrides[String(m)]); if (v != null) ov[String(m)] = v; });
+      return { name: b.name.trim(), rateMinor: pence(b.rate), overrides: ov };
+    });
     return {
       model: form.model, currency: currency, rateMinor: pence($('rate').value), ratePerMinutes: 60,
       lengths: form.lengths.slice(), overrides: overrides, note: $('note').value.trim() || null,
-      later: later, startsAt: startsAt
+      later: later, startsAt: startsAt,
+      bands: bands,
+      timetable: bands.length ? {
+        base: form.base.trim() || 'Off-peak',
+        weekly: form.weekly.map(function (r) { return { band: r.band, days: r.days.slice().sort(), from: r.from, to: r.to }; }),
+        dates: form.dates.map(function (r) { return { from: r.from, to: r.to, band: r.band }; })
+      } : null
     };
   }
 
@@ -990,6 +1158,26 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
       if (isNaN(p) || p < 1 || p > 100000) out.push('The price for ' + spoken(Number(k)) + ' must be between £0.01 and £1,000.');
     });
     if (d.note && d.note.length > NOTE_MAX) out.push('The words can be at most ' + NOTE_MAX + ' characters.');
+    if (d.bands.length) {
+      var seen = [d.timetable.base.toLowerCase()];
+      d.bands.forEach(function (b, i) {
+        if (!b.name) out.push('Band ' + (i + 1) + ' needs a name.');
+        else if (seen.indexOf(b.name.toLowerCase()) >= 0) out.push('Two bands are called ' + b.name + '.');
+        seen.push(b.name.toLowerCase());
+        if (b.rateMinor == null || isNaN(b.rateMinor) || b.rateMinor < 1 || b.rateMinor > 100000) out.push((b.name || 'Band ' + (i + 1)) + ' needs a price per hour.');
+        Object.keys(b.overrides).forEach(function (k) {
+          if (isNaN(b.overrides[k]) || b.overrides[k] < 1) out.push((b.name || 'A band') + '’s price for ' + spoken(Number(k)) + ' isn’t a price.');
+        });
+      });
+      d.timetable.weekly.forEach(function (r) {
+        if (!r.days.length) out.push('A ' + r.band + ' rule has no days ticked.');
+        if (r.from >= r.to) out.push('A ' + r.band + ' rule ends before it starts (' + r.from + ' to ' + r.to + '). Past midnight is two rules.');
+      });
+      d.timetable.dates.forEach(function (r) {
+        if (!r.from || !r.to) out.push('Pick both dates for each special date.');
+        else if (r.to < r.from) out.push('A special date ends before it starts.');
+      });
+    }
     if (d.later) {
       if (!d.startsAt) out.push('Pick the date and time it starts.');
       else if (d.startsAt <= new Date()) out.push('That start has already passed. Pick a later one, or choose Now.');
@@ -1048,8 +1236,160 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
       ]));
       if (focused === key) { input.focus(); }
     });
+    drawBands();
     drawPreview();
   }
+
+  // A band's rename follows into the rules that name it.
+  function renameBand(oldName, newName) {
+    form.weekly.forEach(function (r) { if (r.band === oldName) r.band = newName; });
+    form.dates.forEach(function (r) { if (r.band === oldName) r.band = newName; });
+    if (form.base === oldName) form.base = newName;
+  }
+  function bandOptions(selected) {
+    var names = [form.base].concat(form.bands.map(function (b) { return b.name; }));
+    var sel = h('select', { 'aria-label': 'Band' }, names.map(function (n) {
+      return h('option', { value: n, text: n + (n === form.base ? ' (main)' : ''), selected: n === selected });
+    }));
+    return sel;
+  }
+  function timeOptions(selected, ending) {
+    var list = [];
+    for (var c = ending ? 1 : 0; c <= (ending ? 48 : 47); c++) list.push(String(Math.floor(c / 2)).padStart(2, '0') + ':' + (c % 2 ? '30' : '00'));
+    if (selected && list.indexOf(selected) < 0) { list.push(selected); list.sort(); }
+    return h('select', { 'aria-label': ending ? 'Until' : 'From' }, list.map(function (t) {
+      return h('option', { value: t, text: t === '24:00' ? 'midnight' : t, selected: t === selected });
+    }));
+  }
+  function removeButton(label, onRemove) {
+    return h('button', { type: 'button', cls: 'small', text: 'Remove', 'aria-label': label, onclick: onRemove });
+  }
+
+  function drawBands() {
+    var d = draft();
+    var box = $('bands-box');
+    box.textContent = '';
+    $('bands-hint').textContent = form.bands.length
+      ? 'Each band is a full price for the lengths above. The main price is the one above; it applies whenever no band does.'
+      : 'One price all week. Add a band, such as Peak, to charge differently on some days and hours, or on special dates.';
+    $('add-band').hidden = form.bands.length >= MAX_BANDS;
+    $('tt-box').hidden = !form.bands.length;
+    if (!form.bands.length) return;
+
+    // The main price's name.
+    var baseInput = h('input', { cls: 'text', maxlength: '20', value: form.base, 'aria-label': 'Name of the main price' });
+    baseInput.addEventListener('input', function () {
+      renameBand(form.base, baseInput.value); form.base = baseInput.value; touched(); drawRules(); drawPreview();
+    });
+    var baseSw = h('i', { cls: 'swatch' }); baseSw.style.background = BASE_COLOUR;
+    box.append(h('div', { cls: 'rule' }, [baseSw, h('span', { cls: 'hint', text: 'Name of the main price' }), baseInput]));
+
+    form.bands.forEach(function (b, i) {
+      var sw = h('i', { cls: 'swatch' }); sw.style.background = BAND_COLOURS[i % BAND_COLOURS.length];
+      var name = h('input', { cls: 'text', maxlength: '20', value: b.name, 'aria-label': 'Band name' });
+      name.addEventListener('input', function () { renameBand(b.name, name.value); b.name = name.value; touched(); drawRules(); drawPreview(); });
+      var rate = h('input', { inputmode: 'decimal', value: b.rate, 'aria-label': (b.name || 'Band') + ' price per hour', placeholder: '40.00' });
+      var lenRows = h('div', { cls: 'len-rows' });
+      var redrawLens = function () {
+        lenRows.textContent = '';
+        var r = pence(b.rate);
+        form.lengths.forEach(function (m) {
+          var key = String(m);
+          var input = h('input', { inputmode: 'decimal', value: b.overrides[key] || '', 'aria-label': (b.name || 'Band') + ' price for ' + spoken(m), 'data-min': key,
+                                   placeholder: r && !isNaN(r) ? poundsText(atRate({ rateMinor: r, ratePerMinutes: 60 }, m)) : '' });
+          input.addEventListener('input', function () { b.overrides[key] = input.value; touched(); drawPreview(); });
+          lenRows.append(h('div', { cls: 'len-row' }, [h('span', { cls: 'm', text: spoken(m) }),
+            h('div', { cls: 'money' }, [h('span', { text: '£' }), input]),
+            h('span', { cls: 's', text: 'Blank: the band’s hourly rate.' })]));
+        });
+      };
+      rate.addEventListener('input', function () {
+        b.rate = rate.value; touched(); drawPreview();
+        Array.prototype.forEach.call(lenRows.querySelectorAll('input'), function (inp) {
+          var r = pence(b.rate);
+          inp.placeholder = r && !isNaN(r) ? poundsText(atRate({ rateMinor: r, ratePerMinutes: 60 }, Number(inp.dataset.min))) : '';
+        });
+      });
+      redrawLens();
+      box.append(h('div', { cls: 'band-card' }, [
+        h('div', { cls: 'top' }, [sw, name,
+          h('div', { cls: 'money' }, [h('span', { text: '£' }), rate]), h('span', { cls: 'hint', text: 'an hour' }),
+          removeButton('Remove band ' + b.name, function () {
+            form.bands.splice(i, 1);
+            form.weekly = form.weekly.filter(function (r) { return r.band !== b.name; });
+            form.dates = form.dates.filter(function (r) { return r.band !== b.name; });
+            touched(); drawForm();
+          })]),
+        lenRows
+      ]));
+    });
+    drawRules();
+  }
+
+  function drawRules() {
+    var wk = $('weekly-rows');
+    wk.textContent = '';
+    form.weekly.forEach(function (r, i) {
+      var band = bandOptions(r.band);
+      band.addEventListener('change', function () { r.band = band.value; touched(); drawRules(); drawPreview(); });
+      var days = h('div', { cls: 'days', role: 'group', 'aria-label': 'Days' }, DAY_NAMES.map(function (n, k) {
+        var on = r.days.indexOf(k + 1) >= 0;
+        return h('button', { type: 'button', text: n, 'aria-pressed': on ? 'true' : 'false', onclick: function () {
+          if (on) r.days = r.days.filter(function (x) { return x !== k + 1; }); else r.days = r.days.concat([k + 1]).sort();
+          touched(); drawRules(); drawPreview();
+        } });
+      }));
+      var from = timeOptions(r.from, false), to = timeOptions(r.to, true);
+      from.addEventListener('change', function () { r.from = from.value; touched(); drawRules(); drawPreview(); });
+      to.addEventListener('change', function () { r.to = to.value; touched(); drawRules(); drawPreview(); });
+      wk.append(h('div', { cls: 'rule' }, [band, days, from, h('span', { cls: 'hint', text: 'to' }), to,
+        removeButton('Remove rule', function () { form.weekly.splice(i, 1); touched(); drawRules(); drawPreview(); })]));
+    });
+    if (!form.weekly.length) wk.append(h('p', { cls: 'hint', text: 'No days and hours yet, so only special dates use the bands.' }));
+
+    var dt = $('date-rows');
+    dt.textContent = '';
+    form.dates.forEach(function (r, i) {
+      var band = bandOptions(r.band);
+      band.addEventListener('change', function () { r.band = band.value; touched(); drawPreview(); });
+      var from = h('input', { type: 'date', value: r.from, 'aria-label': 'From' });
+      var to = h('input', { type: 'date', value: r.to, 'aria-label': 'To' });
+      from.addEventListener('input', function () {
+        if (!r.to || r.to === r.from || r.to < from.value) { r.to = from.value; to.value = from.value; }
+        r.from = from.value; touched(); drawPreview();
+      });
+      to.addEventListener('input', function () { r.to = to.value; touched(); drawPreview(); });
+      dt.append(h('div', { cls: 'rule' }, [from, h('span', { cls: 'hint', text: 'to' }), to, band,
+        h('span', { cls: 'hint', text: 'all day' }),
+        removeButton('Remove date', function () { form.dates.splice(i, 1); touched(); drawRules(); drawPreview(); })]));
+    });
+
+    var row = draft();
+    $('week-grid').textContent = '';
+    if (row.bands.length) {
+      var gridRow = Object.assign({}, row, { bands: row.bands.map(function (b, k) { return Object.assign({}, b, { name: form.bands[k].name }); }) });
+      $('week-grid').append(weekGrid(gridRow), legend(gridRow));
+    }
+  }
+
+  $('add-band').addEventListener('click', function () {
+    var used = form.bands.map(function (b) { return b.name.toLowerCase(); }).concat([form.base.toLowerCase()]);
+    var name = NEW_BAND_NAMES.filter(function (n) { return used.indexOf(n.toLowerCase()) < 0; })[0] || 'Band ' + (form.bands.length + 1);
+    form.bands.push({ name: name, rate: $('rate').value, overrides: Object.assign({}, form.overrides) });
+    // A first band gets a likely start: Friday and Saturday evenings.
+    if (form.bands.length === 1 && !form.weekly.length) form.weekly.push({ band: name, days: [5, 6], from: '17:00', to: '23:00' });
+    touched();
+    drawForm();
+  });
+  $('add-hours').addEventListener('click', function () {
+    var band = form.bands.length ? form.bands[0].name : form.base;
+    form.weekly.push({ band: band, days: [], from: '17:00', to: '23:00' });
+    touched(); drawRules(); drawPreview();
+  });
+  $('add-date').addEventListener('click', function () {
+    form.dates.push({ from: '', to: '', band: form.bands.length ? form.bands[0].name : form.base });
+    touched(); drawRules(); drawPreview();
+  });
 
   function markBad() {
     $('rate-box').classList.toggle('bad', isNaN(pence($('rate').value)));
@@ -1094,6 +1434,18 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     var tiles = $('pv-lengths');
     tiles.replaceWith(ok ? Object.assign(lengthTiles(row), { id: 'pv-lengths' }) : h('ul', { cls: 'lengths', id: 'pv-lengths' }));
 
+    // With bands, the line above is the main price; each band gets its own line and prices.
+    $('pv-label').textContent = d.bands.length ? (d.timetable.base || 'Main price') + ': the welcome line will read'
+                                               : 'The board’s welcome line will read';
+    var pvb = $('pv-bands');
+    pvb.textContent = '';
+    if (ok) d.bands.forEach(function (b, i) {
+      if (!b.rateMinor || isNaN(b.rateMinor)) return;
+      var br = Object.assign({}, row, { rateMinor: b.rateMinor, overrides: b.overrides });
+      Object.keys(br.overrides).forEach(function (k) { if (isNaN(br.overrides[k])) delete br.overrides[k]; });
+      pvb.append(boardBox((form.bands[i].name || 'Band ' + (i + 1)) + ': the welcome line will read', br), lengthTiles(br));
+    });
+
     // What changes: against the scheduled price being edited, else the price on the board now.
     var base = state.editing || active;
     var ch = $('pv-changes');
@@ -1116,6 +1468,10 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
         else if (was == null) lines.push(h('li', {}, [spoken(m) + ': new, ', h('b', { text: money(now, row.currency) + nowEach })]));
         else lines.push(h('li', {}, [spoken(m) + ': ', h('span', { cls: 'was', text: money(was, base.currency) + wasEach }), ' → ', h('b', { text: money(now, row.currency) + nowEach })]));
       });
+      var bandsKey = function (x) { return JSON.stringify([x.bands || [], x.timetable || null]); };
+      if (bandsKey(base) !== bandsKey({ bands: d.bands, timetable: d.timetable })) {
+        lines.push(h('li', { text: d.bands.length ? 'Peak and off-peak: the bands or their times change.' : 'Peak and off-peak: removed; one price all week.' }));
+      }
       if (welcomeLine(base) !== line && !lines.length) lines.push(h('li', { text: 'Only the words on the welcome line change.' }));
       if (!lines.length) lines.push(h('li', { text: 'Same as ' + against + '.' }));
       if (state.editing) lines.unshift(h('li', { text: 'Against ' + against + ':' }));
@@ -1141,6 +1497,17 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
             ' while the hour goes from ' + money(base.rateMinor, base.currency) + ' to ' + money(row.rateMinor, row.currency) +
             '. Change it above if it should move with the hour.' }));
         }
+      });
+    }
+    if (d.bands.length) {
+      warns.append(h('div', { cls: 'warn', text: 'Peak and off-peak need every board at ' + (v ? nameOf(v) : 'this venue') +
+        ' on the game release that adds them (not released yet). Until a board has it, it charges the main price (' +
+        (d.timetable.base || 'Off-peak') + ') all the time.' }));
+      d.bands.forEach(function (b, i) {
+        var name = form.bands[i].name;
+        var used = d.timetable.weekly.some(function (r) { return r.band === name && r.days.length; }) ||
+                   d.timetable.dates.some(function (r) { return r.band === name; });
+        if (!used) warns.append(h('div', { cls: 'warn', text: (name || 'A band') + ' has no days, hours or dates yet, so it never applies.' }));
       });
     }
     if (v && !v.boards.length) {
@@ -1217,6 +1584,11 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
         : nameOf(v) + '’s board will read “' + line + '” from its next welcome screen.';
     }
     $('confirm-text').textContent += ' ' + pricingWords(d);
+    if (d.bands.length) {
+      $('confirm-text').textContent += ' That is the ' + d.timetable.base + ' price; ' +
+        d.bands.map(function (b) { return b.name + ' is ' + lengthPrices(Object.assign({}, d, { rateMinor: b.rateMinor, overrides: b.overrides })); }).join('; ') +
+        ', at the days, hours and dates set.';
+    }
     $('confirm-yes').textContent = ed ? 'Yes, save the changes' : d.later ? 'Yes, schedule it' : 'Yes, change the price now';
     $('save').hidden = true;
     $('confirm').hidden = false;
@@ -1242,6 +1614,8 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     };
     // Only when editing, so a save still works against a database without the argument.
     if (ed) args.p_replaces = ed.id;
+    args.p_bands = d.bands;
+    args.p_timetable = d.timetable;
     rpc('dashboard_set_price', args).then(function (r) {
       btn.disabled = false;
       if (r.error) {
