@@ -79,6 +79,8 @@ signature first, figures second.
 | `staff/index.html`, `staff/rising-sun.html` | old and short staff addresses; both redirect to `/dashboard/vouchers/` |
 | `dashboard/index.html` | Hawktivity's sessions dashboard, behind Google sign-in |
 | `dashboard/mock.js` | made-up sessions for walking the dashboard on a laptop (`/dashboard/?mock`) |
+| `dashboard/prices/index.html` | each venue's darts prices, and changing them, for Hawktivity Google accounts |
+| `dashboard/prices/mock.js` | made-up venues and prices for walking the price page on a laptop (`/dashboard/prices/?mock`, `&as=outsider`, `&fail=1`) |
 | `notebook.html` | Ezra's notebook for Murder at Last Orders: the case so far, private crosses on suspects, and the table's WHO / HOW / WHY vote. Polls the `mystery-notebook` Edge Function with the board's signed `note` code; no account, no typed text |
 | `murder/notebook-mock.js` | a made-up Case 1 for walking the notebook on a laptop (`notebook.html?mock=1`, `&case=briefing`, `accusing`, `closed`, `waiting`, `offline`, `bad`) |
 | `murder/portraits/` | the 22 suspect, victim and witness portraits the notebook shows, 270x336 greyscale |
@@ -124,6 +126,27 @@ list. It opens `story.html#staff=<claim id>`, the story page's staff view: the d
 no copy of a guest's link (only its hash), so the staff view uses this browser's dashboard
 sign-in instead, and `get-story` lets it in only for a viewer who may see people. Opening it
 there does not count as the guest opening their email.
+
+### Prices
+
+`pay.hawktivity.com/dashboard/prices/` (linked as **Prices** from the dashboard for
+hawktivity.com accounts) shows what each venue's board charges and changes it, with no SQL and
+no game release: a board on release 1.42.39 or later re-reads its venue's active `pricing` row
+at every welcome screen. The page uses three database functions (pinpointe-supabase migration
+`20261123200000`), which answer only a dashboard viewer whose verified Google account is on
+hawktivity.com; outside dashboard viewers and boards are refused:
+
+- `dashboard_prices()`: every venue with a board or a price, its active row, any scheduled
+  rows, and earlier rows;
+- `dashboard_set_price(...)`: a new price, either now (the active row is retired and the next
+  version goes in active) or from a date and time in London (the next version goes in
+  inactive with `effective_from`). A save never changes an existing row's prices;
+- `dashboard_cancel_price(id)`: withdraws a scheduled price before it starts.
+
+A pg_cron job, `pricing-activate-due`, switches on any scheduled price within 5 minutes of its
+start. The page previews the board's welcome line and each length's price with the board's own
+rules (`PaymentWording.PriceLine`, `PriceCalculator.Quote` in pinpointe-social-suite); if those
+change, change the copies at the top of the page's script too.
 
 
 ## Running it locally

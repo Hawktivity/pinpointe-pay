@@ -291,6 +291,7 @@ select, .small {
       </div>
       <div class="who">
         <span class="email" id="who-email"></span>
+        <a id="prices-link" class="link" href="prices/" hidden>Prices</a>
         <button id="signout" class="link" type="button">Sign out</button>
       </div>
     </header>
@@ -1121,6 +1122,9 @@ select, .small {
   var entered = false, timer = null;
   function enterApp() {
     $('who-email').textContent = state.email;
+    // The price page answers only hawktivity.com accounts (dashboard_prices()); the link follows.
+    $('prices-link').hidden = !/@hawktivity\.com$/i.test(state.email || '');
+    if (MOCK) $('prices-link').href = 'prices/?mock';
     if (CFG.environment && CFG.environment !== 'prod') { $('envtag').textContent = MOCK ? 'mock' : CFG.environment; $('envtag').hidden = false; }
     show('app');
     if (!entered) {
