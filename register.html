@@ -334,6 +334,62 @@ button.link {
 .saved .after.warn { color: var(--paper); }
 input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
 
+/* --- "Sure you want to skip?" ---------------------------------------------
+   Over the form, the first time I'M IN is tapped with the email left blank. */
+.skip-check {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: rgba(8, 8, 11, .78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow-y: auto;
+}
+.skip-card {
+  width: 100%;
+  max-width: 26rem;
+  margin: auto;
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--brick);
+  border-radius: 3px;
+  padding: 1.35rem 1.2rem 1.2rem;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
+}
+.skip-card h2 {
+  font-family: var(--display);
+  font-size: 1.95rem;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: .01em;
+  text-transform: uppercase;
+  margin: 0 0 .7rem;
+  text-wrap: balance;
+}
+.skip-card p { margin: 0; color: var(--dim); font-size: .98rem; }
+.skip-card ul { list-style: none; margin: .85rem 0 0; padding: 0; }
+.skip-card li { display: flex; gap: .7rem; align-items: center; font-size: 1rem; font-weight: 500; line-height: 1.3; }
+.skip-card li + li { margin-top: .6rem; }
+.skip-card li::before {
+  content: '\2713';
+  flex: 0 0 auto;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 50%;
+  background: var(--brick);
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .9rem;
+  font-weight: 700;
+}
+.skip-card p.promise { margin: 1rem 0 0; color: var(--paper); font-weight: 600; font-size: .95rem; }
+.skip-card .actions { margin-top: 1.2rem; display: grid; gap: .6rem; }
+.skip-card button.no { background: transparent; border: 1px solid var(--line); color: var(--dim); font-size: 1.05rem; }
+
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -492,6 +548,27 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
 
       <button id="submit" type="submit">I'm in</button>
     </form>
+
+    <!-- "Sure you want to skip?" (Richard, 22 Nov 2026). Once per guest, the first time I'M IN
+         is tapped by an adult who left the email blank; never an under-18, whose email field is
+         hidden. Each line is something the clips page really shows; the offers box is not part
+         of the pitch. The board asks the same, in the same words (QuickSignup.SkipCheck*). -->
+    <div class="skip-check" id="skip-check" role="dialog" aria-modal="true" aria-labelledby="skip-check-h" hidden>
+      <div class="skip-card">
+        <h2 id="skip-check-h">Sure you want to skip?</h2>
+        <p>Add your email and when your session ends we'll send you:</p>
+        <ul>
+          <li>Videos of your best throws, ready to share</li>
+          <li>Your scores, your stats and where every dart landed</li>
+          <li>The group photo</li>
+        </ul>
+        <p class="promise">It's free and quick. We never sell your email or spam you. Ever.</p>
+        <div class="actions">
+          <button type="button" id="skip-check-add">Add my email</button>
+          <button type="button" class="no" id="skip-check-no">No thanks</button>
+        </div>
+      </div>
+    </div>
 
     <p class="privacy">
       Your name, and your photo if you add one, go to the board so people can see
@@ -827,6 +904,40 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
     img.src = url;
   }
 
+  // --- "Sure you want to skip?" ------------------------------------------------
+  // Once per guest: the first I'M IN with the email blank asks; after that it goes through.
+  // Never an under-18: their email field is hidden, and they are not sent clips.
+  var skipCheckAsked = false;
+
+  function asksBeforeSkipping() {
+    return !skipCheckAsked && !el('email-field').hidden && el('email').value.trim() === '';
+  }
+
+  function openSkipCheck() {
+    skipCheckAsked = true;
+    el('skip-check').hidden = false;
+    el('skip-check-add').focus();
+  }
+
+  function closeSkipCheck() { el('skip-check').hidden = true; }
+
+  el('skip-check-add').addEventListener('click', function () {
+    closeSkipCheck();
+    // Focusing from the tap brings the phone's keyboard up on the field.
+    el('email').focus();
+    el('email').scrollIntoView({ block: 'center' });
+  });
+
+  el('skip-check-no').addEventListener('click', function () {
+    closeSkipCheck();
+    if (el('form').requestSubmit) { el('form').requestSubmit(); } else { el('submit').click(); }
+  });
+
+  // Escape is the same as going back to the form; a tap on the dimmed page does nothing.
+  el('skip-check').addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { closeSkipCheck(); el('email').focus(); }
+  });
+
   // --- submit ---------------------------------------------------------------
   el('form').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -855,6 +966,13 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
       notice('form-notice-slot', 'One more thing',
         'Tick to say you’ve read the rules before you throw.');
       el('disclaimer').focus();
+      return;
+    }
+
+    // Everything else is in order: only now ask about the email, so nobody answers the
+    // question and then meets a missing name.
+    if (asksBeforeSkipping()) {
+      openSkipCheck();
       return;
     }
 
