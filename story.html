@@ -109,6 +109,23 @@ button { font: inherit; color: inherit; }
 .reel { display: grid; grid-auto-flow: column; grid-auto-columns: 86%; gap: .8rem; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -1rem; padding: 0 1rem .4rem; scrollbar-width: none; }
 .reel::-webkit-scrollbar { display: none; }
 .reel > * { scroll-snap-align: center; }
+/* The reel scrolls sideways, which a phone does with a swipe but a mouse cannot (Richard, 23 Nov
+   2026: "no way to scroll to the others"). Arrows on either side whenever there is more that way,
+   and a count under it. */
+.reel-wrap { position: relative; }
+.reel-nav {
+  position: absolute; top: 38%; z-index: 2; transform: translateY(-50%);
+  width: 2.9rem; height: 2.9rem; border-radius: 50%; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(16, 16, 21, .82); border: 1px solid rgba(255, 255, 255, .28); color: var(--paper);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .5); cursor: pointer;
+}
+.reel-nav svg { width: 1.25rem; height: 1.25rem; }
+.reel-nav.prev { left: -.35rem; }
+.reel-nav.next { right: -.35rem; }
+.reel-nav:hover { background: rgba(40, 40, 48, .92); }
+.reel-nav:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
+.reel-count { text-align: center; color: var(--dim); font-size: .8rem; margin: .45rem 0 0; }
 
 /* Numbers */
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .55rem; }
@@ -248,7 +265,16 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
     <section id="reel-sec" class="hidden">
       <h2>Every highlight<small>Tap a name to see their moments.</small></h2>
       <div id="chips" class="chips" role="group" aria-label="Whose highlights"></div>
-      <div id="reel" class="reel"></div>
+      <div class="reel-wrap">
+        <div id="reel" class="reel"></div>
+        <button type="button" id="reel-prev" class="reel-nav prev hidden" aria-label="Previous clip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <button type="button" id="reel-next" class="reel-nav next hidden" aria-label="Next clip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+      <p id="reel-count" class="reel-count hidden" aria-live="polite"></p>
     </section>
 
     <section id="photo-sec" class="hidden">
@@ -735,7 +761,51 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
     story.highlights
       .filter(function (h) { return filter === 'all' || h.player === filter; })
       .forEach(function (h) { reel.appendChild(clipCard(h)); });
+    reel.scrollLeft = 0;
+    updateReelNav();
   }
+
+  // ------------------------------------------------------------------ moving along the reel
+
+  /** The clip most in view: the one whose middle is nearest the reel's. */
+  function reelIndex() {
+    var reel = $('reel'), cards = reel.children;
+    var middle = reel.scrollLeft + reel.clientWidth / 2, best = 0, nearest = Infinity;
+    for (var i = 0; i < cards.length; i++) {
+      var d = Math.abs(cards[i].offsetLeft - reel.offsetLeft + cards[i].offsetWidth / 2 - middle);
+      if (d < nearest) { nearest = d; best = i; }
+    }
+    return best;
+  }
+
+  function updateReelNav() {
+    var reel = $('reel'), n = reel.children.length;
+    var many = n > 1;
+    var atStart = reel.scrollLeft <= 4;
+    var atEnd = reel.scrollLeft + reel.clientWidth >= reel.scrollWidth - 4;
+    $('reel-prev').classList.toggle('hidden', !many || atStart);
+    $('reel-next').classList.toggle('hidden', !many || atEnd);
+    $('reel-count').classList.toggle('hidden', !many);
+    if (many) { $('reel-count').textContent = (reelIndex() + 1) + ' of ' + n; }
+  }
+
+  /** One clip along, centred as a swipe would leave it; whatever was playing stops. */
+  function stepReel(by) {
+    var reel = $('reel'), cards = reel.children;
+    if (!cards.length) { return; }
+    var target = cards[Math.max(0, Math.min(cards.length - 1, reelIndex() + by))];
+    Array.prototype.forEach.call(reel.querySelectorAll('video'), function (v) { if (!v.paused) { v.pause(); } });
+    var left = target.offsetLeft - reel.offsetLeft - (reel.clientWidth - target.offsetWidth) / 2;
+    reel.scrollTo({ left: left, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+
+  $('reel-prev').addEventListener('click', function () { stepReel(-1); });
+  $('reel-next').addEventListener('click', function () { stepReel(1); });
+  $('reel').addEventListener('scroll', updateReelNav, { passive: true });
+  window.addEventListener('resize', updateReelNav);
+  // The reel is laid out after the story arrives, and its cards grow as their posters load: look
+  // again whenever its size changes, or the arrows would stay as they were with nothing to show.
+  if ('ResizeObserver' in window) { new ResizeObserver(updateReelNav).observe($('reel')); }
 
   function setView(key) {
     view = key;
