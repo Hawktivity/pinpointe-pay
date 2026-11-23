@@ -26,7 +26,8 @@
 
   function row(o) {
     return Object.assign({ id: id(), currency: 'GBP', ratePerMinutes: 60, overrides: {}, note: null,
-                           isActive: false, effectiveFrom: null, createdBy: null, retiredAt: null }, o);
+                           isActive: false, effectiveFrom: null, createdBy: null, retiredAt: null,
+                           bands: [], timetable: null }, o);
   }
 
   var rows = {
@@ -128,8 +129,20 @@
       old.retiredAt = now;
     }
     var version = list.reduce(function (n, r) { return Math.max(n, r.version); }, 0) + 1;
+    // Bands and their timetable, as pricing_bands_checked stores them (20261123220000): no bands,
+    // no timetable; names trimmed; a rule naming no band is refused.
+    var bands = (a.p_bands || []).map(function (b) { return { name: String(b.name || '').trim(), rateMinor: b.rateMinor, overrides: b.overrides || {} }; });
+    var timetable = null;
+    if (bands.length) {
+      var tt = a.p_timetable || {};
+      var names = [String(tt.base || 'Standard').trim()].concat(bands.map(function (b) { return b.name; }));
+      var unknown = (tt.weekly || []).concat(tt.dates || []).filter(function (r) { return names.indexOf(r.band) < 0; })[0];
+      if (unknown) return fail('22023', 'A rule names a band "' + unknown.band + '" that isn\'t one of this price\'s bands');
+      if (bands.some(function (b) { return !(b.rateMinor >= 1); })) return fail('22023', 'Each band needs an hourly price');
+      timetable = { base: names[0], weekly: tt.weekly || [], dates: tt.dates || [] };
+    }
     var fresh = row({ version: version, model: a.p_model, rateMinor: a.p_rate_minor, lengths: lengths, overrides: overrides,
-                      note: note, createdAt: now, createdBy: EMAIL });
+                      note: note, createdAt: now, createdBy: EMAIL, bands: bands, timetable: timetable });
     if (starts == null) {
       if (active) { active.isActive = false; active.retiredAt = now; }
       list.forEach(function (r) { if (scheduled(r) && Date.parse(r.effectiveFrom) <= Date.now()) r.retiredAt = now; });
