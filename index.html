@@ -922,6 +922,9 @@ button:focus-visible, input:focus-visible {
   // rest" on the next.
   var buttonAction = {};
 
+  // The smallest card share "Pay just my share" offers, in minor units: £5 (Richard, 23 Nov).
+  var MIN_SHARE_MINOR = 500;
+
   function setButton(id, label, action) {
     el(id).textContent = label;
     el(id).disabled = false;
@@ -936,6 +939,7 @@ button:focus-visible, input:focus-visible {
    *
    *   one player, or a join       Pay by card
    *   nobody has paid yet         Pay for everyone      / Pay just my share
+   *   ... but a share is under £5 Pay for everyone      (no split: MIN_SHARE_MINOR)
    *   some of the group have      Pay my share          / Pay the rest
    *   the rest is mid-payment     (nothing primary)     / They gave up? Pay the rest
    *
@@ -983,6 +987,18 @@ button:focus-visible, input:focus-visible {
       setButton('pay-share', 'They gave up? Pay the rest · ' + money(f.remaining, currency),
         { heads: data.players, ignoreHolds: true });
       el('pay-share').hidden = false;
+      return;
+    }
+
+    if (!f.started && f.perHead < MIN_SHARE_MINOR) {
+      // Richard, 23 Nov 2026: no card share under £5. Every card payment carries a fixed
+      // fee, so splitting a small total many ways hands much of it to the card company.
+      // One person pays and the group settles up between themselves.
+      setButton('pay-card', 'Pay for everyone · ' + money(f.available, currency),
+        { heads: data.players });
+      el('split-hint').textContent = 'One of you pays for the group. Splitting by card starts at '
+        + money(MIN_SHARE_MINOR, currency) + ' each.';
+      el('split-hint').hidden = false;
       return;
     }
 

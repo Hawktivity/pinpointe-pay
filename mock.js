@@ -28,6 +28,7 @@
  *
  * Split payments -- a card-only venue, 4 players, 30 min, £20.00 (£5.00 a head):
  *   split         nobody has paid: Pay for everyone / Pay just my share
+ *                 (&players=8: £2.50 a head, under the £5 minimum: Pay for everyone only)
  *   splitpartial  £5 of £20 paid: Pay my share / Pay the rest
  *   splitheld     £5 paid and the other £15 is in somebody's card form right now; the
  *                 checkout refuses until "They gave up? Pay the rest" is used
@@ -121,6 +122,8 @@
       cardPayment: true, barPayment: false, splitPayment: true,
       split: null, share: null, codeExpired: false, boardAcknowledged: false
     };
+    // &players=N changes the group size, e.g. 8 for £2.50 a head (under the £5 minimum share).
+    if (Number(params.get('players')) > 0) base.players = Number(params.get('players'));
     var partial = { paidMinor: 500, heldMinor: 0, payers: 1, remainingMinor: 1500 };
 
     if (scenario === 'splitpartial') {
