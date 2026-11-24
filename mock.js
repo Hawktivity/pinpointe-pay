@@ -47,6 +47,9 @@
  *                 another game (CANCEL, then a new group): it is all going back
  * In the voucher case, RS-LATE-0000 is refused as too late tonight.
  *
+ * Every describe answer names the board "Metropolis board 1", the way two boards in one venue
+ * are told apart (Nov 2026). &board=<name> names it something else; &board= (empty) sends no
+ * name, which is what an unnamed board or an older backend answers.
  * Ambassadors (25 Nov 2026), the same £20 for 4:
  *   ambassador    nobody has paid: "Ambassador? Cover my share · £5.00"; Face ID covers it,
  *                 then the screen is this phone's covered share and £15 still to pay
@@ -74,6 +77,8 @@
 
   var params = new URLSearchParams(window.location.search);
   var scenario = params.get('case') || 'new';
+  // The board's name in describe's answer. See the note at the top.
+  var boardName = params.has('board') ? params.get('board') : 'Metropolis board 1';
   // Back from the (fake) card page: Stripe's success link carries paid=1.
   var returning = params.get('paid') === '1';
   // describe's venueLogoUrl, for &logo. A drawn placeholder: no venue's real artwork here.
@@ -112,6 +117,14 @@
       window.setTimeout(function () {
         if (value instanceof Error) { reject(value); } else { resolve(value); }
       }, ms == null ? 600 : ms);
+    });
+  }
+
+  /** Adds the board's name to a describe answer that succeeded, as the real one does. */
+  function withBoardName(answer) {
+    return answer.then(function (result) {
+      if (result && result.data && result.data.ok) result.data.boardName = boardName || null;
+      return result;
     });
   }
 
@@ -393,7 +406,7 @@
   }
 
   window.PAY_CONFIG.transport = function (request) {
-    return request.action === 'describe' ? describe(request) : retiredUnlock(request);
+    return request.action === 'describe' ? withBoardName(describe(request)) : retiredUnlock(request);
   };
 
   window.PAY_CONFIG.checkoutTransport = checkout;
