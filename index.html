@@ -630,6 +630,9 @@ button:focus-visible, input:focus-visible {
   }
 
   var settleTried = false;
+  // Set when this phone has just covered an ambassador's share, so a sale that cover finished
+  // reads "Board unlocked" rather than "Already paid".
+  var justCovered = false;
 
   /**
    * Puts a describe answer on screen. Split out of describe so a refusal from the card
@@ -640,8 +643,10 @@ button:focus-visible, input:focus-visible {
     session = data;
 
     if (data.alreadyPaid) {
-      // Never invite a second payment for the same session.
-      showPaid(data, false);
+      // Never invite a second payment for the same session. A cover that was the last of the
+      // price is this phone finishing the sale, not finding it finished.
+      showPaid(data, justCovered);
+      justCovered = false;
       return;
     }
 
@@ -854,6 +859,14 @@ button:focus-visible, input:focus-visible {
     el('done-by').textContent = byCard ? 'CARD'
       : byVoucher ? 'VOUCHER'
       : (data.approvedBy || 'Staff').toUpperCase();
+
+    // An ambassador's phone: their share was covered, not paid, and nothing was charged to them.
+    if (mine !== null && data.share.paidVia === 'ambassador') {
+      el('done-amount-label').textContent = 'Your share';
+      el('done-amount').textContent = 'Covered · ' + money(mine, data.currency);
+      el('done-by-label').textContent = 'The rest paid by';
+      el('done-by').textContent = 'YOUR GROUP, BY CARD';
+    }
 
     if (!justPaid) {
       el('done-hint').textContent =
@@ -1387,8 +1400,10 @@ button:focus-visible, input:focus-visible {
         + 'Starting the board.';
 
     // The one thing on offer here is paying what is LEFT, for whoever would rather not wait.
-    // Never this guest's own share again, and nothing at all with an expired code.
-    var canPay = !data.codeExpired && !!data.cardPayment && f.available > 0;
+    // Never this guest's own share again, and nothing at all with an expired code. Never on an
+    // ambassador's phone either: the rest is for somebody else in the group to pay, which is
+    // the whole condition of the covered share.
+    var canPay = !data.codeExpired && !!data.cardPayment && f.available > 0 && !covered;
     el('share-rest').hidden = !canPay;
     if (canPay) {
       setButton('share-rest', 'Pay the rest · ' + money(f.available, data.currency),
@@ -1424,11 +1439,16 @@ button:focus-visible, input:focus-visible {
     el('share-mine').textContent = money(data.share.amountMinor, data.currency);
     el('share-progress-row').hidden = true;
     el('share-title').textContent = 'Your free share wasn’t used';
-    el('share-blurb').textContent = (data.share.splitReason === 'past_closing'
+    var why = data.share.splitReason;
+    el('share-blurb').textContent = (why === 'past_closing'
         ? 'It got too late, so the board never started. '
-        : data.share.splitReason === 'board_moved_on' || data.share.splitReason === 'board_never_started'
+        : why === 'board_moved_on' || why === 'board_never_started'
           ? 'The board moved on to another game, so it never started yours. '
-          : 'Your group didn’t finish paying, so the board never started. ')
+          : why === 'sold_another_way' || why === 'code_already_used'
+            ? 'Your game was paid for another way, so your share wasn’t needed. '
+            : why === 'quote_changed'
+              ? 'The board changed the game while it was being paid for. '
+              : 'Your group didn’t finish paying, so the board never started. ')
       + 'Nothing was charged, and your covered share for today is still yours to use.';
     el('share-rest').hidden = true;
     el('share-hint').hidden = true;
@@ -1492,7 +1512,14 @@ button:focus-visible, input:focus-visible {
     }).then(function (result) {
       ambBusy = false;
       var answer = (result && result.data) || {};
+      if (!answer.ok && (answer.reason === 'nothing_to_cover' || answer.reason === 'already_paid')) {
+        // The rest of the group finished paying a moment ago: the board is unlocked.
+        show('loading');
+        describe();
+        return;
+      }
       if (answer.ok) {
+        justCovered = !!answer.complete;
         // From here this phone is the one whose share is in: name it, as Stripe's return
         // link does for a card share, so a reload keeps showing it.
         shareId = answer.shareId || shareId;
@@ -1563,6 +1590,13 @@ button:focus-visible, input:focus-visible {
             // Not mid-tap: redrawing would put the button's label back under "Opening…".
             if (!startingCheckout && data.share && data.share.state === 'paid') {
               showShare(data);
+            }
+            // An ambassador's covered share handed back by the sweep (the group never finished):
+            // say so now rather than leave "your share is covered" up until a reload.
+            if (data.share && data.share.paidVia === 'ambassador' && data.share.state === 'released'
+                && data.share.splitState === 'abandoned') {
+              showCoverReleased(data);
+              return;
             }
           }
           window.setTimeout(ask, SPLIT_POLL_MS);

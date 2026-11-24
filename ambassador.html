@@ -160,7 +160,7 @@ details.terms li { margin: 0 0 .5rem; }
     <ol class="steps">
       <li>Add your players and choose how long to play.</li>
       <li>Scan the QR code with this phone.</li>
-      <li>Tap <b>Ambassador? Cover my share</b> and use Face ID.</li>
+      <li>Before your friends pay, tap <b>Ambassador? Cover my share</b> and use Face ID.</li>
       <li>Your friends scan the same code and pay the rest.</li>
     </ol>
     <p class="lede">Once a day, up to &pound;5, for a new game with at least one other person paying.</p>
@@ -337,11 +337,17 @@ details.terms li { margin: 0 0 .5rem; }
     busy = false;
     if (!data.ok) {
       error('faceid-error', data.message || 'Something went wrong. Try again.');
-      // The challenge that answer used is spent: fresh options before the next tap.
-      el('create').disabled = true;
-      post(Object.assign({ action: 'enrol_options' }, details)).then(function (again) {
-        if (again.ok) { created = again; el('create').disabled = false; }
-      });
+      // The challenge that answer used is spent: fresh options before the next tap, for
+      // whichever button is showing.
+      if (existing) {
+        existing = null;
+        post({ action: 'enrol_existing_options' }).then(function (again) { if (again.ok) existing = again; });
+      } else {
+        el('create').disabled = true;
+        post(Object.assign({ action: 'enrol_options' }, details)).then(function (again) {
+          if (again.ok) { created = again; el('create').disabled = false; }
+        });
+      }
       return;
     }
     el('done-text').textContent = 'Thanks, ' + (data.firstName || details.firstName) + '. This phone is set up.';
