@@ -43,6 +43,11 @@
         currency: 'GBP', isTest: false, acked: true, voucher: null, sharesPaid: heads > 1 && rnd() < 0.3 ? 2 : 1,
         refundedMinor: rnd() < 0.05 ? 500 : 0 });
       var newAct = acts[acts.length - 1];
+      // Now and then an ambassador's covered share (25 Nov 2026): part of the price nobody paid.
+      if (heads > 1 && rnd() < 0.2) {
+        newAct.compMinor = Math.min(Math.floor(newAct.priceMinor / heads), 500);
+        newAct.ambassador = { name: 'Jess Example' };
+      }
       newAct.stripe = newAct.sharesPaid === 2
         ? [stripeRef(newAct.priceMinor / 2), stripeRef(newAct.priceMinor / 2)]
         : [stripeRef(newAct.priceMinor)];

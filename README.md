@@ -51,6 +51,18 @@ cover the price. Somebody who has paid their share waits on a screen that says s
 and never offers to take it again; anything a group pays that does not end up as a
 session is refunded automatically.
 
+### Ambassadors
+
+Once a day an ambassador's own share of a new game is covered, up to £5, while the rest of
+the group pays the rest by card (25 Nov 2026). Where the programme has ambassadors, a quiet
+**Ambassador? Cover my share** link appears under the card buttons for a new game of two or
+more; it proves who they are with the phone's passkey (Face ID) and puts a covered share,
+with no card behind it, into the group's split. Every phone then reads "Jess's share is
+covered" and splits the rest. Hawktivity invites ambassadors from `/dashboard/ambassadors/`;
+the emailed link opens `ambassador.html`, where they give their name and date of birth,
+accept the terms and save the passkey. The rules live in the `ambassador` Edge Function and
+pinpointe-supabase migration `20261125090000`.
+
 ## Vouchers
 
 A venue can hand out one-time codes. Where it has unspent ones, a quiet **Have a
@@ -74,20 +86,43 @@ signature first, figures second.
 | `config.js` | which Supabase project to talk to, chosen by hostname |
 | `mock.js` | fake endpoints for walking the screens on a laptop |
 | `.nojekyll` | stops GitHub Pages running the files through Jekyll |
-| `staff/rising-sun.html` | the Rising Sun's free 15-minute voucher codes, for bar staff, behind a password |
-| `staff/seal-codes.mjs` | encrypts a batch's codes into a staff page under its password |
+| `dashboard/vouchers/index.html` | free-darts voucher codes for pub staff, every venue, behind Google sign-in |
+| `dashboard/vouchers/mock.js` | made-up venues and codes for walking the staff page on a laptop (`/dashboard/vouchers/?mock`) |
+| `staff/index.html`, `staff/rising-sun.html` | old and short staff addresses; both redirect to `/dashboard/vouchers/` |
 | `dashboard/index.html` | Hawktivity's sessions dashboard, behind Google sign-in |
 | `dashboard/mock.js` | made-up sessions for walking the dashboard on a laptop (`/dashboard/?mock`) |
+| `dashboard/prices/index.html` | each venue's darts prices, and changing them, for Hawktivity Google accounts |
+| `dashboard/prices/mock.js` | made-up venues and prices for walking the price page on a laptop (`/dashboard/prices/?mock`, `&as=outsider`, `&fail=1`) |
+| `ambassador.html` | an invited ambassador sets up their phone: name, date of birth, terms, passkey (`ambassador.html?mock&i=x`, `&case=invitephone`, `inviteexisting`, `inviteexpired`) |
+| `passkey.js` | passkey (Face ID) helpers shared by `index.html` and `ambassador.html` |
+| `dashboard/ambassadors/index.html` | invite, follow and end ambassadors, for Hawktivity Google accounts |
+| `dashboard/ambassadors/mock.js` | made-up ambassadors for walking that page on a laptop (`/dashboard/ambassadors/?mock`, `&as=outsider`) |
+| `notebook.html` | Ezra's notebook for Murder at Last Orders: the case so far, private crosses on suspects, and the table's WHO / HOW / WHY vote. Polls the `mystery-notebook` Edge Function with the board's signed `note` code; no account, no typed text |
+| `murder/notebook-mock.js` | a made-up Case 1 for walking the notebook on a laptop (`notebook.html?mock=1`, `&case=briefing`, `accusing`, `closed`, `waiting`, `offline`, `bad`) |
+| `murder/portraits/` | the 22 suspect, victim and witness portraits the notebook shows, 270x336 greyscale |
 
 ### Staff voucher pages
 
-`pay.hawktivity.com/staff/rising-sun` lists a venue's voucher codes for its staff to hand
-out. This repository is public, so the codes are in the page only as AES-GCM ciphertext
-under a key derived from the staff password; the browser decrypts them once the password
-is typed. Every 30 seconds the page sends the SHA-256 of each code to the
-`vouchers_spent` database function and drops whichever come back used or revoked. To
-reseal a page with a new batch or password, run `staff/seal-codes.mjs` (usage at its top)
-with the CSV that `create_voucher_batch()` produced.
+`pay.hawktivity.com/staff/` (it redirects to `/dashboard/vouchers/`) lists free-darts codes for
+pub staff to hand out. People sign in with Google, exactly as on the sessions dashboard, and
+share its login. The page reads one database function, `staff_vouchers()`
+(pinpointe-supabase migration `20261122180000`), which returns only the venues the signed-in
+account may see and only codes that can still be spent:
+
+- a `hawktivity.com` Google account sees every venue, with a switch between them, and gets a
+  "Who can see codes" panel to add or remove anyone else;
+- any other Google account sees exactly the venues it has been added to (table
+  `staff_venue_access`), and nothing if none.
+
+The codes live in the database (`staff_voucher_codes`), never in this public repository. The
+page asks again every 30 seconds, so a code drops off as soon as a guest uses it. "Handed out"
+is remembered per phone. To put a new batch on the page, an operator runs
+`create_staff_voucher_batch(location, count, label, prefix, minutes)` in SQL; it never prints
+the codes. `add_staff_voucher_codes(batch, codes[])` puts an already-printed batch on it.
+
+Until 22 Nov 2026 the Rising Sun had its own page, `staff/rising-sun.html`, with its codes
+AES-sealed under a shared password. That address now opens the new page on the Rising Sun.
+The page sits under `/dashboard/` because that is where Google sign-in may return to.
 
 ### Sessions dashboard
 
@@ -107,6 +142,30 @@ list. It opens `story.html#staff=<claim id>`, the story page's staff view: the d
 no copy of a guest's link (only its hash), so the staff view uses this browser's dashboard
 sign-in instead, and `get-story` lets it in only for a viewer who may see people. Opening it
 there does not count as the guest opening their email.
+
+### Prices
+
+`pay.hawktivity.com/dashboard/prices/` (linked as **Prices** from the dashboard for
+hawktivity.com accounts) shows what each venue's board charges and changes it, with no SQL and
+no game release: a board on release 1.42.39 or later re-reads its venue's active `pricing` row
+at every welcome screen. The page uses three database functions (pinpointe-supabase migration
+`20261123200000`), which answer only a dashboard viewer whose verified Google account is on
+hawktivity.com; outside dashboard viewers and boards are refused:
+
+- `dashboard_prices()`: every venue with a board or a price, its active row, any scheduled
+  rows, and earlier rows;
+- `dashboard_set_price(...)`: a new price, either now (the active row is retired and the next
+  version goes in active) or from a date and time in London (the next version goes in
+  inactive with `effective_from`). A save never changes an existing row's prices. **Edit** on a
+  scheduled price fills the form with it, start included, and the save passes `p_replaces`
+  (migration `20261123210000`), so that price is retired in the same step;
+- `dashboard_cancel_price(id)`: **Delete** on a scheduled price, before it starts. The price on
+  the board now can be replaced but not deleted: a board always needs a price.
+
+A pg_cron job, `pricing-activate-due`, switches on any scheduled price within 5 minutes of its
+start. The page previews the board's welcome line and each length's price with the board's own
+rules (`PaymentWording.PriceLine`, `PriceCalculator.Quote` in pinpointe-social-suite); if those
+change, change the copies at the top of the page's script too.
 
 
 ## Running it locally
@@ -131,6 +190,8 @@ Then open a scenario. The mock only loads from localhost, and only with `?mock`:
 | `localhost:8080/?mock&c=x&case=expired` | past its half hour |
 | `localhost:8080/?mock&c=x&case=altered` | a forged payload |
 | `localhost:8080/?mock&c=x&case=offline` | no network |
+| `localhost:8080/?mock&c=x&logo` | a venue logo at the top (add `&logo` to any case; a placeholder, not a real venue's) |
+| `localhost:8080/?mock&c=x&logo=broken` | a logo that fails to load: the page must look as it does with none |
 | `localhost:8080/?mock&c=x&case=split` | 4 players, £20: pay for everyone or just my share |
 | `localhost:8080/?mock&c=x&case=splitpartial` | £5 of £20 paid: my share, or the rest |
 | `localhost:8080/?mock&c=x&case=splitheld` | the rest is mid-payment on another phone |
@@ -138,6 +199,11 @@ Then open a scenario. The mock only loads from localhost, and only with `?mock`:
 | `localhost:8080/?mock&c=x&case=splitdone&paid=1&s=x` | my share is in, then the group finishes |
 | `localhost:8080/?mock&c=x&case=splitcovered` | already covered after CHANGE lowered the price |
 | `localhost:8080/?mock&c=x&case=splitexpired` | part paid, this phone's code has run out |
+| `localhost:8080/?mock&c=x&case=ambassador` | "Ambassador? Cover my share": Face ID covers it, then this phone's covered share |
+| `localhost:8080/?mock&c=x&case=ambused` | the ambassador has had today's share: refused |
+| `localhost:8080/?mock&c=x&case=ambcovered` | Jess's share is covered; the rest share £15 |
+| `localhost:8080/?mock&c=x&case=ambcovered8` | the same with 8 players: shares under £5, so one pays the rest |
+| `localhost:8080/?mock&c=x&case=ambreleased&s=x` | this phone covered its share but the group never paid |
 
 The full list of cases, including the refund ones, is at the top of `mock.js`.
 
