@@ -391,7 +391,7 @@ button:focus-visible, input:focus-visible {
     <div class="stack" style="margin-top:36px">
       <div>
         <h1 id="error-title">This code didn&rsquo;t work</h1>
-        <p id="error-detail">Ask the suite for a new one.</p>
+        <p id="error-detail">Scan the new code on the screen.</p>
       </div>
       <div id="error-notice-slot" hidden></div>
       <button class="ghost" id="error-retry">Try again</button>
@@ -633,7 +633,7 @@ button:focus-visible, input:focus-visible {
   function describe() {
     if (!code) {
       fail('This link is incomplete',
-        'Scan the code on the suite screen again, or ask a member of staff.');
+        'Scan the code on the screen again, or ask a member of staff.');
       return;
     }
 
@@ -645,7 +645,7 @@ button:focus-visible, input:focus-visible {
           data.reason === 'expired' ? 'This code has expired'
             : data.reason === 'altered' ? 'This code isn’t valid'
             : 'This code didn’t work',
-          data.message || 'Ask the suite for a new one.');
+          data.message || 'Scan the new code on the screen.');
         return;
       }
 

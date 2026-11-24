@@ -287,13 +287,13 @@
     if (scenario === 'expired') {
       return later(body({
         ok: false, reason: 'expired',
-        message: 'This code was made more than half an hour ago. Ask the suite for a new one.'
+        message: 'This code has expired. Scan the new code on the screen.'
       }, 400));
     }
     if (scenario === 'altered') {
       return later(body({
         ok: false, reason: 'altered',
-        message: 'This code has been changed since the suite made it.'
+        message: 'This code has been altered or was not issued by this venue.'
       }, 400));
     }
     // An old code re-scanned after it was paid for. `paidbar` is a sale a member of staff
@@ -497,7 +497,7 @@
 
   window.PAY_CONFIG.registerTransport = function (request) {
     if (request.action === 'describe') {
-      return later(body({ ok: true, suiteName: 'Suite 1', expiresInSeconds: 1500, registered: 0, full: false,
+      return later(body({ ok: true, suiteName: 'Lane 1', expiresInSeconds: 1500, registered: 0, full: false,
                           remember: scenario !== 'nopasskeys',
                           emailCodes: scenario !== 'nopasskeys' && scenario !== 'nocodes' }));
     }
@@ -521,7 +521,7 @@
     }
     if (request.action === 'recover') {
       window.lastRecover = request;
-      return later(body({ ok: true, firstName: 'Sam', suiteName: 'Suite 1', alreadyOn: false,
+      return later(body({ ok: true, firstName: 'Sam', suiteName: 'Lane 1', alreadyOn: false,
                           photoKept: true, forgetToken: 'mock-forget-token-0000000000' }));
     }
     if (request.action === 'join_options') {
@@ -536,7 +536,7 @@
         return later(body({ ok: false, reason: 'unknown_passkey',
           message: 'We don’t have that one saved any more. Fill in the form instead.' }, 400));
       }
-      return later(body({ ok: true, firstName: 'Sam', suiteName: 'Suite 1', alreadyOn: false,
+      return later(body({ ok: true, firstName: 'Sam', suiteName: 'Lane 1', alreadyOn: false,
                           photoKept: true, forgetToken: 'mock-forget-token-0000000000' }));
     }
     if (request.action === 'enrol') {
@@ -557,7 +557,7 @@
     var had = now.getMonth() + 1 > +m[2] || (now.getMonth() + 1 === +m[2] && now.getDate() >= +m[3]);
     var minor = now.getFullYear() - +m[1] - (had ? 0 : 1) < 18;
     return later(body({
-      ok: true, firstName: request.firstName, suiteName: 'Suite 1',
+      ok: true, firstName: request.firstName, suiteName: 'Lane 1',
       underEighteen: minor, photoKept: !minor && !!request.photo,
       marketingConsent: !minor && request.marketingConsent === true,
       canRemember: !minor && scenario !== 'nopasskeys'
