@@ -52,11 +52,37 @@ body {
 
 .shell { max-width: 430px; margin: 0 auto; padding: 22px 24px 40px; }
 
+/* ---- the venue's logo -------------------------------------------------- */
+/* The venue's own logo at the very top, when it has one (21 Nov 2026). describe says where
+   it is; it is shown only once it has loaded, so a venue without one looks as before. */
+.venue-logo {
+  display: block; margin: 2px auto 10px; width: auto; height: auto;
+  max-width: 220px; max-height: 64px;
+}
+
 /* ---- masthead --------------------------------------------------------- */
 .venue {
   text-align: center; font: 500 11px/1 var(--body); letter-spacing: .16em;
   text-transform: uppercase; color: var(--dimmer); margin-top: 9px;
 }
+
+/* ---- which board ------------------------------------------------------ */
+/* Two boards side by side in one venue print QR codes nobody can tell apart, so the board's
+   name is the first thing on the screen: the same name the board shows beside its code. */
+.board {
+  margin-top: 8px; padding: 13px 14px 14px; text-align: center;
+  border: 2px solid #3d3d47; border-radius: 8px; background: var(--ink-2);
+}
+.board-k {
+  font: 600 10.5px/1 var(--body); letter-spacing: .2em; text-transform: uppercase;
+  color: var(--dimmer);
+}
+.board-name {
+  font: 400 30px/1.15 var(--display); text-transform: uppercase; letter-spacing: .02em;
+  color: #fff; margin-top: 9px; overflow-wrap: anywhere;
+}
+.board-check { font: 500 12px/1.45 var(--body); color: var(--dim); margin-top: 7px; }
+.row .v.board-v { text-transform: uppercase; overflow-wrap: anywhere; }
 
 /* ---- headings and text ------------------------------------------------ */
 h1 {
@@ -190,6 +216,9 @@ button:focus-visible, input:focus-visible {
 
 <main class="shell">
 
+  <!-- The venue's logo, above whichever screen is showing. Hidden until it has loaded. -->
+  <img class="venue-logo" id="venue-logo" alt="" hidden>
+
   <!-- ============ loading ============ -->
   <section id="view-loading">
     <div class="venue" id="loading-caption">Checking your code</div>
@@ -198,7 +227,14 @@ button:focus-visible, input:focus-visible {
 
   <!-- ============ what you're paying ============ -->
   <section id="view-pay" hidden>
-    <div class="venue" id="pay-venue">Suite</div>
+    <div class="venue" id="pay-venue">Lane</div>
+    <!-- Which board this code is for, when the board has a name (Nov 2026). Shown instead of
+         the "Lane 1a2b3c4d" line above, which nobody can match to a board. -->
+    <div class="board" id="pay-board" hidden>
+      <div class="board-k">You&rsquo;re paying for</div>
+      <div class="board-name" id="pay-board-name">&mdash;</div>
+      <div class="board-check">The same name is on the board, beside the code you scanned.</div>
+    </div>
 
     <div class="stack" style="margin-top:30px">
       <div>
@@ -212,7 +248,7 @@ button:focus-visible, input:focus-visible {
           <div class="row"><span class="k" id="pay-minutes-label">Time</span><span class="v" id="pay-minutes">&mdash;</span></div>
           <!-- Only once part of the group has paid: the big figure above becomes what is
                left, and this says what it is left of. -->
-          <div class="row" id="pay-paid-row" hidden><span class="k">Paid so far</span><span class="v" id="pay-paid">&mdash;</span></div>
+          <div class="row" id="pay-paid-row" hidden><span class="k" id="pay-paid-label">Paid so far</span><span class="v" id="pay-paid">&mdash;</span></div>
           <div class="row"><span class="k">This code lasts</span><span class="v" id="pay-expires">&mdash;</span></div>
         </div>
       </div>
@@ -233,6 +269,11 @@ button:focus-visible, input:focus-visible {
         <button class="ghost" id="pay-share" type="button" hidden>Pay just my share</button>
         <p class="hint" id="split-hint" hidden>Splitting it? Everyone scans the same code on the board and pays their share.</p>
         <div id="pay-notice-slot" hidden></div>
+        <!-- An ambassador's own share, covered once a day (25 Nov 2026). Quiet, because almost
+             nobody is one; shown only while the programme has ambassadors and this game has a
+             share to cover. Face ID proves who it is. See offerAmbassador. -->
+        <button class="link" id="amb-cover" type="button" hidden>Ambassador? Cover my share</button>
+        <div id="amb-notice-slot" hidden></div>
       </div>
 
       <!--
@@ -273,6 +314,7 @@ button:focus-visible, input:focus-visible {
       </div>
 
       <div class="rows">
+        <div class="row" id="done-board-row" hidden><span class="k">Board</span><span class="v board-v" id="done-board">&mdash;</span></div>
         <div class="row"><span class="k" id="done-amount-label">Paid</span><span class="v" id="done-amount">&mdash;</span></div>
         <div class="row"><span class="k" id="done-minutes-label">Time bought</span><span class="v" id="done-minutes">&mdash;</span></div>
         <div class="row"><span class="k" id="done-by-label">Paid by</span><span class="v" id="done-by">&mdash;</span></div>
@@ -313,7 +355,11 @@ button:focus-visible, input:focus-visible {
     friend who would rather not wait.
   -->
   <section id="view-share" hidden>
-    <div class="venue" id="share-venue">Suite</div>
+    <div class="venue" id="share-venue">Lane</div>
+    <div class="board" id="share-board" hidden>
+      <div class="board-k">Board</div>
+      <div class="board-name" id="share-board-name">&mdash;</div>
+    </div>
 
     <div class="stack" style="margin-top:30px">
       <div>
@@ -322,8 +368,8 @@ button:focus-visible, input:focus-visible {
       </div>
 
       <div class="rows">
-        <div class="row"><span class="k">You paid</span><span class="v" id="share-mine">&mdash;</span></div>
-        <div class="row" id="share-progress-row"><span class="k">Paid so far</span><span class="v" id="share-progress">&mdash;</span></div>
+        <div class="row"><span class="k" id="share-mine-label">You paid</span><span class="v" id="share-mine">&mdash;</span></div>
+        <div class="row" id="share-progress-row"><span class="k" id="share-progress-label">Paid so far</span><span class="v" id="share-progress">&mdash;</span></div>
       </div>
 
       <div>
@@ -358,6 +404,7 @@ button:focus-visible, input:focus-visible {
      pointed at dev or production without editing the app, and so a local copy can
      be driven from a fake. -->
 <script src="config.js"></script>
+<script src="passkey.js"></script>
 
 <script>
 (function () {
@@ -377,6 +424,7 @@ button:focus-visible, input:focus-visible {
   var FUNCTION_URL = CONFIG.functionUrl || '';
   var CHECKOUT_URL = CONFIG.checkoutUrl || '';
   var VOUCHER_URL = CONFIG.voucherUrl || '';
+  var AMBASSADOR_URL = CONFIG.ambassadorUrl || '';
   var ANON_KEY = CONFIG.anonKey || '';
 
   // How long to let the board answer before offering the six digits instead.
@@ -458,6 +506,25 @@ button:focus-visible, input:focus-visible {
   var code = codeFromUrl();
   var session = null;
 
+  // A board's 15 MIN FREE code (24 Nov 2026) is for free.html: every adult types their own
+  // emailed code there, and nothing is paid. Routing only -- free.html has the code checked
+  // before it shows anything, so reading the unverified flag here decides nothing but the page.
+  function isFreeCode(value) {
+    if (!value) return false;
+    try {
+      var body = value.slice(0, value.lastIndexOf('.')).replace(/-/g, '+').replace(/_/g, '/');
+      while (body.length % 4) body += '=';
+      var claims = JSON.parse(atob(body));
+      return !!claims && claims.f === 1;
+    } catch (e) {
+      return false;  // not a code this check understands: the page goes on as before
+    }
+  }
+  if (isFreeCode(code)) {
+    window.location.replace('free.html?c=' + encodeURIComponent(code));
+    return;
+  }
+
   // Stripe adds this on the way back, and only on the way back from a payment that went
   // through. It changes what this page does on load: not "what is this code worth" but
   // "has the money landed yet".
@@ -472,6 +539,17 @@ button:focus-visible, input:focus-visible {
     new URLSearchParams(window.location.search).get('back') === '1';
 
   function call(body) {
+    return send(body).then(function (result) {
+      // Every describe answer says where the venue's logo is. Here rather than in each of
+      // the four places that ask, so a guest arriving back from the card page sees it too.
+      if (body.action === 'describe' && result && result.data && result.data.ok) {
+        showVenueLogo(result.data.venueLogoUrl);
+      }
+      return result;
+    });
+  }
+
+  function send(body) {
     // A local copy can supply its own responder. Never present in a deployed
     // build, because config.js only installs one for localhost.
     if (typeof CONFIG.transport === 'function') {
@@ -484,6 +562,24 @@ button:focus-visible, input:focus-visible {
     }
 
     return post(FUNCTION_URL, body);
+  }
+
+  var venueLogoAsked = false;
+
+  /**
+   * Puts the venue's logo at the top, once (21 Nov 2026). describe gives an address whether or
+   * not the venue has uploaded one, so the image stays hidden until it has actually loaded:
+   * a venue with no logo, or a logo that fails, looks exactly as the page did before.
+   * Only an https address (or an inline image, which the local mock uses) is ever loaded.
+   */
+  function showVenueLogo(url) {
+    if (venueLogoAsked || typeof url !== 'string') return;
+    if (!/^(https:\/\/|data:image\/)/.test(url)) return;
+    venueLogoAsked = true;
+    var img = el('venue-logo');
+    img.onload = function () { img.hidden = false; };
+    img.onerror = function () { img.hidden = true; };
+    img.src = url;
   }
 
   /**
@@ -564,6 +660,9 @@ button:focus-visible, input:focus-visible {
   }
 
   var settleTried = false;
+  // Set when this phone has just covered an ambassador's share, so a sale that cover finished
+  // reads "Board unlocked" rather than "Already paid".
+  var justCovered = false;
 
   /**
    * Puts a describe answer on screen. Split out of describe so a refusal from the card
@@ -574,8 +673,10 @@ button:focus-visible, input:focus-visible {
     session = data;
 
     if (data.alreadyPaid) {
-      // Never invite a second payment for the same session.
-      showPaid(data, false);
+      // Never invite a second payment for the same session. A cover that was the last of the
+      // price is this phone finishing the sale, not finding it finished.
+      showPaid(data, justCovered);
+      justCovered = false;
       return;
     }
 
@@ -583,6 +684,14 @@ button:focus-visible, input:focus-visible {
     if (data.share && data.share.state === 'paid') {
       showShare(data);
       if (!isRefund(data)) watchSplit();
+      return;
+    }
+
+    // An ambassador's covered share that was handed back because the group never finished:
+    // nothing to pay and nothing to refund, but their free share for today is still theirs.
+    if (data.share && data.share.paidVia === 'ambassador' && data.share.state === 'released'
+        && data.share.splitState === 'abandoned') {
+      showCoverReleased(data);
       return;
     }
 
@@ -595,7 +704,7 @@ button:focus-visible, input:focus-visible {
       return;
     }
 
-    el('pay-venue').textContent = 'Suite ' + (data.suiteId ? shortSuite(data.suiteId) : '');
+    nameBoard('pay', data);
     el('pay-amount').textContent = money(data.amountMinor, data.currency);
     el('pay-players').textContent = data.players;
     el('pay-minutes').textContent = duration(data.minutes);
@@ -629,6 +738,7 @@ button:focus-visible, input:focus-visible {
 
     show('pay');
     offerVoucher(data);
+    offerAmbassador(data);
   }
 
   /**
@@ -663,6 +773,31 @@ button:focus-visible, input:focus-visible {
   /** A suite id is a uuid; only the readable tail is worth putting on screen. */
   function shortSuite(id) {
     return String(id).slice(0, 8);
+  }
+
+  /**
+   * The board's name, as it shows beside its QR -- "Metropolis board 1" (Nov 2026).
+   *
+   * Two boards side by side in one venue print codes nobody can tell apart, and a guest who
+   * scans the neighbour's code pays for the neighbour's game. describe sends the name; an
+   * answer that carries none (an older backend, a board with no name) is '' and the page
+   * says what it said before.
+   */
+  function boardNameOf(data) {
+    return (data && data.boardName) || (session && session.boardName) || '';
+  }
+
+  /**
+   * Puts the board's name at the top of a screen, or a "Lane 1a2b3c4d" line without one.
+   * Lane, not suite, in anything a guest reads (Richard, 21 Nov 2026): suites are only at
+   * Pinpointe. suiteId stays as the field's name; it is never shown.
+   */
+  function nameBoard(prefix, data) {
+    var name = boardNameOf(data);
+    el(prefix + '-board').hidden = !name;
+    el(prefix + '-board-name').textContent = name;
+    el(prefix + '-venue').hidden = !!name;
+    el(prefix + '-venue').textContent = 'Lane ' + (data.suiteId ? shortSuite(data.suiteId) : '');
   }
 
   // ---- 2. the board picking it up ------------------------------------------
@@ -737,6 +872,11 @@ button:focus-visible, input:focus-visible {
     // Otherwise a share payer's tab still says "Your share is paid" over a running board.
     document.title = el('done-title').textContent;
 
+    // Which board was paid for, so "Board unlocked" says which one.
+    var board = boardNameOf(data);
+    el('done-board-row').hidden = !board;
+    el('done-board').textContent = board;
+
     el('done-blurb').textContent = justPaid
       ? (kind === 'join'
           ? 'You’re on the board for the rest of the session. Go and throw.'
@@ -779,6 +919,14 @@ button:focus-visible, input:focus-visible {
     el('done-by').textContent = byCard ? 'CARD'
       : byVoucher ? 'VOUCHER'
       : (data.approvedBy || 'Staff').toUpperCase();
+
+    // An ambassador's phone: their share was covered, not paid, and nothing was charged to them.
+    if (mine !== null && data.share.paidVia === 'ambassador') {
+      el('done-amount-label').textContent = 'Your share';
+      el('done-amount').textContent = 'Covered · ' + money(mine, data.currency);
+      el('done-by-label').textContent = 'The rest paid by';
+      el('done-by').textContent = 'YOUR GROUP, BY CARD';
+    }
 
     if (!justPaid) {
       el('done-hint').textContent =
@@ -862,7 +1010,12 @@ button:focus-visible, input:focus-visible {
       ? split.remainingMinor
       : total - paid;
     var available = remaining - held;
-    var perHead = Math.ceil(total / Math.max(1, Number(data.players) || 1));
+    // With an ambassador's share covered, the rest of the price is shared by the rest of the
+    // group, and the server says what one more head pays (perHeadMinor). Its covered share is
+    // capped at £5, so that can be more than the price over the players.
+    var perHead = split && typeof split.perHeadMinor === 'number'
+      ? split.perHeadMinor
+      : Math.ceil(total / Math.max(1, Number(data.players) || 1));
 
     return {
       total: total,
@@ -873,14 +1026,25 @@ button:focus-visible, input:focus-visible {
       perHead: perHead,
       share: Math.min(perHead, available),
       payers: split ? (split.payers || 0) : 0,
+      cover: split && split.cover ? split.cover : null,
       started: paid > 0 || held > 0
     };
+  }
+
+  /** "Jess’s share is covered. " -- or nothing, when no ambassador has covered theirs. */
+  function coverLine(f, currency) {
+    if (!f.cover) return '';
+    var who = f.cover.firstName ? f.cover.firstName + '’s' : 'An ambassador’s';
+    return who + ' share is covered (' + money(f.cover.minor, currency) + '). ';
   }
 
   // What each pay button does when tapped. Kept beside the buttons rather than read back
   // off their labels, because the same button means "everyone" on one screen and "the
   // rest" on the next.
   var buttonAction = {};
+
+  // The smallest card share "Pay just my share" offers, in minor units: £5 (Richard, 23 Nov).
+  var MIN_SHARE_MINOR = 500;
 
   function setButton(id, label, action) {
     el(id).textContent = label;
@@ -896,6 +1060,7 @@ button:focus-visible, input:focus-visible {
    *
    *   one player, or a join       Pay by card
    *   nobody has paid yet         Pay for everyone      / Pay just my share
+   *   ... but a share is under £5 Pay for everyone      (no split: MIN_SHARE_MINOR)
    *   some of the group have      Pay my share          / Pay the rest
    *   the rest is mid-payment     (nothing primary)     / They gave up? Pay the rest
    *
@@ -921,10 +1086,12 @@ button:focus-visible, input:focus-visible {
       el('pay-amount-label').textContent = 'Still to pay';
       el('pay-amount').textContent = money(Math.max(0, f.remaining), currency);
       el('pay-paid-row').hidden = false;
+      el('pay-paid-label').textContent = f.cover ? 'Covered and paid' : 'Paid so far';
       el('pay-paid').textContent = money(f.paid, currency) + ' of ' + money(f.total, currency);
 
       el('pay-heading').textContent = 'Pay your share';
       el('pay-blurb').textContent = cardContext(kindOf(data))
+        + coverLine(f, currency)
         + (f.payers === 1 ? 'One of your group has paid. ' : f.payers > 1 ? f.payers + ' of your group have paid. ' : '')
         + 'The board starts on its own once the rest is in.';
     }
@@ -946,6 +1113,18 @@ button:focus-visible, input:focus-visible {
       return;
     }
 
+    if (!f.started && f.perHead < MIN_SHARE_MINOR) {
+      // Richard, 23 Nov 2026: no card share under £5. Every card payment carries a fixed
+      // fee, so splitting a small total many ways hands much of it to the card company.
+      // One person pays and the group settles up between themselves.
+      setButton('pay-card', 'Pay for everyone · ' + money(f.available, currency),
+        { heads: data.players });
+      el('split-hint').textContent = 'One of you pays for the group. Splitting by card starts at '
+        + money(MIN_SHARE_MINOR, currency) + ' each.';
+      el('split-hint').hidden = false;
+      return;
+    }
+
     if (!f.started) {
       setButton('pay-card', 'Pay for everyone · ' + money(f.available, currency),
         { heads: data.players });
@@ -953,6 +1132,16 @@ button:focus-visible, input:focus-visible {
       el('pay-share').hidden = false;
       el('split-hint').textContent =
         'Splitting it? Everyone scans the same code on the board and pays their share.';
+      el('split-hint').hidden = false;
+      return;
+    }
+
+    if (f.perHead < MIN_SHARE_MINOR && f.available > f.share) {
+      // The same £5 floor once part of the price is in -- an ambassador's covered share in a
+      // group of eight at £20 leaves shares of £2.50: one of the rest pays the rest.
+      setButton('pay-card', 'Pay the rest · ' + money(f.available, currency), { heads: data.players });
+      el('split-hint').textContent = 'One of you pays the rest. Splitting by card starts at '
+        + money(MIN_SHARE_MINOR, currency) + ' each.';
       el('split-hint').hidden = false;
       return;
     }
@@ -1208,7 +1397,7 @@ button:focus-visible, input:focus-visible {
     var mine = data.share ? data.share.amountMinor : 0;
     var left = Math.max(0, f.remaining);
 
-    el('share-venue').textContent = 'Suite ' + (data.suiteId ? shortSuite(data.suiteId) : '');
+    nameBoard('share', data);
 
     // The group never finished -- an hour went by with nobody else paying, or the board moved
     // on to another group -- so the board never started and this guest's money is going back.
@@ -1248,22 +1437,33 @@ button:focus-visible, input:focus-visible {
 
     el('share-amount-label').textContent = 'Still to pay';
     el('share-progress-row').hidden = false;
+    el('share-progress-label').textContent = f.cover ? 'Covered and paid' : 'Paid so far';
     el('share-remaining').textContent = money(left, data.currency);
     el('share-mine').textContent = money(mine, data.currency);
     el('share-progress').textContent =
       money(f.paid, data.currency) + ' of ' + money(f.total, data.currency);
 
-    el('share-title').textContent = 'Your share is paid';
+    // An ambassador's share: covered, not paid, and said so.
+    var covered = data.share && data.share.paidVia === 'ambassador';
+    el('share-mine-label').textContent = covered ? 'Your share' : 'You paid';
+    if (covered) el('share-mine').textContent = 'Covered · ' + money(mine, data.currency);
+
+    el('share-title').textContent = covered ? 'Your share is covered' : 'Your share is paid';
     el('share-blurb').textContent = left > 0
-      ? 'Your ' + money(mine, data.currency) + ' is paid. ' + money(left, data.currency)
+      ? (covered ? 'Your ' + money(mine, data.currency) + ' share is on us today. '
+                 : 'Your ' + money(mine, data.currency) + ' is paid. ')
+        + money(left, data.currency)
         + ' still to pay — the board starts once it’s all in. Everyone else scans the code '
         + 'on the board and pays theirs.'
-      : 'Your ' + money(mine, data.currency) + ' is paid, and so is everyone else’s. '
+      : (covered ? 'Your share is covered, and everyone else has paid. '
+                 : 'Your ' + money(mine, data.currency) + ' is paid, and so is everyone else’s. ')
         + 'Starting the board.';
 
     // The one thing on offer here is paying what is LEFT, for whoever would rather not wait.
-    // Never this guest's own share again, and nothing at all with an expired code.
-    var canPay = !data.codeExpired && !!data.cardPayment && f.available > 0;
+    // Never this guest's own share again, and nothing at all with an expired code. Never on an
+    // ambassador's phone either: the rest is for somebody else in the group to pay, which is
+    // the whole condition of the covered share.
+    var canPay = !data.codeExpired && !!data.cardPayment && f.available > 0 && !covered;
     el('share-rest').hidden = !canPay;
     if (canPay) {
       setButton('share-rest', 'Pay the rest · ' + money(f.available, data.currency),
@@ -1281,8 +1481,132 @@ button:focus-visible, input:focus-visible {
 
     // The tab title follows a guest into their tab list; "Pay for the board" on a screen
     // saying they have paid is the wrong thing to find there.
-    document.title = 'Your share is paid';
+    document.title = covered ? 'Your share is covered' : 'Your share is paid';
     if (el('view-share').hidden) show('share');
+  }
+
+  /**
+   * An ambassador covered their share, but the group never finished paying (or the board moved
+   * on), so the game never started. Nothing was charged and nothing goes back: the share was
+   * simply handed back, and today's covered share is theirs to use on another game.
+   */
+  function showCoverReleased(data) {
+    splitWatch++;
+    el('share-venue').textContent = 'Suite ' + (data.suiteId ? shortSuite(data.suiteId) : '');
+    el('share-amount-label').textContent = 'Your share';
+    el('share-remaining').textContent = 'Not used';
+    el('share-mine-label').textContent = 'Covered';
+    el('share-mine').textContent = money(data.share.amountMinor, data.currency);
+    el('share-progress-row').hidden = true;
+    el('share-title').textContent = 'Your free share wasn’t used';
+    var why = data.share.splitReason;
+    el('share-blurb').textContent = (why === 'past_closing'
+        ? 'It got too late, so the board never started. '
+        : why === 'board_moved_on' || why === 'board_never_started'
+          ? 'The board moved on to another game, so it never started yours. '
+          : why === 'sold_another_way' || why === 'code_already_used'
+            ? 'Your game was paid for another way, so your share wasn’t needed. '
+            : why === 'quote_changed'
+              ? 'The board changed the game while it was being paid for. '
+              : 'Your group didn’t finish paying, so the board never started. ')
+      + 'Nothing was charged, and your covered share for today is still yours to use.';
+    el('share-rest').hidden = true;
+    el('share-hint').hidden = true;
+    el('share-refresh').hidden = true;
+    document.title = 'Your share wasn’t used';
+    show('share');
+  }
+
+  // ---- 3c. an ambassador's share ------------------------------------------------
+  //
+  // Once a day an ambassador's own share of a new game is covered (up to £5) while the rest of
+  // the group pays the rest by card (25 Nov 2026). The page asks the ambassador function first,
+  // and shows the button only when it says yes -- while the programme has ambassadors, for a
+  // new game of two or more with card payments on. The Face ID options come with that answer:
+  // Safari shows a passkey prompt only in direct response to a tap, and a network round trip
+  // in between can lose it.
+  var ambReady = null;
+  var ambBusy = false;
+
+  function callAmbassador(request) {
+    if (typeof CONFIG.ambassadorTransport === 'function') {
+      return Promise.resolve(CONFIG.ambassadorTransport(request));
+    }
+    return post(AMBASSADOR_URL, request);
+  }
+
+  function offerAmbassador(data) {
+    el('amb-cover').hidden = true;
+    ambReady = null;
+    var f = splitFigures(data);
+    var possible = kindOf(data) === 'new' && !!data.splitPayment && !data.codeExpired
+      && !f.cover && f.available > 0
+      && (!!AMBASSADOR_URL || typeof CONFIG.ambassadorTransport === 'function')
+      && !!window.HawkPasskey;
+    if (!possible) return;
+
+    window.HawkPasskey.usable().then(function (usable) {
+      if (!usable) return null;
+      return callAmbassador({ action: 'cover_options', code: code });
+    }).then(function (result) {
+      var answer = result && result.data;
+      if (!answer || !answer.ok || !answer.offered) return;
+      ambReady = answer;
+      el('amb-cover').textContent = 'Ambassador? Cover my share · ' + money(answer.coverMinor, data.currency);
+      el('amb-cover').disabled = false;
+      el('amb-cover').hidden = false;
+    }).catch(function () { /* no button: the group pays as normal */ });
+  }
+
+  function coverMyShare() {
+    if (ambBusy || !ambReady) return;
+    ambBusy = true;
+    var ready = ambReady;
+    el('amb-cover').disabled = true;
+    el('amb-notice-slot').hidden = true;
+
+    // Straight from the tap, no network first: see above.
+    window.HawkPasskey.get(ready.options).then(function (credential) {
+      el('amb-cover').textContent = 'Checking…';
+      return callAmbassador({ action: 'cover', code: code, challengeId: ready.challengeId, credential: credential });
+    }).then(function (result) {
+      ambBusy = false;
+      var answer = (result && result.data) || {};
+      if (!answer.ok && (answer.reason === 'nothing_to_cover' || answer.reason === 'already_paid')) {
+        // The rest of the group finished paying a moment ago: the board is unlocked.
+        show('loading');
+        describe();
+        return;
+      }
+      if (answer.ok) {
+        justCovered = !!answer.complete;
+        // From here this phone is the one whose share is in: name it, as Stripe's return
+        // link does for a card share, so a reload keeps showing it.
+        shareId = answer.shareId || shareId;
+        try {
+          var next = new URL(window.location.href);
+          if (shareId) next.searchParams.set('s', shareId);
+          window.history.replaceState(null, '', next.toString());
+        } catch (e) { /* cosmetic */ }
+        show('loading');
+        describe();
+        return;
+      }
+      notice('amb-notice-slot', 'Your share isn’t covered',
+        answer.message || 'Try again, or pay as normal.');
+      el('amb-cover').hidden = true;
+      // A refusal that might pass on a second try gets fresh Face ID options.
+      if (answer.reason === 'held_elsewhere' || answer.reason === 'expired_challenge' || answer.reason === 'rejected') {
+        offerAmbassador(session);
+      }
+    }).catch(function (error) {
+      ambBusy = false;
+      // Cancelled at the Face ID prompt, or it timed out: nothing to say, just ready again.
+      if (!(error && error.name === 'NotAllowedError')) {
+        notice('amb-notice-slot', 'Face ID didn’t work', 'Try again, or pay as normal.');
+      }
+      offerAmbassador(session);
+    });
   }
 
   /** This phone's share was paid into a split that was closed unfinished, and is going back. */
@@ -1326,6 +1650,13 @@ button:focus-visible, input:focus-visible {
             // Not mid-tap: redrawing would put the button's label back under "Opening…".
             if (!startingCheckout && data.share && data.share.state === 'paid') {
               showShare(data);
+            }
+            // An ambassador's covered share handed back by the sweep (the group never finished):
+            // say so now rather than leave "your share is covered" up until a reload.
+            if (data.share && data.share.paidVia === 'ambassador' && data.share.state === 'released'
+                && data.share.splitState === 'abandoned') {
+              showCoverReleased(data);
+              return;
             }
           }
           window.setTimeout(ask, SPLIT_POLL_MS);
@@ -1474,6 +1805,7 @@ button:focus-visible, input:focus-visible {
   el('pay-share').addEventListener('click', payByCard);
   el('share-rest').addEventListener('click', payByCard);
   el('share-refresh').addEventListener('click', watchSplit);
+  el('amb-cover').addEventListener('click', coverMyShare);
 
   // Back from Stripe with the browser's own back button rather than Stripe's link. The page
   // is restored exactly as it was left -- "Opening…" and every button disabled -- and the

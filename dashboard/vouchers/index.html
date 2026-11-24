@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#14141a">
+<title>Free darts codes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@500;600&family=Montserrat:wght@400;500;600;700&display=swap">
+<style>
+/* ---------------------------------------------------------------------------
+   Free-darts codes for pub staff to hand out, every venue on one page.
+
+   Signed in with Google, like the sessions dashboard (and sharing its login, so a
+   Hawktivity person signed in there is signed in here). The codes come from the
+   database, never from this page: staff_vouchers() answers only for the venues
+   the signed-in account is assigned to (pinpointe-supabase migration
+   20261122180000). Nothing on this page is a security boundary.
+
+   Same palette as the guest's pay page. The ticket's band matches the printed
+   sheets: green for 15 minutes, red for an hour. Single dark theme on purpose: it
+   is read behind a bar, often in low light.
+--------------------------------------------------------------------------- */
+:root {
+  --ink: #14141a;
+  --ink-2: #1b1b22;
+  --ink-3: #24242c;
+  --line: #2c2c34;
+  --brick: #a8433f;
+  --brick-lit: #c0504b;
+  --brick-deep: #8a3532;
+  --go: #3e9b4f;
+  --go-deep: #2f7a3d;
+  --warn: #d08a2c;
+  --paper: #f0f0f2;
+  --dim: #9b9ba4;
+  --dimmer: #74747e;
+  --display: 'Anton', 'Arial Narrow', Impact, sans-serif;
+  --body: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background-color: var(--ink);
+  background-image: linear-gradient(168deg, #17171d 0%, #101015 100%);
+  background-attachment: fixed;
+  color: var(--paper);
+  font-family: var(--body);
+  -webkit-font-smoothing: antialiased;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.shell {
+  max-width: 460px; margin: 0 auto;
+  padding-block: 22px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.view { display: flex; flex-direction: column; gap: 26px; }
+.center { text-align: center; color: var(--dim); padding-top: 18vh; font-size: 14px; }
+
+.eyebrow {
+  font: 600 11px/1 var(--body); letter-spacing: .18em;
+  text-transform: uppercase; color: var(--dimmer);
+  display: flex; align-items: center; gap: 10px;
+}
+.envtag {
+  font: 600 10px/1 var(--body); letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink); background: var(--warn); border-radius: 4px; padding: 3px 6px;
+}
+h1 {
+  font: 400 42px/1.02 var(--display); text-transform: uppercase;
+  margin: 0; letter-spacing: .01em; text-wrap: balance;
+}
+h2 {
+  font: 600 11px/1.2 var(--body); letter-spacing: .18em; text-transform: uppercase;
+  color: var(--dim); margin: 0;
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+}
+h2 .count { font-variant-numeric: tabular-nums; color: var(--paper); letter-spacing: .06em; }
+p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--dim); max-width: 60ch; }
+b { color: var(--paper); font-weight: 600; }
+.head { display: flex; flex-direction: column; gap: 10px; }
+
+/* ---- buttons ---------------------------------------------------------- */
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--paper); outline-offset: 3px;
+}
+.primary {
+  width: 100%; min-height: 54px; border: 0; border-radius: 12px;
+  background: var(--brick); color: #fff;
+  font: 600 15px/1 var(--body); letter-spacing: .04em;
+  display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+}
+.primary:hover { background: var(--brick-lit); }
+.primary:disabled { opacity: .55; cursor: default; }
+.primary svg { width: 20px; height: 20px; background: #fff; border-radius: 50%; padding: 2px; }
+.link {
+  background: none; border: 0; padding: 8px 0;
+  font: 500 13px/1 var(--body); color: var(--dim);
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--dimmer);
+}
+.link:hover { color: var(--paper); }
+.small {
+  background: var(--ink-3); border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 12px; font: 600 12px/1 var(--body); color: var(--paper);
+}
+.small:disabled { opacity: .5; cursor: default; }
+.error { color: #f0a29e; font-weight: 500; }
+
+/* ---- switches: venue and length --------------------------------------- */
+.seg {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px;
+  background: var(--ink-2); border: 1px solid var(--line); border-radius: 12px; padding: 4px;
+}
+.seg button {
+  min-height: 44px; border: 0; border-radius: 9px; background: none; color: var(--dim);
+  font: 600 13px/1.2 var(--body); padding: 6px 8px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+}
+.seg button small { font: 500 11px/1 var(--body); color: var(--dimmer); font-variant-numeric: tabular-nums; }
+.seg button[aria-pressed="true"] { background: var(--ink-3); color: var(--paper); box-shadow: inset 0 0 0 1px var(--line); }
+.seg button[aria-pressed="true"] small { color: var(--dim); }
+
+/* ---- the ticket ------------------------------------------------------- */
+.ticket {
+  position: relative; border-radius: 14px; overflow: hidden;
+  background: var(--ink-2); border: 1px solid var(--line);
+}
+.ticket .band {
+  background: var(--go-deep); color: #fff;
+  padding: 12px 20px;
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap;
+}
+.ticket.hour .band { background: var(--brick-deep); }
+.ticket .band .free { font: 400 22px/1 var(--display); text-transform: uppercase; letter-spacing: .02em; }
+.ticket .band .who { font: 600 10px/1.3 var(--body); letter-spacing: .16em; text-transform: uppercase; opacity: .85; }
+.ticket .body { padding: 22px 20px 20px; display: flex; flex-direction: column; gap: 18px; }
+.ticket .tear { position: relative; height: 0; border-top: 2px dashed var(--line); margin: 0 18px; }
+.ticket .tear::before, .ticket .tear::after {
+  content: ""; position: absolute; top: -10px; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--ink); border: 1px solid var(--line);
+}
+.ticket .tear::before { left: -28px; }
+.ticket .tear::after { right: -28px; }
+.ticket .stub { padding: 14px 20px 18px; display: flex; flex-direction: column; gap: 6px; }
+
+.code-label { font: 600 11px/1 var(--body); letter-spacing: .18em; text-transform: uppercase; color: var(--dimmer); }
+.code {
+  font: 600 clamp(26px, 8.6vw, 40px)/1 var(--mono); letter-spacing: .04em;
+  color: #fff; white-space: nowrap; font-variant-numeric: tabular-nums;
+  user-select: all; -webkit-user-select: all;
+}
+.code.waiting { color: var(--dimmer); }
+.under { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+
+/* ---- how the guest uses it ------------------------------------------- */
+ol.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; counter-reset: step; }
+ol.steps li {
+  counter-increment: step; display: grid; grid-template-columns: 26px 1fr; gap: 12px; align-items: baseline;
+  font-size: 14px; line-height: 1.5; color: var(--dim);
+}
+ol.steps li::before { content: counter(step); font: 400 20px/1 var(--display); color: var(--go); }
+
+/* ---- the lists -------------------------------------------------------- */
+section.list { display: flex; flex-direction: column; gap: 12px; }
+.grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.grid button {
+  width: 100%; min-height: 44px; padding: 0 8px;
+  background: var(--ink-2); border: 1px solid var(--line); border-radius: 10px;
+  font: 500 14px/1 var(--mono); letter-spacing: .02em; color: var(--paper);
+}
+.grid button:hover { border-color: var(--dimmer); }
+.grid button[aria-current="true"] { border-color: var(--go); background: #1d2a20; }
+.rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.rows li {
+  display: grid; grid-template-columns: 1fr auto auto; gap: 14px; align-items: center;
+  padding: 12px 0; border-bottom: 1px solid var(--line);
+}
+.rows li:first-child { border-top: 1px solid var(--line); }
+.rows .c { font: 500 15px/1.2 var(--mono); letter-spacing: .03em; overflow-wrap: anywhere; }
+.rows .t { font-size: 12px; color: var(--dimmer); font-variant-numeric: tabular-nums; }
+.note { font-size: 13px; color: var(--dimmer); }
+
+/* ---- who can see codes (Hawktivity only) ------------------------------ */
+details.admin { border: 1px solid var(--line); border-radius: 14px; background: var(--ink-2); }
+details.admin > summary {
+  list-style: none; cursor: pointer; padding: 16px 18px;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  font: 600 11px/1.2 var(--body); letter-spacing: .18em; text-transform: uppercase; color: var(--dim);
+}
+details.admin > summary::-webkit-details-marker { display: none; }
+details.admin > summary::after { content: "+"; font: 400 20px/1 var(--body); color: var(--dimmer); }
+details.admin[open] > summary::after { content: "–"; }
+.admin-body { padding: 0 18px 18px; display: flex; flex-direction: column; gap: 16px; }
+.admin-body .rows li { grid-template-columns: 1fr auto; }
+.admin-body .rows .c { font: 500 14px/1.3 var(--body); }
+.admin-body .rows .t { display: block; margin-top: 3px; }
+form.grant { display: flex; flex-direction: column; gap: 10px; }
+form.grant input, form.grant select {
+  width: 100%; min-height: 48px; padding: 0 14px;
+  background: var(--ink); border: 1px solid var(--line); border-radius: 10px;
+  color: var(--paper); font: 500 15px/1 var(--body);
+}
+form.grant .primary { min-height: 48px; }
+
+/* ---- status ----------------------------------------------------------- */
+footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+.status { display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 1.45; color: var(--dim); }
+.dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--dimmer); }
+.status.ok .dot { background: var(--go); }
+.status.bad .dot { background: var(--warn); }
+.status.bad { color: var(--warn); }
+.foot-actions { display: flex; gap: 22px; flex-wrap: wrap; align-items: center; }
+.who-line { font-size: 12px; color: var(--dimmer); overflow-wrap: anywhere; }
+
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  width: min(420px, calc(100% - 32px));
+  background: var(--paper); color: var(--ink); border-radius: 12px;
+  padding: 14px 16px; font: 500 14px/1.4 var(--body);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .toast { animation: rise .25s ease-out; }
+  @keyframes rise { from { opacity: 0; transform: translate(-50%, 8px); } }
+}
+</style>
+</head>
+<body>
+<main class="shell">
+
+  <div id="loading" class="center">Loading&hellip;</div>
+
+  <!-- Signed out --------------------------------------------------------- -->
+  <section class="view" id="signin" hidden>
+    <div class="head">
+      <div class="eyebrow">Staff only</div>
+      <h1>Free darts codes</h1>
+      <p>Codes you can hand out for free time on the darts board. Sign in with the Google account Hawktivity set up for you.</p>
+    </div>
+    <button id="signin-btn" class="primary" type="button">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.2C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.8c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.5c-.5-1.4-.8-2.9-.8-4.5s.3-3.1.8-4.5l-7.9-6.2C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.8c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg>
+      Sign in with Google
+    </button>
+    <p id="signin-error" class="error" role="alert" hidden></p>
+    <p id="signin-note" hidden>This browser is blocking website data for this page, so it will ask you to sign in each time you open it.</p>
+  </section>
+
+  <!-- Signed in, no venue ------------------------------------------------- -->
+  <section class="view" id="denied" hidden>
+    <div class="head">
+      <div class="eyebrow">Staff only</div>
+      <h1>Not set up yet</h1>
+      <p id="denied-text"><b id="denied-email"></b> isn't set up for any venue yet. Ask Hawktivity to add this Google account, or sign in with the one they set up for you.</p>
+    </div>
+    <button id="denied-switch" class="primary" type="button">Use another Google account</button>
+    <button id="denied-out" class="link" type="button">Sign out</button>
+  </section>
+
+  <!-- The codes ----------------------------------------------------------- -->
+  <section class="view" id="app" hidden>
+    <div class="head">
+      <div class="eyebrow"><span id="venue-name">Staff only</span><span id="envtag" class="envtag" hidden></span></div>
+      <h1>Free darts codes</h1>
+      <p>Each code is up to <b class="len-words">15 minutes</b> on the board for one group, any number of players.
+         A code disappears from this page as soon as a guest uses it.</p>
+    </div>
+
+    <div class="seg" id="venue-seg" role="group" aria-label="Venue" hidden></div>
+    <div class="seg" id="length-seg" role="group" aria-label="Length" hidden></div>
+
+    <div class="ticket" id="ticket">
+      <div class="band">
+        <span class="free">Free <span class="len-words">15 minutes</span></span>
+        <span class="who">Any number of players</span>
+      </div>
+      <div class="body">
+        <span class="code-label" id="code-label">Next code to hand out</span>
+        <span class="code waiting" id="next-code">Checking…</span>
+        <button class="primary" id="give" type="button" disabled>Handed out · show the next one</button>
+        <div class="under">
+          <button class="link" id="another" type="button">Show a different code</button>
+          <button class="link" id="copy" type="button">Copy code</button>
+        </div>
+      </div>
+      <div class="tear" aria-hidden="true"></div>
+      <div class="stub">
+        <span class="code-label">Left to give out</span>
+        <p id="tally">Checking which codes have been used…</p>
+      </div>
+    </div>
+
+    <section class="list">
+      <h2>How the guest uses it</h2>
+      <ol class="steps">
+        <li><span>On the board, add the players and pick <b class="len-words">15 minutes</b> or less.</span></li>
+        <li><span>On the pay screen, tap <b>Have a voucher?</b>, type the code and tap <b>Use voucher</b>. The board starts straight away.</span></li>
+        <li><span>Or scan the QR code with a phone, tap <b>Have a voucher?</b> there and type it in.</span></li>
+      </ol>
+    </section>
+
+    <section class="list" id="ready-section">
+      <h2>Ready to hand out <span class="count" id="ready-count"></span></h2>
+      <p class="note">Tap a code to hand out that one instead.</p>
+      <ul class="grid" id="ready-list"></ul>
+    </section>
+
+    <section class="list" id="given-section" hidden>
+      <h2>Handed out, not used yet <span class="count" id="given-count"></span></h2>
+      <p class="note">Remembered on this phone only. Put a code back if the guest didn’t take it.</p>
+      <ul class="rows" id="given-list"></ul>
+    </section>
+
+    <!-- Hawktivity accounts only: who may see which venue's codes. -->
+    <details class="admin" id="admin" hidden>
+      <summary>Who can see codes</summary>
+      <div class="admin-body">
+        <p>Anyone with a Hawktivity Google account sees every venue. Everyone else sees only the venues they’re added to here, with the Google account they sign in with.</p>
+        <ul class="rows" id="access-list"></ul>
+        <p class="note" id="access-empty" hidden>Nobody outside Hawktivity yet.</p>
+        <form class="grant" id="grant-form" autocomplete="off">
+          <input id="grant-email" type="email" inputmode="email" placeholder="Their Google email" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+          <select id="grant-venue" aria-label="Venue"></select>
+          <button class="primary" id="grant-btn" type="submit">Add</button>
+          <p class="error" id="grant-error" role="alert" hidden></p>
+        </form>
+      </div>
+    </details>
+
+    <footer>
+      <div class="status" id="status" role="status"><span class="dot"></span><span id="status-text">Checking which codes have been used…</span></div>
+      <div class="foot-actions">
+        <button class="link" id="refresh" type="button">Check now</button>
+        <button class="link" id="signout" type="button">Sign out</button>
+      </div>
+      <div class="who-line" id="who-line"></div>
+    </footer>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="../../config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"
+        integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o"
+        crossorigin="anonymous"></script>
+<script>
+(function () {
+  'use strict';
+
+  var CFG = window.PAY_CONFIG || {};
+  var MOCK = window.STAFF_VOUCHERS_MOCK || null;
+  var GIVEN_KEY = 'staff-vouchers:given';      // the old Rising Sun page's key: its phones keep their list
+  var PICK_KEY = 'staff-vouchers:pick';        // last venue + length chosen on this phone
+  var POLL_MS = 30000;
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  var state = {
+    email: '',
+    admin: false,
+    venues: [],       // from staff_vouchers()
+    venueId: null,
+    minutes: null,
+    given: {},        // code -> ms handed out, on this phone
+    current: null,    // the code on the ticket
+    checked: false,
+    lastOk: null,
+    failing: false,
+    busy: false,
+    timer: null,
+    access: []
+  };
+
+  // ---- small helpers ------------------------------------------------------
+  function load(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+  function save(key, value) {
+    try { if (value == null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch (e) { /* private mode */ }
+  }
+  function clock(d) { return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+  function lengthWords(m) { return m === 60 ? '1 hour' : m % 60 === 0 ? (m / 60) + ' hours' : m + ' minutes'; }
+  function lengthShort(m) { return m === 60 ? '1 HOUR' : m % 60 === 0 ? (m / 60) + ' HOURS' : m + ' MIN'; }
+
+  var toastTimer = null;
+  function toast(text) {
+    var t = $('toast');
+    t.textContent = text;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 5000);
+  }
+
+  var VIEWS = ['loading', 'signin', 'denied', 'app'];
+  function show(id) { VIEWS.forEach(function (v) { $(v).hidden = v !== id; }); }
+
+  try { state.given = JSON.parse(load(GIVEN_KEY) || '{}') || {}; } catch (e) { state.given = {}; }
+  var pref = {};
+  try { pref = JSON.parse(load(PICK_KEY) || '{}') || {}; } catch (e) { pref = {}; }
+  var asked = new URLSearchParams(location.search).get('venue');
+
+  // ---- auth (the dashboard's: Google, implicit flow, its storage key) ------
+  var returningFromGoogle = /(^|[#&?])(access_token|code)=/.test(location.hash + '&' + location.search);
+  var storageWorks = (function () {
+    try { localStorage.setItem('sv-probe', '1'); localStorage.removeItem('sv-probe'); return true; }
+    catch (e) { return false; }
+  })();
+
+  // The implicit flow, not PKCE, for the reason the dashboard gives: a browser that blocks
+  // website data loses PKCE's verifier on the way to Google and the sign-in silently fails.
+  var sb = null;
+  if (!MOCK && window.supabase && CFG.supabaseUrl) {
+    sb = window.supabase.createClient(CFG.supabaseUrl, CFG.anonKey, {
+      auth: { flowType: 'implicit', persistSession: true, autoRefreshToken: true, detectSessionInUrl: true,
+              storageKey: 'hawktivity-dashboard-auth' }
+    });
+  }
+
+  function signIn() {
+    $('signin-btn').disabled = true;
+    // Back to this page with its venue, so a link to one venue lands on it after Google.
+    var back = location.origin + location.pathname + (asked ? '?venue=' + encodeURIComponent(asked) : '');
+    sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: back, queryParams: { prompt: 'select_account' } }
+    }).then(function (r) {
+      if (r.error) { $('signin-btn').disabled = false; showSigninError(r.error.message); }
+    });
+  }
+  function signOut() {
+    clearTimeout(state.timer);
+    state.venues = []; state.current = null; state.checked = false; currentUser = null;
+    if (MOCK) { show('signin'); return Promise.resolve(); }
+    return sb.auth.signOut().then(function () { show('signin'); $('signin-btn').disabled = false; });
+  }
+  function showSigninError(msg) { var e = $('signin-error'); e.textContent = msg; e.hidden = !msg; }
+
+  var currentUser = null;
+  function onSession(session) {
+    if (location.hash.indexOf('access_token') >= 0) {
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+    if (!session) {
+      currentUser = null;
+      show('signin');
+      $('signin-btn').disabled = false;
+      if (returningFromGoogle) {
+        showSigninError('Google signed you in, but this browser did not keep the login. Open the link in Safari or Chrome itself rather than inside WhatsApp, and allow cookies and website data for this site, then try again.');
+      }
+      returningFromGoogle = false;
+      $('signin-note').hidden = storageWorks;
+      return;
+    }
+    returningFromGoogle = false;
+    if (currentUser === session.user.id) return;          // a token refresh, not a new person
+    currentUser = session.user.id;
+    state.email = session.user.email || '';
+    enter();
+  }
+
+  // ---- the database --------------------------------------------------------
+  function rpc(name, args) {
+    if (MOCK) return Promise.resolve(MOCK.call(name, args || {}));
+    return sb.rpc(name, args || {});
+  }
+
+  function venue() {
+    for (var i = 0; i < state.venues.length; i++) if (state.venues[i].locationId === state.venueId) return state.venues[i];
+    return null;
+  }
+  function length() {
+    var v = venue();
+    if (!v) return null;
+    for (var i = 0; i < v.lengths.length; i++) if (v.lengths[i].minutes === state.minutes) return v.lengths[i];
+    return null;
+  }
+
+  // Keep the chosen venue and length when they still exist; otherwise the asked-for venue,
+  // this phone's last choice, or the first. Within a venue, the length with codes left.
+  function choose() {
+    var ids = state.venues.map(function (v) { return v.locationId; });
+    if (ids.indexOf(state.venueId) < 0) {
+      state.venueId = ids.indexOf(asked) >= 0 ? asked : ids.indexOf(pref.venue) >= 0 ? pref.venue : (ids[0] || null);
+    }
+    var v = venue();
+    var mins = v ? v.lengths.map(function (l) { return l.minutes; }) : [];
+    if (mins.indexOf(state.minutes) < 0) {
+      var withCodes = v ? v.lengths.filter(function (l) { return l.codes.length; }).map(function (l) { return l.minutes; }) : [];
+      state.minutes = mins.indexOf(pref.minutes) >= 0 ? pref.minutes : (withCodes[0] || mins[0] || null);
+    }
+  }
+
+  function check() {
+    if (state.busy) return Promise.resolve();
+    state.busy = true;
+    var before = {};
+    state.venues.forEach(function (v) { v.lengths.forEach(function (l) { l.codes.forEach(function (c) { before[c] = true; }); }); });
+    return rpc('staff_vouchers').then(function (r) {
+      if (r.error) {
+        if (r.error.code === '42501') { deny(r.error.message); return; }
+        throw r.error;
+      }
+      var data = r.data || {};
+      state.email = data.email || state.email;
+      state.admin = !!data.admin;
+      state.venues = data.venues || [];
+      if (!state.venues.length) { deny(); return; }
+
+      // A code that was on the page and has gone was used (or withdrawn) since the last look.
+      var now = {}, gone = [];
+      state.venues.forEach(function (v) { v.lengths.forEach(function (l) { l.codes.forEach(function (c) { now[c] = true; }); }); });
+      Object.keys(before).forEach(function (c) { if (!now[c]) gone.push(c); });
+      Object.keys(state.given).forEach(function (c) { if (!now[c]) delete state.given[c]; });
+      save(GIVEN_KEY, JSON.stringify(state.given));
+      if (state.lastOk && gone.length === 1) toast(gone[0] + ' has just been used, so it’s gone from the list.');
+      else if (state.lastOk && gone.length > 1) toast(gone.length + ' codes have just been used, so they’re gone from the list.');
+
+      state.lastOk = new Date();
+      state.failing = false;
+      choose();
+      show('app');
+    }).catch(function () {
+      state.failing = true;
+    }).then(function () {
+      state.busy = false;
+      state.checked = true;
+      // A first look that could not reach the server still opens the page, which says so.
+      if ($('denied').hidden && $('signin').hidden) show('app');
+      render();
+    });
+  }
+
+  function deny(message) {
+    clearTimeout(state.timer);
+    $('denied-email').textContent = state.email || 'This account';
+    if (message && /Sign in with Google/.test(message)) {
+      $('denied-text').textContent = 'This login can’t see voucher codes. Sign in with a Google account Hawktivity has set up for you.';
+    }
+    show('denied');
+  }
+
+  function schedule() {
+    clearTimeout(state.timer);
+    state.timer = setTimeout(function () {
+      if (!document.hidden) check();
+      schedule();
+    }, POLL_MS);
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && currentUser && !$('app').hidden) check();
+  });
+
+  function enter() {
+    if (CFG.environment && CFG.environment !== 'prod') {
+      $('envtag').textContent = MOCK ? 'mock' : CFG.environment; $('envtag').hidden = false;
+    }
+    show('loading');
+    state.checked = false;
+    check().then(function () {
+      if ($('app').hidden) return;
+      schedule();
+      if (state.admin) loadAccess();
+    });
+  }
+
+  // ---- drawing -------------------------------------------------------------
+  function pool() {
+    var l = length();
+    return l ? l.codes.filter(function (c) { return !state.given[c]; }) : [];
+  }
+  function handedOut() {
+    var l = length();
+    return l ? l.codes.filter(function (c) { return state.given[c]; })
+                      .sort(function (a, b) { return state.given[b] - state.given[a]; }) : [];
+  }
+  // A random pick, so two phones behind the same bar rarely offer the same code.
+  function pick(list, avoid) {
+    var choices = list.filter(function (c) { return c !== avoid; });
+    if (!choices.length) choices = list;
+    return choices.length ? choices[Math.floor(Math.random() * choices.length)] : null;
+  }
+
+  function seg(container, items, chosen, onPick) {
+    container.textContent = '';
+    container.hidden = items.length < 2;
+    items.forEach(function (it) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('aria-pressed', it.key === chosen ? 'true' : 'false');
+      b.appendChild(document.createTextNode(it.label));
+      if (it.sub) { var s = document.createElement('small'); s.textContent = it.sub; b.appendChild(s); }
+      b.addEventListener('click', function () { onPick(it.key); });
+      container.appendChild(b);
+    });
+  }
+
+  function render() {
+    var v = venue();
+    var l = length();
+    $('venue-name').textContent = v ? v.name + ' · Staff only' : 'Staff only';
+    document.title = v ? 'Free darts codes · ' + v.name : 'Free darts codes';
+
+    seg($('venue-seg'), state.venues.map(function (x) {
+      var left = x.lengths.reduce(function (n, y) { return n + y.codes.length; }, 0);
+      return { key: x.locationId, label: x.name, sub: plural(left, 'code', 'codes') };
+    }), state.venueId, function (key) {
+      state.venueId = key; state.minutes = null; state.current = null; choose(); remember(); render();
+    });
+    seg($('length-seg'), v ? v.lengths.map(function (y) {
+      return { key: y.minutes, label: lengthShort(y.minutes), sub: y.codes.length + ' left' };
+    }) : [], state.minutes, function (key) {
+      state.minutes = key; state.current = null; remember(); render();
+    });
+
+    var minutes = l ? l.minutes : (state.minutes || 15);
+    Array.prototype.forEach.call(document.querySelectorAll('.len-words'), function (n) { n.textContent = lengthWords(minutes); });
+    $('ticket').classList.toggle('hour', minutes >= 60);
+
+    var ready = pool();
+    var out = handedOut();
+    if (state.checked && (!state.current || ready.indexOf(state.current) < 0)) state.current = pick(ready);
+
+    var code = $('next-code');
+    if (!state.checked) {
+      code.textContent = 'Checking…'; code.classList.add('waiting');
+    } else if (!l) {
+      code.textContent = 'No codes yet'; code.classList.add('waiting');
+    } else if (state.current) {
+      code.textContent = state.current; code.classList.remove('waiting');
+    } else {
+      code.textContent = 'None left'; code.classList.add('waiting');
+    }
+    $('code-label').textContent = state.checked && l && !state.current
+      ? 'Every code has been handed out' : 'Next code to hand out';
+    $('give').disabled = !state.checked || !state.current;
+    $('another').hidden = !state.current || ready.length < 2;
+    $('copy').hidden = !state.current;
+
+    if (state.checked) {
+      if (!l) {
+        $('tally').textContent = 'There are no codes for ' + (v ? v.name : 'this venue') + ' yet. Ask Hawktivity for some.';
+      } else {
+        var parts = [plural(ready.length, 'code ready', 'codes ready')];
+        if (out.length) parts.push(out.length + ' handed out');
+        parts.push(l.used + ' used');
+        $('tally').textContent = parts.join(' · ') + '.' +
+          (!state.current && !out.length ? ' Ask Hawktivity for more codes.' : '');
+      }
+    }
+
+    $('ready-count').textContent = state.checked ? ready.length : '';
+    var list = $('ready-list');
+    list.textContent = '';
+    ready.forEach(function (c) {
+      var li = document.createElement('li');
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = c;
+      b.setAttribute('aria-current', c === state.current ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        state.current = c;
+        render();
+        $('ticket').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      li.appendChild(b);
+      list.appendChild(li);
+    });
+    $('ready-section').hidden = state.checked && !ready.length;
+
+    $('given-section').hidden = !out.length;
+    $('given-count').textContent = out.length;
+    var rows = $('given-list');
+    rows.textContent = '';
+    out.forEach(function (c) {
+      var li = document.createElement('li');
+      var name = document.createElement('span'); name.className = 'c'; name.textContent = c;
+      var when = document.createElement('span'); when.className = 't'; when.textContent = clock(new Date(state.given[c]));
+      var back = document.createElement('button'); back.type = 'button'; back.className = 'small'; back.textContent = 'Put back';
+      back.addEventListener('click', function () {
+        delete state.given[c];
+        save(GIVEN_KEY, JSON.stringify(state.given));
+        render();
+      });
+      li.appendChild(name); li.appendChild(when); li.appendChild(back);
+      rows.appendChild(li);
+    });
+
+    var status = $('status');
+    var text = $('status-text');
+    status.classList.toggle('ok', state.checked && !state.failing);
+    status.classList.toggle('bad', state.failing);
+    if (!state.checked) {
+      text.textContent = 'Checking which codes have been used…';
+    } else if (state.failing && state.lastOk) {
+      text.textContent = 'Can’t reach the server. A code used since ' + clock(state.lastOk) + ' may still show here.';
+    } else if (state.failing) {
+      text.textContent = 'Can’t reach the server. Check the connection and tap Check now.';
+    } else {
+      text.textContent = 'Up to date at ' + clock(state.lastOk) + '. Checks again every 30 seconds.';
+    }
+    $('who-line').textContent = state.email ? 'Signed in as ' + state.email : '';
+
+    $('admin').hidden = !state.admin;
+    renderVenueChoices();
+  }
+
+  function remember() { save(PICK_KEY, JSON.stringify({ venue: state.venueId, minutes: state.minutes })); }
+
+  // ---- who can see codes ----------------------------------------------------
+  function loadAccess() {
+    return rpc('staff_access_list').then(function (r) {
+      if (r.error) return;
+      state.access = r.data || [];
+      renderAccess();
+    });
+  }
+  function renderVenueChoices() {
+    var sel = $('grant-venue');
+    var keep = sel.value;
+    sel.textContent = '';
+    state.venues.forEach(function (v) {
+      var o = document.createElement('option');
+      o.value = v.locationId; o.textContent = v.name;
+      sel.appendChild(o);
+    });
+    sel.value = keep && state.venues.some(function (v) { return v.locationId === keep; }) ? keep : (state.venueId || '');
+  }
+  function renderAccess() {
+    var ul = $('access-list');
+    ul.textContent = '';
+    $('access-empty').hidden = state.access.length > 0;
+    state.access.forEach(function (a) {
+      var li = document.createElement('li');
+      var who = document.createElement('div');
+      var e = document.createElement('span'); e.className = 'c'; e.textContent = a.email;
+      var t = document.createElement('span'); t.className = 't'; t.textContent = a.venue;
+      who.appendChild(e); who.appendChild(t);
+      var rm = document.createElement('button'); rm.type = 'button'; rm.className = 'small'; rm.textContent = 'Remove';
+      rm.addEventListener('click', function () {
+        rm.disabled = true;
+        rpc('staff_access_revoke', { p_email: a.email, p_location_id: a.locationId }).then(function (r) {
+          if (r.error) { rm.disabled = false; toast('Couldn’t remove ' + a.email + ': ' + r.error.message); return; }
+          state.access = r.data || [];
+          renderAccess();
+          toast(a.email + ' can no longer see ' + a.venue + '.');
+        });
+      });
+      li.appendChild(who); li.appendChild(rm);
+      ul.appendChild(li);
+    });
+  }
+  $('grant-form').addEventListener('submit', function (event) {
+    event.preventDefault();
+    var email = $('grant-email').value.trim();
+    var loc = $('grant-venue').value;
+    var err = $('grant-error');
+    err.hidden = true;
+    if (!email || !loc) return;
+    $('grant-btn').disabled = true;
+    rpc('staff_access_grant', { p_email: email, p_location_id: loc, p_note: null }).then(function (r) {
+      $('grant-btn').disabled = false;
+      if (r.error) { err.textContent = r.error.message; err.hidden = false; return; }
+      state.access = r.data || [];
+      renderAccess();
+      $('grant-email').value = '';
+      var v = state.venues.filter(function (x) { return x.locationId === loc; })[0];
+      toast(email.toLowerCase() + ' can now see ' + (v ? v.name : 'that venue') + ' when they sign in with Google.');
+    });
+  });
+
+  // ---- actions ------------------------------------------------------------
+  $('give').addEventListener('click', function () {
+    if (!state.current) return;
+    state.given[state.current] = Date.now();
+    save(GIVEN_KEY, JSON.stringify(state.given));
+    state.current = null;
+    render();
+  });
+  $('another').addEventListener('click', function () {
+    state.current = pick(pool(), state.current);
+    render();
+  });
+  $('copy').addEventListener('click', function () {
+    var button = $('copy');
+    var done = function (label) {
+      button.textContent = label;
+      setTimeout(function () { button.textContent = 'Copy code'; }, 1800);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(state.current).then(function () { done('Copied'); }, function () { selectCode(); done('Selected'); });
+    } else { selectCode(); done('Selected'); }
+  });
+  function selectCode() {
+    var range = document.createRange();
+    range.selectNodeContents($('next-code'));
+    var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+  }
+  $('refresh').addEventListener('click', function () { check(); });
+  $('signout').addEventListener('click', signOut);
+  $('denied-out').addEventListener('click', signOut);
+  $('denied-switch').addEventListener('click', function () { signOut().then(function () { signIn(); }); });
+  $('signin-btn').addEventListener('click', function () { signIn(); });
+
+  // An error coming back from Google or Supabase lands in the address bar.
+  var qs = new URLSearchParams(location.search + '&' + location.hash.replace(/^#/, ''));
+  if (qs.get('error_description') || qs.get('error')) {
+    showSigninError('Sign-in failed: ' + (qs.get('error_description') || qs.get('error')));
+    history.replaceState(null, '', location.pathname + (asked ? '?venue=' + encodeURIComponent(asked) : ''));
+  }
+
+  if (MOCK) {
+    currentUser = 'mock';
+    state.email = MOCK.email;
+    enter();
+  } else if (!sb) {
+    show('signin');
+    showSigninError('This copy of the page has no database to talk to.');
+    $('signin-btn').disabled = true;
+  } else {
+    sb.auth.onAuthStateChange(function (event, session) {
+      // Out of the callback: supabase-js holds a lock while it runs.
+      setTimeout(function () { onSession(session); }, 0);
+    });
+  }
+})();
+</script>
+</body>
+</html>

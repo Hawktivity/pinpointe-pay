@@ -28,6 +28,7 @@
  *
  * Split payments -- a card-only venue, 4 players, 30 min, £20.00 (£5.00 a head):
  *   split         nobody has paid: Pay for everyone / Pay just my share
+ *                 (&players=8: £2.50 a head, under the £5 minimum: Pay for everyone only)
  *   splitpartial  £5 of £20 paid: Pay my share / Pay the rest
  *   splitheld     £5 paid and the other £15 is in somebody's card form right now; the
  *                 checkout refuses until "They gave up? Pay the rest" is used
@@ -45,8 +46,27 @@
  *   sharemovedon  (with &s=x) the whole group paid, but the board had already gone on to
  *                 another game (CANCEL, then a new group): it is all going back
  * In the voucher case, RS-LATE-0000 is refused as too late tonight.
+ *
+ * Every describe answer names the board "Metropolis board 1", the way two boards in one venue
+ * are told apart (Nov 2026). &board=<name> names it something else; &board= (empty) sends no
+ * name, which is what an unnamed board or an older backend answers.
+ * Ambassadors (25 Nov 2026), the same £20 for 4:
+ *   ambassador    nobody has paid: "Ambassador? Cover my share · £5.00"; Face ID covers it,
+ *                 then the screen is this phone's covered share and £15 still to pay
+ *   ambused       the same, but the ambassador has had today's share: refused
+ *   ambcovered    Jess (an ambassador) has covered hers: the rest share £15
+ *   ambcovered8   &players=8 of the same: Jess's £2.50, the other seven owe £2.50 each,
+ *                 under the £5 minimum, so one of them pays the rest
+ *   ambreleased   (with &s=x) this phone covered its share but the group never paid: not used
+ * ambassador.html, the invite page, with &i=anything:
+ *   (default)     a new ambassador: details, terms, Face ID
+ *   invitephone   already enrolled: a link for another phone
+ *   inviteexisting  this phone already has their passkey: "Use the Face ID already here"
+ *   inviteexpired an expired link
  * Add &back=1&s=x to any of them to see Stripe's back link release a held share
  * (window.lastRelease). Every checkout request is kept on window.checkoutRequests.
+ * Add &logo to any of them for a venue logo at the top (a placeholder, not any real venue's),
+ * or &logo=broken for one that fails to load, which must leave the page as it was.
  *
  * Staff passwords are retired: anything sent to unlock-session other than describe
  * gets the real endpoint's 410 bar_retired, and is kept on window.unlockRequests --
@@ -57,8 +77,18 @@
 
   var params = new URLSearchParams(window.location.search);
   var scenario = params.get('case') || 'new';
+  // The board's name in describe's answer. See the note at the top.
+  var boardName = params.has('board') ? params.get('board') : 'Metropolis board 1';
   // Back from the (fake) card page: Stripe's success link carries paid=1.
   var returning = params.get('paid') === '1';
+  // describe's venueLogoUrl, for &logo. A drawn placeholder: no venue's real artwork here.
+  var PLACEHOLDER_LOGO = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="440" height="110" viewBox="0 0 440 110">' +
+    '<text x="220" y="76" text-anchor="middle" font-family="Georgia, serif" font-style="italic" ' +
+    'font-size="64" fill="#f2a33a">test venue</text></svg>');
+  var venueLogo = !params.has('logo') ? null
+    : params.get('logo') === 'broken' ? 'https://logo.invalid/venue-logos/none.png'
+    : PLACEHOLDER_LOGO;
   var polls = 0;
   var ackPolls = 0;
   // Set once a voucher has been spent, so describe starts reporting that the board picked
@@ -90,6 +120,14 @@
     });
   }
 
+  /** Adds the board's name to a describe answer that succeeded, as the real one does. */
+  function withBoardName(answer) {
+    return answer.then(function (result) {
+      if (result && result.data && result.data.ok) result.data.boardName = boardName || null;
+      return result;
+    });
+  }
+
   function body(data, status) {
     return { status: status || 200, data: data };
   }
@@ -97,7 +135,10 @@
   // ---- split payments -----------------------------------------------------------------
   var SPLIT_CASES = ['split', 'splitpartial', 'splitheld', 'sharepaid', 'splitdone',
     'splitwhole', 'splitcovered', 'splitexpired', 'sharerefund', 'splitrace',
-    'splitlate', 'sharelate', 'sharemovedon'];
+    'splitlate', 'sharelate', 'sharemovedon',
+    'ambassador', 'ambused', 'ambcovered', 'ambcovered8', 'ambreleased'];
+  // Set once the ambassador case's Face ID has covered this phone's share.
+  var ambCovered = false;
   var splitPolls = 0;
   var coveredSettled = false;
   // What this phone paid, carried through the fake Stripe round trip in the URL.
@@ -111,6 +152,8 @@
       cardPayment: true, barPayment: false, splitPayment: true,
       split: null, share: null, codeExpired: false, boardAcknowledged: false
     };
+    // &players=N changes the group size, e.g. 8 for £2.50 a head (under the £5 minimum share).
+    if (Number(params.get('players')) > 0) base.players = Number(params.get('players'));
     var partial = { paidMinor: 500, heldMinor: 0, payers: 1, remainingMinor: 1500 };
 
     if (scenario === 'splitpartial') {
@@ -174,6 +217,20 @@
         base.splitPayment = false;
         base.boardAcknowledged = acknowledged(true);
       }
+    }
+
+    if ((scenario === 'ambassador' && ambCovered) || scenario === 'ambcovered' || scenario === 'ambcovered8') {
+      var cover = scenario === 'ambcovered8' ? 250 : 500;
+      if (scenario === 'ambcovered8') base.players = 8;
+      base.split = { paidMinor: cover, heldMinor: 0, payers: 0, remainingMinor: 2000 - cover,
+        cover: { minor: cover, heads: 1, firstName: 'Jess' },
+        perHeadMinor: Math.ceil((2000 - cover) / (base.players - 1)) };
+      if (scenario === 'ambassador') {
+        base.share = { state: 'paid', amountMinor: 500, heads: 1, paidVia: 'ambassador', splitState: 'open', returnedMinor: 0 };
+      }
+    } else if (scenario === 'ambreleased') {
+      base.share = { state: 'released', amountMinor: 500, heads: 1, paidVia: 'ambassador', splitState: 'abandoned',
+        splitReason: 'nobody_finished', returnedMinor: 0 };
     }
 
     if (request && !request.share) base.share = null;
@@ -349,7 +406,7 @@
   }
 
   window.PAY_CONFIG.transport = function (request) {
-    return request.action === 'describe' ? describe(request) : retiredUnlock(request);
+    return request.action === 'describe' ? withBoardName(describe(request)) : retiredUnlock(request);
   };
 
   window.PAY_CONFIG.checkoutTransport = checkout;
@@ -419,8 +476,16 @@
     e.name = 'NotAllowedError';
     return e;
   }
+  function alreadyHere() {
+    var e = new Error('The user attempted to register an authenticator that contains one of the credentials already registered with the relying party.');
+    e.name = 'InvalidStateError';
+    return e;
+  }
   window.PAY_CONFIG.passkeys = {
-    create: function () { return later(scenario === 'cancel' ? refused() : fakeCredential('create'), 700); },
+    create: function () {
+      return later(scenario === 'cancel' ? refused()
+        : scenario === 'inviteexisting' ? alreadyHere() : fakeCredential('create'), 700);
+    },
     get: function () { return later(scenario === 'cancel' ? refused() : fakeCredential('get'), 700); }
   };
   var mockOptions = {
@@ -500,6 +565,50 @@
   };
 
 
+  // Ambassadors: the pay page's "Ambassador? Cover my share", and ambassador.html. Every
+  // request is kept on window.ambassadorRequests.
+  window.ambassadorRequests = [];
+  window.PAY_CONFIG.ambassadorTransport = function (request) {
+    window.ambassadorRequests.push(request);
+    if (request.action === 'cover_options') {
+      var offered = (scenario === 'ambassador' || scenario === 'ambused') && !ambCovered;
+      return later(body({ ok: true, offered: offered, coverMinor: 500,
+        challengeId: '00000000-0000-4000-8000-000000000004', options: mockOptions.get }), 200);
+    }
+    if (request.action === 'cover') {
+      if (scenario === 'ambused') {
+        return later(body({ ok: false, reason: 'used_today',
+          message: 'You’ve already had your covered share today. It’s once a day.' }, 409), 500);
+      }
+      ambCovered = true;
+      return later(body({ ok: true, coverMinor: 500, firstName: 'Jess', shareId: 'mock-cover-share',
+        repeat: false, complete: false }), 500);
+    }
+    if (request.action === 'invite') {
+      if (scenario === 'inviteexpired') {
+        return later(body({ ok: false, reason: 'invite_expired',
+          message: 'This invite link has run out. Ask us for a new one.' }, 400));
+      }
+      return later(body({ ok: true, firstName: 'Jess', lastName: scenario === 'invitephone' ? 'Mock' : null,
+        email: 'j***@example.com', enrolled: scenario === 'invitephone', termsVersion: '2026-11-24', passkeys: true }), 300);
+    }
+    if (request.action === 'enrol_options') {
+      var m = /^(\d{4})-/.exec(request.dateOfBirth || '');
+      if (m && new Date().getFullYear() - +m[1] < 18) {
+        return later(body({ ok: false, reason: 'under_18', message: 'Ambassadors are 18 and over.' }, 400));
+      }
+      return later(body({ ok: true, challengeId: '00000000-0000-4000-8000-000000000005', options: mockOptions.create }), 300);
+    }
+    if (request.action === 'enrol_existing_options') {
+      return later(body({ ok: true, challengeId: '00000000-0000-4000-8000-000000000006', options: mockOptions.get }), 300);
+    }
+    if (request.action === 'enrol' || request.action === 'enrol_existing') {
+      window.lastAmbassadorEnrol = request;
+      return later(body({ ok: true, firstName: request.firstName }), 500);
+    }
+    return later(body({ ok: false, reason: 'unknown', message: 'Something went wrong. Try again.' }, 400));
+  };
+
   // Six quick asks rather than fifteen slow ones, so the "still confirming" screen can be
   // reached in a few seconds instead of half a minute.
   window.PAY_CONFIG.paymentPollAttempts = 6;
@@ -515,6 +624,37 @@
   // `sharepaid` reaches its "Check again" button in about ten seconds.
   window.PAY_CONFIG.splitPollMs = 700;
   window.PAY_CONFIG.splitPollTries = 14;
+
+  // &logo: describe's venueLogoUrl on every answer that succeeded, as the real one sends it.
+  // Wraps whatever transport is set above, so it stacks with anything else that does.
+  if (venueLogo) {
+    var answerWithoutLogo = window.PAY_CONFIG.transport;
+    window.PAY_CONFIG.transport = function (request) {
+      var answer = answerWithoutLogo(request);
+      if (request.action !== 'describe') return answer;
+      return Promise.resolve(answer).then(function (result) {
+        if (result && result.data && result.data.ok) {
+          result = body(Object.assign({}, result.data, { venueLogoUrl: venueLogo }), result.status);
+        }
+        return result;
+      });
+    };
+  }
+
+  // clips.html, the end-of-session "add your email" QR. Lists three guests; &case=expired
+  // shows an out-of-date code. Records the last add on window.lastLateEmail.
+  window.PAY_CONFIG.lateEmailTransport = function (request) {
+    if (scenario === 'expired') {
+      return later(body({ ok: false, reason: 'expired',
+        message: 'This code has expired. Ask at the bar if you missed it.' }, 400));
+    }
+    if (request.action === 'describe') {
+      return later(body({ ok: true, venue: 'The Rising Sun', expiresInSeconds: 1500,
+        players: [{ id: 101, name: 'Priya' }, { id: 102, name: 'Tom' }, { id: 103, name: 'Sam' }] }));
+    }
+    window.lastLateEmail = request;
+    return later(body({ ok: true, venue: 'The Rising Sun', name: 'Priya', applied: false }));
+  };
 
   // Obvious on screen, so a mocked run is never mistaken for a real one.
   window.addEventListener('DOMContentLoaded', function () {

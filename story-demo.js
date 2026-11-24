@@ -1884,6 +1884,17 @@ window.STORY_DEMO = {
    "achievement": null,
    "video": null,
    "thumbnail": null
+  },
+  {
+   "id": "h6",
+   "player": "p2",
+   "game": "g1",
+   "gameName": "Smart Arrows",
+   "type": "ton",
+   "label": "DOUBLE POINTS!",
+   "achievement": null,
+   "video": null,
+   "thumbnail": null
   }
  ],
  "selfie": null

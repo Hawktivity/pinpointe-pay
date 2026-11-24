@@ -61,6 +61,24 @@
     // after the #, and this is the only place the page sends it.
     storyUrl: project.url ? project.url + '/functions/v1/get-story' : '',
 
+    // Where clips.html (the end-of-session "add your email" QR) lists the guests its code offers
+    // and saves one guest's email. The venue-signed code is the only access check.
+    lateEmailUrl: project.url ? project.url + '/functions/v1/late-email' : '',
+
+    // Where free.html (15 minutes free, per person) signs a guest up for their own emailed code,
+    // and where each adult at the board types it. The board's 15 MIN FREE code is the access
+    // check at the board; a sign-up from home only ever mints a code for the address typed.
+    freeUrl: project.url ? project.url + '/functions/v1/free-15' : '',
+
+    // Where notebook.html (Ezra's notebook, Murder at Last Orders) reads the case the table has
+    // found so far (GET) and sends a phone's vote (POST). Its code buys nothing.
+    notebookUrl: project.url ? project.url + '/functions/v1/mystery-notebook' : '',
+
+    // Ambassadors (25 Nov 2026): the pay page asks it whether to offer "Ambassador? Cover my
+    // share" and covers the share with Face ID; ambassador.html enrols an invited ambassador's
+    // phone; the dashboard invites them. See supabase/functions/ambassador.
+    ambassadorUrl: project.url ? project.url + '/functions/v1/ambassador' : '',
+
     // The project itself, for pages that sign in rather than call one function: the staff
     // dashboard (dashboard/) signs Hawktivity people in with Google through Supabase Auth.
     supabaseUrl: project.url,
@@ -71,8 +89,10 @@
 
   // A local copy is driven from a fake so the screens can be walked through
   // without a Supabase project, Stripe or a real voucher. Deliberately gated on
-  // the hostname: a deployed copy has no route to this code at all.
+  // the hostname: a deployed copy has no route to this code at all. A page with fakes of its
+  // own names them in PAY_MOCK_SCRIPT before loading this file (notebook.html does).
   if (isLocal && new URLSearchParams(window.location.search).has('mock')) {
-    document.write('<script src="mock.js"><\/script>');
+    var mockScript = typeof window.PAY_MOCK_SCRIPT === 'string' ? window.PAY_MOCK_SCRIPT : 'mock.js';
+    document.write('<script src="' + mockScript + '"><\/script>');
   }
 })();

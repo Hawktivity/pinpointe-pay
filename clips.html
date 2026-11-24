@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#14141a">
+<title>Get your clips</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@400;500;600;700&display=swap">
+<style>
+/* ---------------------------------------------------------------------------
+   The end-of-session "add your email" QR opens this. The board lists the adults in the
+   session it has just ended who left no email; a guest taps their name and adds one, and
+   their clips and stats are emailed like everybody else's.
+
+   Same palette and type as the sign-up and pay pages. Single dark theme, like them.
+--------------------------------------------------------------------------- */
+:root {
+  --ink: #14141a;
+  --ink-2: #1b1b22;
+  --ink-3: #24242c;
+  --line: #2c2c34;
+  --brick: #a8433f;
+  --brick-lit: #c0504b;
+  --go: #3e9b4f;
+  --paper: #f0f0f2;
+  --dim: #9b9ba4;
+  --dimmer: #74747e;
+  --display: 'Anton', 'Arial Narrow', Impact, sans-serif;
+  --body: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background: linear-gradient(168deg, #17171d 0%, #101015 100%);
+  background-attachment: fixed;
+  color: var(--paper);
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+.wrap { max-width: 30rem; margin: 0 auto; padding: 1.5rem 1.25rem calc(2.5rem + env(safe-area-inset-bottom)); }
+.brand { font-family: var(--display); letter-spacing: .12em; font-size: .85rem; color: var(--brick-lit); text-transform: uppercase; margin: 0 0 1rem; }
+h1 { font-family: var(--display); font-weight: 400; text-transform: uppercase; font-size: clamp(2.2rem, 11vw, 3rem); line-height: 1; margin: 0 0 .8rem; }
+.lede { color: var(--dim); margin: 0 0 1.5rem; }
+.lede b { color: var(--paper); font-weight: 600; }
+.names { display: grid; gap: .6rem; margin: 0 0 1.25rem; }
+.name {
+  display: block; width: 100%; text-align: left; font: 600 1.15rem var(--body); color: var(--paper);
+  background: var(--ink-3); border: 1px solid var(--line); border-radius: 14px; padding: 1rem 1.1rem; cursor: pointer;
+}
+.name:active { background: var(--line); }
+label.field-label { display: block; font-weight: 600; margin: 0 0 .4rem; }
+input[type=email] {
+  width: 100%; font: 500 1.05rem var(--body); color: var(--paper); background: var(--ink-2);
+  border: 1px solid var(--line); border-radius: 12px; padding: .85rem .9rem;
+}
+input[type=email]:focus { outline: 2px solid var(--brick-lit); outline-offset: 1px; }
+.tick { display: flex; gap: .75rem; align-items: flex-start; padding: 1rem 0 0; cursor: pointer; }
+.tick input { flex: 0 0 auto; width: 1.5rem; height: 1.5rem; margin: 0; accent-color: var(--brick-lit); }
+.tick span { font-size: .92rem; color: var(--dim); line-height: 1.4; }
+button.go {
+  display: block; width: 100%; margin: 1.5rem 0 0; font: 700 1.05rem var(--body); color: #fff;
+  background: var(--brick); border: 0; border-radius: 999px; padding: 1rem; cursor: pointer;
+}
+button.go:disabled { opacity: .55; }
+button.quiet { background: none; border: 0; color: var(--dim); text-decoration: underline; font: 600 .95rem var(--body); padding: .8rem 0 0; cursor: pointer; }
+.error { color: #f2a3a0; font-size: .92rem; margin: .7rem 0 0; }
+.done-mark { font-size: 3rem; color: var(--go); margin: 0 0 .3rem; }
+.privacy { color: var(--dimmer); font-size: .8rem; margin: 2rem 0 0; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="brand">Hawktivity Darts</p>
+
+  <section id="loading">
+    <p class="lede">One moment&hellip;</p>
+  </section>
+
+  <section id="problem" class="hidden" role="alert">
+    <h1 id="problem-title">Can&rsquo;t open this</h1>
+    <p class="lede" id="problem-text"></p>
+  </section>
+
+  <section id="pick" class="hidden">
+    <h1>Want your clips?</h1>
+    <p class="lede" id="pick-lede"></p>
+    <p class="lede"><b>Which one are you?</b></p>
+    <div class="names" id="names"></div>
+  </section>
+
+  <section id="form" class="hidden">
+    <h1 id="form-title"></h1>
+    <p class="lede">Get your night by email: a summary of your session and videos of your best
+      throws. We never sell your email and never spam you.</p>
+    <form id="email-form" novalidate>
+      <label class="field-label" for="email">Your email</label>
+      <input id="email" type="email" autocomplete="email" inputmode="email" enterkeyhint="send" maxlength="120" required>
+      <!-- Its own consent, unticked, never assumed: the same words as the board. -->
+      <label class="tick" for="offersConsent">
+        <input id="offersConsent" type="checkbox">
+        <span>Also send me the odd special offer from Hawktivity Darts. Unsubscribe any time.</span>
+      </label>
+      <p class="error hidden" id="form-error"></p>
+      <button class="go" id="send" type="submit">Send me my clips</button>
+      <button class="quiet" id="not-me" type="button">That&rsquo;s not me</button>
+    </form>
+  </section>
+
+  <section id="done" class="hidden">
+    <p class="done-mark">&check;</p>
+    <h1 id="done-title"></h1>
+    <p class="lede" id="done-text"></p>
+    <button class="go" id="another" type="button">Add someone else</button>
+  </section>
+
+  <p class="privacy">We keep your email for 30 days to send your session summary and clips, then
+    delete it. If you tick the offers box we keep it until you unsubscribe. We never sell it.</p>
+</div>
+
+<script src="config.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var cfg = window.PAY_CONFIG || {};
+  var code = new URLSearchParams(window.location.search).get('c') || '';
+  var venue = '';
+  var players = [];
+  var done = {};
+  var chosen = null;
+
+  function el(id) { return document.getElementById(id); }
+  function show(id) {
+    ['loading', 'problem', 'pick', 'form', 'done'].forEach(function (s) { el(s).classList.toggle('hidden', s !== id); });
+    window.scrollTo(0, 0);
+  }
+  function problem(title, text) {
+    el('problem-title').textContent = title;
+    el('problem-text').textContent = text;
+    show('problem');
+  }
+
+  function post(body) {
+    // The local mock answers here instead of the network; see mock.js.
+    if (cfg.lateEmailTransport) {
+      return cfg.lateEmailTransport(Object.assign({ code: code }, body)).then(function (r) { return r.data; });
+    }
+    return fetch(cfg.lateEmailUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', apikey: cfg.anonKey, authorization: 'Bearer ' + cfg.anonKey },
+      body: JSON.stringify(Object.assign({ code: code }, body))
+    }).then(function (r) { return r.json().catch(function () { return {}; }); });
+  }
+
+  function renderNames() {
+    var list = el('names');
+    while (list.firstChild) list.removeChild(list.firstChild);
+    var left = players.filter(function (p) { return !done[p.id]; });
+    if (left.length === 0) {
+      el('done-title').textContent = 'That’s everyone';
+      el('done-text').textContent = 'Everybody on the list has added an email. Your clips and stats from ' +
+        venue + ' are on their way.';
+      el('another').classList.add('hidden');
+      show('done');
+      return;
+    }
+    left.forEach(function (p) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'name';
+      b.textContent = p.name;  // typed by a guest: text, never markup
+      b.addEventListener('click', function () { choose(p); });
+      list.appendChild(b);
+    });
+    el('pick-lede').textContent = 'From your night at ' + venue + ': a summary of your session and videos of ' +
+      'your best throws, by email. We never sell your email and never spam you.';
+    show('pick');
+  }
+
+  function choose(p) {
+    chosen = p;
+    el('form-title').textContent = p.name + ', your clips';
+    el('email').value = '';
+    el('offersConsent').checked = false;
+    el('form-error').classList.add('hidden');
+    show('form');
+    el('email').focus();
+  }
+
+  el('email').addEventListener('input', function () { el('form-error').classList.add('hidden'); });
+  el('not-me').addEventListener('click', renderNames);
+  el('another').addEventListener('click', renderNames);
+
+  el('email-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var email = el('email').value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      el('form-error').textContent = 'That email address doesn’t look right.';
+      el('form-error').classList.remove('hidden');
+      return;
+    }
+    var button = el('send');
+    button.disabled = true;
+    post({ action: 'add', playerId: chosen.id, email: email, offersConsent: el('offersConsent').checked === true })
+      .then(function (data) {
+        if (!data.ok) {
+          el('form-error').textContent = data.message || 'That didn’t save. Try again.';
+          el('form-error').classList.remove('hidden');
+          return;
+        }
+        done[chosen.id] = true;
+        el('done-title').textContent = 'Done, ' + chosen.name;
+        el('done-text').textContent = 'Your session summary and clips from ' + venue +
+          ' will be in your inbox shortly.';
+        el('another').classList.toggle('hidden', players.every(function (p) { return done[p.id]; }));
+        show('done');
+      })
+      .catch(function () {
+        el('form-error').textContent = 'No connection just now. Try again in a moment.';
+        el('form-error').classList.remove('hidden');
+      })
+      .then(function () { button.disabled = false; });
+  });
+
+  if (!code) {
+    problem('Can’t open this', 'This link is missing its code. Scan the code on the board again.');
+    return;
+  }
+  post({ action: 'describe' }).then(function (data) {
+    if (!data.ok) {
+      problem(data.reason === 'expired' ? 'This code has expired' : 'Can’t open this',
+        data.message || 'Something went wrong. Try again in a minute.');
+      return;
+    }
+    venue = data.venue || 'the pub';
+    players = data.players || [];
+    renderNames();
+  }).catch(function () {
+    problem('No connection', 'We couldn’t reach the server. Check your signal and try again.');
+  });
+})();
+</script>
+</body>
+</html>

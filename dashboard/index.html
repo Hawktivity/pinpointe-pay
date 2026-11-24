@@ -291,6 +291,8 @@ select, .small {
       </div>
       <div class="who">
         <span class="email" id="who-email"></span>
+        <a id="prices-link" class="link" href="prices/" hidden>Prices</a>
+        <a id="ambassadors-link" class="link" href="ambassadors/" hidden>Ambassadors</a>
         <button id="signout" class="link" type="button">Sign out</button>
       </div>
     </header>
@@ -370,11 +372,12 @@ select, .small {
   var PAGE = 150;
 
   // The board's GameId -> name, as the story page names them (pinpointe-supabase
-  // supabase/functions/_shared/story-catalogue.ts), plus the two games being built.
+  // supabase/functions/_shared/story-catalogue.ts). A new game goes in both places.
   var GAME_NAMES = {
     1: 'Zero Hour', 2: '501', 3: '301', 4: 'Kill Shot', 5: 'Roulette', 6: 'Killer',
     7: 'Warships', 8: 'Hounds & Hares', 9: 'Casual Cricket', 10: 'Around the World',
-    11: 'Snakes & Ladders', 12: 'Smart Arrows'
+    11: 'Snakes & Ladders', 12: 'Smart Arrows', 13: "The Landlord's Tales",
+    14: 'Murder at Last Orders'
   };
   function gameName(id) { return GAME_NAMES[id] || (id == null ? 'Darts' : 'Game ' + id); }
 
@@ -584,7 +587,8 @@ select, .small {
     acts.forEach(function (a) {
       if (a.kind === 'new' || a.kind === 'join') x.paidFor += a.players || 0;
       if (a.kind === 'new' || a.kind === 'ext') x.minutesBought += a.minutes || 0;
-      if (a.paidVia === 'card') x.cardMinor += a.priceMinor || 0;
+      // An ambassador's covered share (compMinor, 25 Nov 2026) is part of the price nobody paid.
+      if (a.paidVia === 'card') x.cardMinor += (a.priceMinor || 0) - (a.compMinor || 0);
       if (a.paidVia === 'voucher') { x.voucherMinor += a.priceMinor || 0; x.vouchers++; }
       x.refundedMinor += a.refundedMinor || 0;
     });
@@ -922,6 +926,10 @@ select, .small {
     var payRows = acts.map(function (a) {
       var notes = [];
       if (a.voucher) notes.push('code …' + a.voucher.hint + ' · ' + a.voucher.batch);
+      if (a.compMinor) {
+        notes.push(money(a.compMinor, a.currency) + ' ambassador share covered'
+          + (a.ambassador && a.ambassador.name ? ' (' + a.ambassador.name + ')' : ''));
+      }
       if (a.sharesPaid > 1) notes.push('split, ' + a.sharesPaid + ' shares paid');
       if (a.refundedMinor) notes.push(money(a.refundedMinor, a.currency) + ' refunded (overpaid share)');
       if (!a.acked) notes.push('no acknowledgement from the board');
@@ -948,7 +956,9 @@ select, .small {
         h('td', { text: time(new Date(a.at)) }),
         h('td', null, h('div', { text: actLabel(a) + ' · ' + plural(a.players, 'player') }),
           notes.length ? h('div', { class: 'muted', text: notes.join(' · ') }) : null, paidBy),
-        h('td', { class: 'num', text: a.paidVia === 'voucher' ? '£0 (' + money(a.priceMinor, a.currency) + ')' : money(a.priceMinor, a.currency) }));
+        h('td', { class: 'num', text: a.paidVia === 'voucher' ? '£0 (' + money(a.priceMinor, a.currency) + ')'
+          : a.compMinor ? money(a.priceMinor - a.compMinor, a.currency) + ' (' + money(a.priceMinor, a.currency) + ')'
+          : money(a.priceMinor, a.currency) }));
     });
     var games = r.games || [];
     var gameRows = games.map(function (g) {
@@ -1120,6 +1130,12 @@ select, .small {
   var entered = false, timer = null;
   function enterApp() {
     $('who-email').textContent = state.email;
+    // The price page answers only hawktivity.com accounts (dashboard_prices()); the link follows.
+    $('prices-link').hidden = !/@hawktivity\.com$/i.test(state.email || '');
+    if (MOCK) $('prices-link').href = 'prices/?mock';
+    // Likewise ambassadors (dashboard_ambassadors(), ambassador_admin_email()).
+    $('ambassadors-link').hidden = $('prices-link').hidden;
+    if (MOCK) $('ambassadors-link').href = 'ambassadors/?mock';
     if (CFG.environment && CFG.environment !== 'prod') { $('envtag').textContent = MOCK ? 'mock' : CFG.environment; $('envtag').hidden = false; }
     show('app');
     if (!entered) {
