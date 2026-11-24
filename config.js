@@ -74,6 +74,11 @@
     // found so far (GET) and sends a phone's vote (POST). Its code buys nothing.
     notebookUrl: project.url ? project.url + '/functions/v1/mystery-notebook' : '',
 
+    // Ambassadors (25 Nov 2026): the pay page asks it whether to offer "Ambassador? Cover my
+    // share" and covers the share with Face ID; ambassador.html enrols an invited ambassador's
+    // phone; the dashboard invites them. See supabase/functions/ambassador.
+    ambassadorUrl: project.url ? project.url + '/functions/v1/ambassador' : '',
+
     // The project itself, for pages that sign in rather than call one function: the staff
     // dashboard (dashboard/) signs Hawktivity people in with Google through Supabase Auth.
     supabaseUrl: project.url,

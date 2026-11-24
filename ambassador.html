@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#14141a">
+<title>Ambassadors</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@400;500;600;700&display=swap">
+<style>
+/* ---------------------------------------------------------------------------
+   Ambassadors (Richard, 23 Nov 2026; built 25 Nov).
+
+   ambassador.html?i=<invite>  the link in the invite email Hawktivity sends from the
+   dashboard. The link reaching their inbox is the proof the address is theirs; here they
+   give their name and date of birth (18 and over), accept the terms, and save a passkey --
+   Face ID or a fingerprint -- which is how the pay page knows it is them at the board.
+
+   Same palette and type as free.html and the other guest pages. Single dark theme.
+--------------------------------------------------------------------------- */
+:root {
+  --ink: #14141a;
+  --ink-2: #1b1b22;
+  --ink-3: #24242c;
+  --line: #2c2c34;
+  --brick: #a8433f;
+  --brick-lit: #c0504b;
+  --go: #3e9b4f;
+  --paper: #f0f0f2;
+  --dim: #9b9ba4;
+  --dimmer: #74747e;
+  --display: 'Anton', 'Arial Narrow', Impact, sans-serif;
+  --body: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background: linear-gradient(168deg, #17171d 0%, #101015 100%);
+  background-attachment: fixed;
+  color: var(--paper);
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+.wrap { max-width: 30rem; margin: 0 auto; padding: 1.5rem 1rem calc(2.5rem + env(safe-area-inset-bottom)); }
+.brand { font-family: var(--display); letter-spacing: .12em; font-size: .85rem; color: var(--brick-lit); text-transform: uppercase; margin: 0 0 1rem; }
+h1 { font-family: var(--display); font-weight: 400; text-transform: uppercase; font-size: clamp(2.1rem, 10.5vw, 3rem); line-height: 1; margin: 0 0 .8rem; overflow-wrap: anywhere; }
+.lede { color: var(--dim); margin: 0 0 1.25rem; }
+.lede b { color: var(--paper); font-weight: 600; }
+label.field-label { display: block; font-weight: 600; margin: 1rem 0 .4rem; }
+label.field-label .opt { color: var(--dimmer); font-weight: 500; }
+input[type=text] {
+  width: 100%; font: 500 1.05rem var(--body); color: var(--paper); background: var(--ink-2);
+  border: 1px solid var(--line); border-radius: 12px; padding: .85rem .9rem;
+}
+input:focus { outline: 2px solid var(--brick-lit); outline-offset: 1px; }
+.tick { display: flex; gap: .75rem; align-items: flex-start; padding: 1.1rem 0 0; cursor: pointer; }
+.tick input { flex: 0 0 auto; width: 1.5rem; height: 1.5rem; margin: 0; accent-color: var(--brick-lit); }
+.tick span { font-size: .95rem; color: var(--paper); line-height: 1.4; }
+button.go {
+  display: block; width: 100%; margin: 1.5rem 0 0; font: 700 1.05rem var(--body); color: #fff;
+  background: var(--brick); border: 0; border-radius: 999px; padding: 1rem; cursor: pointer;
+}
+button.go:disabled { opacity: .55; }
+button.second {
+  display: block; width: 100%; margin: .75rem 0 0; font: 700 1.05rem var(--body); color: var(--paper);
+  background: var(--ink-3); border: 1px solid var(--line); border-radius: 999px; padding: 1rem; cursor: pointer;
+}
+button.quiet { background: none; border: 0; color: var(--dim); text-decoration: underline; font: 600 .95rem var(--body); padding: .9rem 0 0; cursor: pointer; }
+.error { color: #f2a3a0; font-size: .92rem; margin: .7rem 0 0; }
+.note { background: var(--ink-3); border: 1px solid var(--line); border-radius: 12px; padding: .8rem .9rem; color: var(--dim); font-size: .92rem; margin: 0 0 1rem; }
+.note b { color: var(--paper); }
+.done-mark { font-size: 3rem; color: var(--go); margin: 0 0 .3rem; }
+.steps { color: var(--dim); padding-left: 1.2rem; margin: 0 0 1rem; }
+.steps li { margin: 0 0 .4rem; }
+.steps b { color: var(--paper); }
+details.terms { background: var(--ink-2); border: 1px solid var(--line); border-radius: 12px; padding: .2rem .9rem; margin: 1.25rem 0 0; }
+details.terms summary { cursor: pointer; font-weight: 600; padding: .7rem 0; }
+details.terms ol { color: var(--dim); font-size: .9rem; padding-left: 1.2rem; margin: 0 0 .8rem; }
+details.terms li { margin: 0 0 .5rem; }
+.privacy { color: var(--dimmer); font-size: .8rem; margin: 2rem 0 0; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="brand">Hawktivity Darts</p>
+
+  <section id="loading">
+    <p class="lede">One moment&hellip;</p>
+  </section>
+
+  <section id="problem" class="hidden" role="alert">
+    <h1 id="problem-title">Can&rsquo;t open this</h1>
+    <p class="lede" id="problem-text"></p>
+  </section>
+
+  <!-- ===== who they are, and the terms ===== -->
+  <section id="details" class="hidden">
+    <h1 id="details-title">Become an ambassador</h1>
+    <p class="lede" id="details-lede"></p>
+    <form id="details-form" novalidate>
+      <label class="field-label" for="firstName">First name</label>
+      <input id="firstName" type="text" autocomplete="given-name" maxlength="40" required>
+      <label class="field-label" for="lastName">Last name <span class="opt">(optional)</span></label>
+      <input id="lastName" type="text" autocomplete="family-name" maxlength="40">
+      <label class="field-label" for="dateOfBirth">Date of birth</label>
+      <input id="dateOfBirth" type="text" inputmode="numeric" autocomplete="bday" placeholder="DD/MM/YYYY" maxlength="10" required>
+
+      <!-- DRAFT wording (25 Nov 2026), for Richard to approve before any ambassador sees it.
+           TERMS_VERSION in supabase/functions/ambassador/index.ts names this text. -->
+      <details class="terms" id="terms">
+        <summary>Ambassador terms</summary>
+        <ol>
+          <li>You must be 18 or over, and invited by Hawktivity.</li>
+          <li>Once a day (UK time), your own share of a new game is covered, up to &pound;5, when at least one
+            other person in your group pays the rest by card. It doesn&rsquo;t cover extra time, joining a game
+            that&rsquo;s already running, the free 15 or vouchers.</li>
+          <li>The covered share is just for you. Use your own phone and your own Face ID or fingerprint, and
+            don&rsquo;t let anyone else use them for it.</li>
+          <li>When you post about Hawktivity Darts, say you&rsquo;re an ambassador (for example with #ad).
+            Don&rsquo;t promote it to under-18s, and don&rsquo;t tie it to drinking offers.</li>
+          <li>We can change or end the programme, or your place on it, at any time, and we will if it&rsquo;s
+            misused. You can stop at any time by replying to any of our emails.</li>
+          <li>We keep your name, email, date of birth, your passkey (never your face or fingerprint) and a record
+            of the games you covered, to run the programme. Ask us to delete them any time.</li>
+        </ol>
+      </details>
+      <label class="tick" for="acceptTerms">
+        <input id="acceptTerms" type="checkbox">
+        <span>I&rsquo;m 18 or over and I accept the ambassador terms.</span>
+      </label>
+      <p class="error hidden" id="details-error"></p>
+      <button class="go" id="next" type="submit">Next</button>
+    </form>
+  </section>
+
+  <!-- ===== the passkey ===== -->
+  <section id="faceid" class="hidden">
+    <h1>Set up Face ID</h1>
+    <p class="lede">This is how the board knows it&rsquo;s you. Your phone keeps it: we never see your face or
+      fingerprint, and there&rsquo;s no password to remember.</p>
+    <p class="note hidden" id="faceid-note"></p>
+    <button class="go" id="create" type="button">Set up Face ID</button>
+    <button class="second hidden" id="use-existing" type="button">Use the Face ID already on this phone</button>
+    <p class="error hidden" id="faceid-error"></p>
+    <button class="quiet" id="faceid-back" type="button">Back</button>
+  </section>
+
+  <section id="done" class="hidden">
+    <p class="done-mark">&check;</p>
+    <h1 id="done-title">You&rsquo;re an ambassador</h1>
+    <p class="lede" id="done-text"></p>
+    <p class="lede"><b>At the board:</b></p>
+    <ol class="steps">
+      <li>Add your players and choose how long to play.</li>
+      <li>Scan the QR code with this phone.</li>
+      <li>Tap <b>Ambassador? Cover my share</b> and use Face ID.</li>
+      <li>Your friends scan the same code and pay the rest.</li>
+    </ol>
+    <p class="lede">Once a day, up to &pound;5, for a new game with at least one other person paying.</p>
+  </section>
+
+  <p class="privacy">We use your details only to run the ambassador programme. We never sell them, and you can
+    ask us to delete them any time by replying to any of our emails.</p>
+</div>
+
+<script src="config.js"></script>
+<script src="passkey.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var cfg = window.PAY_CONFIG || {};
+  var params = new URLSearchParams(window.location.search);
+  var invite = params.get('i') || '';
+  var DATE_PARTS = [2, 2, 4];
+  var details = null;      // what was typed, sent again with the finished passkey
+  var created = null;      // the passkey options for "Set up Face ID", fetched before the tap
+  var existing = null;     // the options for "Use the Face ID already on this phone"
+  var busy = false;
+
+  function el(id) { return document.getElementById(id); }
+  var SECTIONS = ['loading', 'problem', 'details', 'faceid', 'done'];
+  function show(id) {
+    SECTIONS.forEach(function (s) { el(s).classList.toggle('hidden', s !== id); });
+    window.scrollTo(0, 0);
+  }
+  function problem(title, text) {
+    el('problem-title').textContent = title;
+    el('problem-text').textContent = text;
+    show('problem');
+  }
+  function error(id, text) {
+    el(id).textContent = text;
+    el(id).classList.remove('hidden');
+  }
+  function clearError(id) { el(id).classList.add('hidden'); }
+
+  function post(body) {
+    var payload = Object.assign({ invite: invite }, body);
+    // The local mock answers here instead of the network; see mock.js.
+    if (cfg.ambassadorTransport) {
+      return Promise.resolve(cfg.ambassadorTransport(payload)).then(function (r) { return r.data || {}; });
+    }
+    return fetch(cfg.ambassadorUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', apikey: cfg.anonKey, authorization: 'Bearer ' + cfg.anonKey },
+      body: JSON.stringify(payload)
+    }).then(function (r) { return r.json().catch(function () { return {}; }); });
+  }
+
+  // ---- date of birth, typed as on the other guest pages ----------------------
+  function tidyBirthDate(value) {
+    var iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (iso) { return iso[3] + '/' + iso[2] + '/' + iso[1]; }
+    var parts = [''];
+    for (var i = 0; i < value.length; i++) {
+      var ch = value.charAt(i);
+      var at = parts.length - 1;
+      if (/\d/.test(ch)) {
+        if (parts[at].length === DATE_PARTS[at]) {
+          if (at === 2) { break; }
+          parts.push('');
+          at++;
+        }
+        parts[at] += ch;
+      } else if (/[\/\-. ]/.test(ch) && parts[at] !== '' && at < 2) {
+        if (parts[at].length === 1) { parts[at] = '0' + parts[at]; }
+        parts.push('');
+      }
+    }
+    return parts.join('/');
+  }
+  function isoToday() {
+    var d = new Date();
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+  function birthDateIso() {
+    var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(el('dateOfBirth').value);
+    if (!m) { return ''; }
+    var d = +m[1], mo = +m[2], y = +m[3];
+    var date = new Date(y, mo - 1, d);
+    if (date.getFullYear() !== y || date.getMonth() !== mo - 1 || date.getDate() !== d) { return ''; }
+    var iso = m[3] + '-' + m[2] + '-' + m[1];
+    return y >= 1900 && iso <= isoToday() ? iso : '';
+  }
+  el('dateOfBirth').addEventListener('input', function () {
+    var field = el('dateOfBirth');
+    var tidy = tidyBirthDate(field.value);
+    if (tidy !== field.value) { field.value = tidy; }
+    clearError('details-error');
+  });
+  el('firstName').addEventListener('input', function () { clearError('details-error'); });
+  el('acceptTerms').addEventListener('change', function () { clearError('details-error'); });
+
+  // ---- 1. the invite ------------------------------------------------------------
+  function start() {
+    if (!invite) {
+      problem('Ambassadors', 'Hawktivity Darts ambassadors are invited by us. If you have an invite, open the link in the email we sent you.');
+      return;
+    }
+    Promise.all([post({ action: 'invite' }), window.HawkPasskey.usable()]).then(function (both) {
+      var data = both[0];
+      var usable = both[1];
+      if (!data.ok) {
+        problem(data.reason === 'invite_expired' ? 'This link has run out' : 'This link doesn’t work',
+          data.message || 'Ask us for a new invite.');
+        return;
+      }
+      if (!usable || data.passkeys === false) {
+        problem('Use your phone',
+          'Open this link on the phone you’ll bring to the board. It needs Face ID, a fingerprint or a screen lock.');
+        return;
+      }
+      if (data.firstName) el('firstName').value = data.firstName;
+      if (data.lastName) el('lastName').value = data.lastName;
+      if (data.enrolled) {
+        el('details-title').textContent = 'Set up this phone';
+        el('details-lede').textContent = 'You’re already an ambassador. Check your details and set up Face ID on this phone too.';
+      } else {
+        el('details-lede').innerHTML = '';
+        var hi = document.createElement('span');
+        hi.textContent = (data.firstName ? 'Hi ' + data.firstName + '. ' : '')
+          + 'Once a day, when you play with friends, your own share of the game is on us, up to £5. '
+          + 'Your friends pay the rest as normal. ';
+        var who = document.createElement('b');
+        who.textContent = 'This invite is for ' + data.email + '.';
+        el('details-lede').appendChild(hi);
+        el('details-lede').appendChild(who);
+      }
+      show('details');
+    }).catch(function () {
+      problem('We can’t reach Hawktivity', 'Check this phone has signal and try again.');
+    });
+  }
+
+  // ---- 2. details in, passkey options out ---------------------------------------
+  el('details-form').addEventListener('submit', function (event) {
+    event.preventDefault();
+    if (busy) return;
+    clearError('details-error');
+    var firstName = el('firstName').value.trim();
+    var dateOfBirth = birthDateIso();
+    if (!firstName) { error('details-error', 'Enter your first name.'); return; }
+    if (!dateOfBirth) { error('details-error', 'Enter your date of birth as DD/MM/YYYY.'); return; }
+    if (!el('acceptTerms').checked) { error('details-error', 'Tick the box to accept the ambassador terms.'); return; }
+
+    details = { firstName: firstName, lastName: el('lastName').value.trim(), dateOfBirth: dateOfBirth, acceptTerms: true };
+    busy = true;
+    el('next').disabled = true;
+    post(Object.assign({ action: 'enrol_options' }, details)).then(function (data) {
+      busy = false;
+      el('next').disabled = false;
+      if (!data.ok) { error('details-error', data.message || 'Something went wrong. Try again.'); return; }
+      created = data;
+      existing = null;
+      el('use-existing').classList.add('hidden');
+      el('faceid-note').classList.add('hidden');
+      clearError('faceid-error');
+      el('create').disabled = false;
+      show('faceid');
+    }).catch(function () {
+      busy = false;
+      el('next').disabled = false;
+      error('details-error', 'We can’t reach Hawktivity. Check this phone has signal and try again.');
+    });
+  });
+
+  // ---- 3. the passkey: made here, or the one this phone already has --------------
+  function finished(data) {
+    busy = false;
+    if (!data.ok) {
+      error('faceid-error', data.message || 'Something went wrong. Try again.');
+      // The challenge that answer used is spent: fresh options before the next tap.
+      el('create').disabled = true;
+      post(Object.assign({ action: 'enrol_options' }, details)).then(function (again) {
+        if (again.ok) { created = again; el('create').disabled = false; }
+      });
+      return;
+    }
+    el('done-text').textContent = 'Thanks, ' + (data.firstName || details.firstName) + '. This phone is set up.';
+    show('done');
+  }
+
+  el('create').addEventListener('click', function () {
+    if (busy || !created) return;
+    busy = true;
+    el('create').disabled = true;
+    clearError('faceid-error');
+    // Straight from the tap: Safari shows the prompt only in direct response to one.
+    window.HawkPasskey.create(created.options).then(function (credential) {
+      return post(Object.assign({ action: 'enrol', challengeId: created.challengeId, credential: credential }, details));
+    }).then(finished).catch(function (e) {
+      busy = false;
+      el('create').disabled = false;
+      if (e && e.name === 'InvalidStateError') {
+        // This phone already holds a passkey for them (a remembered player, or an earlier
+        // invite). Using it is enough; the options for that are fetched now, before the tap.
+        el('faceid-note').textContent = 'This phone already has your Face ID for Hawktivity Darts. Use that instead.';
+        el('faceid-note').classList.remove('hidden');
+        el('create').classList.add('hidden');
+        post({ action: 'enrol_existing_options' }).then(function (data) {
+          if (!data.ok) { error('faceid-error', data.message || 'Something went wrong. Try again.'); return; }
+          existing = data;
+          el('use-existing').classList.remove('hidden');
+        });
+        return;
+      }
+      if (!(e && e.name === 'NotAllowedError')) {
+        error('faceid-error', 'Face ID didn’t work. Try again.');
+      }
+    });
+  });
+
+  el('use-existing').addEventListener('click', function () {
+    if (busy || !existing) return;
+    busy = true;
+    clearError('faceid-error');
+    window.HawkPasskey.get(existing.options).then(function (credential) {
+      return post(Object.assign({ action: 'enrol_existing', challengeId: existing.challengeId, credential: credential }, details));
+    }).then(finished).catch(function (e) {
+      busy = false;
+      if (!(e && e.name === 'NotAllowedError')) error('faceid-error', 'Face ID didn’t work. Try again.');
+      // A used challenge is no good twice: fresh options for the next tap.
+      post({ action: 'enrol_existing_options' }).then(function (data) { if (data.ok) existing = data; });
+    });
+  });
+
+  el('faceid-back').addEventListener('click', function () {
+    el('create').classList.remove('hidden');
+    show('details');
+  });
+
+  start();
+})();
+</script>
+</body>
+</html>

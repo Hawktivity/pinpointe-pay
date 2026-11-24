@@ -51,6 +51,18 @@ cover the price. Somebody who has paid their share waits on a screen that says s
 and never offers to take it again; anything a group pays that does not end up as a
 session is refunded automatically.
 
+### Ambassadors
+
+Once a day an ambassador's own share of a new game is covered, up to £5, while the rest of
+the group pays the rest by card (25 Nov 2026). Where the programme has ambassadors, a quiet
+**Ambassador? Cover my share** link appears under the card buttons for a new game of two or
+more; it proves who they are with the phone's passkey (Face ID) and puts a covered share,
+with no card behind it, into the group's split. Every phone then reads "Jess's share is
+covered" and splits the rest. Hawktivity invites ambassadors from `/dashboard/ambassadors/`;
+the emailed link opens `ambassador.html`, where they give their name and date of birth,
+accept the terms and save the passkey. The rules live in the `ambassador` Edge Function and
+pinpointe-supabase migration `20261125090000`.
+
 ## Vouchers
 
 A venue can hand out one-time codes. Where it has unspent ones, a quiet **Have a
@@ -81,6 +93,10 @@ signature first, figures second.
 | `dashboard/mock.js` | made-up sessions for walking the dashboard on a laptop (`/dashboard/?mock`) |
 | `dashboard/prices/index.html` | each venue's darts prices, and changing them, for Hawktivity Google accounts |
 | `dashboard/prices/mock.js` | made-up venues and prices for walking the price page on a laptop (`/dashboard/prices/?mock`, `&as=outsider`, `&fail=1`) |
+| `ambassador.html` | an invited ambassador sets up their phone: name, date of birth, terms, passkey (`ambassador.html?mock&i=x`, `&case=invitephone`, `inviteexisting`, `inviteexpired`) |
+| `passkey.js` | passkey (Face ID) helpers shared by `index.html` and `ambassador.html` |
+| `dashboard/ambassadors/index.html` | invite, follow and end ambassadors, for Hawktivity Google accounts |
+| `dashboard/ambassadors/mock.js` | made-up ambassadors for walking that page on a laptop (`/dashboard/ambassadors/?mock`, `&as=outsider`) |
 | `notebook.html` | Ezra's notebook for Murder at Last Orders: the case so far, private crosses on suspects, and the table's WHO / HOW / WHY vote. Polls the `mystery-notebook` Edge Function with the board's signed `note` code; no account, no typed text |
 | `murder/notebook-mock.js` | a made-up Case 1 for walking the notebook on a laptop (`notebook.html?mock=1`, `&case=briefing`, `accusing`, `closed`, `waiting`, `offline`, `bad`) |
 | `murder/portraits/` | the 22 suspect, victim and witness portraits the notebook shows, 270x336 greyscale |
@@ -183,6 +199,11 @@ Then open a scenario. The mock only loads from localhost, and only with `?mock`:
 | `localhost:8080/?mock&c=x&case=splitdone&paid=1&s=x` | my share is in, then the group finishes |
 | `localhost:8080/?mock&c=x&case=splitcovered` | already covered after CHANGE lowered the price |
 | `localhost:8080/?mock&c=x&case=splitexpired` | part paid, this phone's code has run out |
+| `localhost:8080/?mock&c=x&case=ambassador` | "Ambassador? Cover my share": Face ID covers it, then this phone's covered share |
+| `localhost:8080/?mock&c=x&case=ambused` | the ambassador has had today's share: refused |
+| `localhost:8080/?mock&c=x&case=ambcovered` | Jess's share is covered; the rest share £15 |
+| `localhost:8080/?mock&c=x&case=ambcovered8` | the same with 8 players: shares under £5, so one pays the rest |
+| `localhost:8080/?mock&c=x&case=ambreleased&s=x` | this phone covered its share but the group never paid |
 
 The full list of cases, including the refund ones, is at the top of `mock.js`.
 

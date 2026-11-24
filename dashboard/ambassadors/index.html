@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#14141a">
+<title>Ambassadors</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@400;500;600;700&display=swap">
+<style>
+/* ---------------------------------------------------------------------------
+   Ambassadors (25 Nov 2026): invite one by email, see who has enrolled and how many
+   games their covered share has been used on, end one.
+
+   Signed in with Google, sharing the sessions dashboard's login. Hawktivity accounts only:
+   dashboard_ambassadors() and the ambassador function's admin actions both ask
+   ambassador_admin_email(), which says no to anybody else. Nothing on this page is a
+   security boundary. Same palette as the other dashboard pages; single dark theme.
+--------------------------------------------------------------------------- */
+:root {
+  --ink: #14141a;
+  --ink-2: #1b1b22;
+  --ink-3: #24242c;
+  --line: #2c2c34;
+  --brick: #a8433f;
+  --brick-lit: #c0504b;
+  --go: #3e9b4f;
+  --warn: #d08a2c;
+  --paper: #f0f0f2;
+  --dim: #9b9ba4;
+  --dimmer: #74747e;
+  --display: 'Anton', 'Arial Narrow', Impact, sans-serif;
+  --body: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { min-height: 100%; }
+body {
+  margin: 0; background-color: var(--ink);
+  background-image: linear-gradient(168deg, #17171d 0%, #101015 100%); background-attachment: fixed;
+  color: var(--paper); font-family: var(--body); -webkit-font-smoothing: antialiased;
+}
+.shell { max-width: 640px; margin: 0 auto; padding: 22px max(16px, env(safe-area-inset-right, 0px)) 56px max(16px, env(safe-area-inset-left, 0px)); }
+.view { display: flex; flex-direction: column; gap: 24px; }
+.center { text-align: center; color: var(--dim); padding-top: 18vh; font-size: 14px; }
+.eyebrow { font: 600 11px/1 var(--body); letter-spacing: .18em; text-transform: uppercase; color: var(--dimmer); display: flex; align-items: center; gap: 10px; }
+.envtag { font: 600 10px/1 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--ink); background: var(--warn); border-radius: 4px; padding: 3px 6px; }
+h1 { font: 400 42px/1.02 var(--display); text-transform: uppercase; margin: 0; letter-spacing: .01em; }
+h2 { font: 600 11px/1.2 var(--body); letter-spacing: .18em; text-transform: uppercase; color: var(--dim); margin: 0; }
+p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--dim); max-width: 62ch; }
+b { color: var(--paper); font-weight: 600; }
+.head { display: flex; flex-direction: column; gap: 10px; }
+.top-links { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--paper); outline-offset: 3px; }
+.primary { width: 100%; min-height: 50px; border: 0; border-radius: 12px; background: var(--brick); color: #fff; font: 600 15px/1 var(--body); letter-spacing: .04em; display: inline-flex; align-items: center; justify-content: center; gap: 12px; }
+.primary:hover { background: var(--brick-lit); }
+.primary:disabled { opacity: .55; cursor: default; }
+.primary svg { width: 20px; height: 20px; background: #fff; border-radius: 50%; padding: 2px; }
+.link, a.link { background: none; border: 0; padding: 6px 0; font: 500 13px/1 var(--body); color: var(--dim); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--dimmer); }
+.link:hover { color: var(--paper); }
+.small { background: var(--ink-3); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font: 600 12px/1 var(--body); color: var(--paper); }
+.small:disabled { opacity: .5; cursor: default; }
+.small.danger { color: #f0a29e; }
+.error { color: #f0a29e; font-weight: 500; }
+.card { border: 1px solid var(--line); border-radius: 14px; background: var(--ink-2); padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+form.invite { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+form.invite input { width: 100%; min-height: 46px; padding: 0 12px; background: var(--ink); border: 1px solid var(--line); border-radius: 10px; color: var(--paper); font: 500 15px/1 var(--body); }
+form.invite .wide { grid-column: 1 / -1; }
+@media (max-width: 480px) { form.invite { grid-template-columns: 1fr; } }
+.devlink { font-size: 12px; color: var(--warn); overflow-wrap: anywhere; }
+ul.people { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+ul.people li { padding: 14px 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 6px 14px; align-items: start; }
+ul.people li:first-child { border-top: 1px solid var(--line); }
+.who { font: 600 15px/1.3 var(--body); overflow-wrap: anywhere; }
+.who small { display: block; font: 500 12px/1.4 var(--body); color: var(--dimmer); margin-top: 2px; }
+.facts { grid-column: 1 / -1; font-size: 12.5px; color: var(--dim); display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.facts b { font-variant-numeric: tabular-nums; }
+.chip { font: 600 10px/1 var(--body); letter-spacing: .12em; text-transform: uppercase; border-radius: 999px; padding: 5px 9px; border: 1px solid var(--line); color: var(--dim); white-space: nowrap; }
+.chip.active { color: #bfe6c6; border-color: #2f7a3d; background: #18261b; }
+.chip.invited { color: #f3d19a; border-color: #6b4c1c; background: #2a2114; }
+.chip.ended, .chip.invite_expired, .chip.unlinked { color: var(--dimmer); }
+.actions { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
+.empty { color: var(--dimmer); font-size: 13px; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: min(440px, calc(100% - 32px)); background: var(--paper); color: var(--ink); border-radius: 12px; padding: 14px 16px; font: 500 14px/1.4 var(--body); box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+</style>
+</head>
+<body>
+<main class="shell">
+  <div id="loading" class="center">Loading&hellip;</div>
+
+  <section class="view" id="signin" hidden>
+    <div class="head">
+      <div class="eyebrow">Hawktivity</div>
+      <h1>Ambassadors</h1>
+      <p>Sign in with your Hawktivity Google account.</p>
+    </div>
+    <button id="signin-btn" class="primary" type="button">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.2C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.8c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.5c-.5-1.4-.8-2.9-.8-4.5s.3-3.1.8-4.5l-7.9-6.2C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.8c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg>
+      Sign in with Google
+    </button>
+    <p id="signin-error" class="error" role="alert" hidden></p>
+  </section>
+
+  <section class="view" id="denied" hidden>
+    <div class="head">
+      <div class="eyebrow">Hawktivity</div>
+      <h1>Not for this account</h1>
+      <p><b id="denied-email"></b> can’t manage ambassadors. Sign in with a Hawktivity Google account.</p>
+    </div>
+    <button id="denied-switch" class="primary" type="button">Use another Google account</button>
+  </section>
+
+  <section class="view" id="app" hidden>
+    <div class="head">
+      <div class="eyebrow">Hawktivity <span id="envtag" class="envtag" hidden></span></div>
+      <h1>Ambassadors</h1>
+      <p>Once a day an ambassador’s own share of a new game is covered, up to £5, while their friends pay the
+        rest by card. They have to be 18 or over and use their own phone’s Face ID.</p>
+      <div class="top-links"><a class="link" id="back-link" href="../">Sessions</a></div>
+    </div>
+
+    <div class="card">
+      <h2>Invite someone</h2>
+      <p>We email them a link. On it they give their name and date of birth, accept the terms and set up Face ID.
+        The link works for 14 days.</p>
+      <form class="invite" id="invite-form" autocomplete="off">
+        <input class="wide" id="invite-email" type="email" inputmode="email" placeholder="Their email" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+        <input id="invite-name" type="text" placeholder="First name (optional)" maxlength="60">
+        <input id="invite-note" type="text" placeholder="Note for us (optional)" maxlength="300">
+        <button class="primary wide" id="invite-btn" type="submit">Send invite</button>
+        <p class="error wide" id="invite-error" role="alert" hidden></p>
+        <p class="devlink wide" id="invite-dev" hidden></p>
+      </form>
+    </div>
+
+    <section class="view" style="gap:12px">
+      <h2 id="list-title">Ambassadors</h2>
+      <ul class="people" id="people"></ul>
+      <p class="empty" id="empty" hidden>Nobody yet. Invite someone above.</p>
+    </section>
+
+    <footer class="top-links">
+      <span id="who-line" class="empty"></span>
+      <button class="link" id="signout" type="button">Sign out</button>
+    </footer>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="../../config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"
+        integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o"
+        crossorigin="anonymous"></script>
+<script>
+(function () {
+  'use strict';
+
+  var CFG = window.PAY_CONFIG || {};
+  var MOCK = window.AMBASSADORS_MOCK || null;
+  var $ = function (id) { return document.getElementById(id); };
+  var state = { email: '', people: [], busy: false };
+
+  var VIEWS = ['loading', 'signin', 'denied', 'app'];
+  function show(id) { VIEWS.forEach(function (v) { $(v).hidden = v !== id; }); }
+
+  var toastTimer = null;
+  function toast(text) {
+    var t = $('toast');
+    t.textContent = text;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 6000);
+  }
+  function money(minor) { return '£' + (minor / 100).toFixed(2); }
+  function day(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/London' });
+  }
+
+  // ---- auth: the dashboard's (Google, implicit flow, shared storage key) ----
+  var sb = null;
+  if (!MOCK && window.supabase && CFG.supabaseUrl) {
+    sb = window.supabase.createClient(CFG.supabaseUrl, CFG.anonKey, {
+      auth: { flowType: 'implicit', persistSession: true, autoRefreshToken: true, detectSessionInUrl: true,
+              storageKey: 'hawktivity-dashboard-auth' }
+    });
+  }
+  function signIn() {
+    $('signin-btn').disabled = true;
+    sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: location.origin + location.pathname, queryParams: { prompt: 'select_account' } }
+    }).then(function (r) {
+      if (r.error) { $('signin-btn').disabled = false; $('signin-error').textContent = r.error.message; $('signin-error').hidden = false; }
+    });
+  }
+  function signOut() {
+    if (MOCK) { show('signin'); return Promise.resolve(); }
+    return sb.auth.signOut().then(function () { show('signin'); $('signin-btn').disabled = false; });
+  }
+
+  var currentUser = null;
+  function onSession(session) {
+    if (location.hash.indexOf('access_token') >= 0) history.replaceState(null, '', location.pathname + location.search);
+    if (!session) { currentUser = null; show('signin'); $('signin-btn').disabled = false; return; }
+    if (currentUser === session.user.id) return;
+    currentUser = session.user.id;
+    state.email = session.user.email || '';
+    load();
+  }
+
+  function rpc(name, args) {
+    if (MOCK) return Promise.resolve(MOCK.call(name, args || {}));
+    return sb.rpc(name, args || {});
+  }
+  function invoke(body) {
+    if (MOCK) return Promise.resolve(MOCK.invoke(body));
+    return sb.functions.invoke('ambassador', { body: body }).then(function (r) {
+      // A refusal (4xx) comes back as an error whose context is the response: read its JSON.
+      if (r.error && r.error.context && typeof r.error.context.json === 'function') {
+        return r.error.context.json().then(function (data) { return { data: data }; }, function () { return { data: { ok: false } }; });
+      }
+      return { data: r.data || { ok: false } };
+    });
+  }
+
+  // ---- the list ------------------------------------------------------------
+  function load() {
+    return rpc('dashboard_ambassadors').then(function (r) {
+      if (r.error) {
+        if (r.error.code === '42501') { $('denied-email').textContent = state.email || 'This account'; show('denied'); return; }
+        throw r.error;
+      }
+      state.people = r.data || [];
+      $('who-line').textContent = 'Signed in as ' + state.email;
+      if (CFG.environment && CFG.environment !== 'prod') { $('envtag').textContent = MOCK ? 'mock' : CFG.environment; $('envtag').hidden = false; }
+      if (MOCK) $('back-link').href = '../?mock';
+      render();
+      show('app');
+    }).catch(function (e) {
+      show('app');
+      toast('Couldn’t load the list: ' + ((e && e.message) || 'try again'));
+    });
+  }
+
+  var STATUS = { active: 'Active', invited: 'Invited', invite_expired: 'Invite ran out', ended: 'Ended', unlinked: 'Player deleted' };
+
+  function render() {
+    var list = $('people');
+    list.textContent = '';
+    var current = state.people.filter(function (p) { return p.status !== 'ended'; }).length;
+    $('list-title').textContent = 'Ambassadors · ' + current;
+    $('empty').hidden = state.people.length > 0;
+
+    state.people.forEach(function (p) {
+      var li = document.createElement('li');
+      var who = document.createElement('div');
+      who.className = 'who';
+      var name = [p.firstName, p.lastName].filter(Boolean).join(' ');
+      who.textContent = name || p.email;
+      var sub = document.createElement('small');
+      sub.textContent = (name ? p.email + ' · ' : '') + 'invited ' + day(p.invitedAt) + ' by ' + (p.invitedBy || '?')
+        + (p.note ? ' · ' + p.note : '') + (p.isTest ? ' · test' : '');
+      who.appendChild(sub);
+
+      var chip = document.createElement('span');
+      chip.className = 'chip ' + p.status;
+      chip.textContent = STATUS[p.status] || p.status;
+
+      var facts = document.createElement('div');
+      facts.className = 'facts';
+      function fact(label, value, after) {
+        var span = document.createElement('span');
+        span.appendChild(document.createTextNode(label ? label + ' ' : ''));
+        var strong = document.createElement('b');
+        strong.textContent = value;
+        span.appendChild(strong);
+        if (after) span.appendChild(document.createTextNode(' ' + after));
+        facts.appendChild(span);
+      }
+      if (p.enrolledAt) fact('Joined', day(p.enrolledAt));
+      fact('Games covered', String(p.covers || 0), '(' + money(p.coveredMinor || 0) + ')');
+      if (p.lastCoverAt) fact('Last', day(p.lastCoverAt));
+      if (p.coveredToday) fact('', 'Used today');
+      if (p.status === 'invited' && p.inviteExpiresAt) fact('Link works until', day(p.inviteExpiresAt));
+      if (p.endedAt) fact('Ended', day(p.endedAt), p.endedBy ? 'by ' + p.endedBy : '');
+
+      li.appendChild(who);
+      li.appendChild(chip);
+      li.appendChild(facts);
+
+      if (p.status !== 'ended') {
+        var actions = document.createElement('div');
+        actions.className = 'actions';
+        var again = document.createElement('button');
+        again.className = 'small';
+        again.type = 'button';
+        again.textContent = p.status === 'active' ? 'Send a link for a new phone' : 'Send the invite again';
+        again.addEventListener('click', function () { resend(p, again); });
+        var end = document.createElement('button');
+        end.className = 'small danger';
+        end.type = 'button';
+        end.textContent = 'End';
+        end.addEventListener('click', function () { endOne(p, end); });
+        actions.appendChild(again);
+        actions.appendChild(end);
+        li.appendChild(actions);
+      }
+      list.appendChild(li);
+    });
+  }
+
+  // ---- actions --------------------------------------------------------------
+  function sent(data, email) {
+    $('invite-dev').hidden = true;
+    if (data.sent === 'dev' && data.devLink) {
+      // Development backend: no email goes out, so the link is shown instead.
+      $('invite-dev').textContent = 'Test system, no email sent. The link: ' + data.devLink;
+      $('invite-dev').hidden = false;
+    }
+    toast(data.sent === 'dev' ? 'Invite made for ' + email + ' (test system: no email).' : 'Invite emailed to ' + email + '.');
+  }
+
+  $('invite-form').addEventListener('submit', function (event) {
+    event.preventDefault();
+    if (state.busy) return;
+    var email = $('invite-email').value.trim();
+    $('invite-error').hidden = true;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      $('invite-error').textContent = 'That email address doesn’t look right.';
+      $('invite-error').hidden = false;
+      return;
+    }
+    state.busy = true;
+    $('invite-btn').disabled = true;
+    invoke({ action: 'admin_invite', email: email, firstName: $('invite-name').value.trim(), note: $('invite-note').value.trim() })
+      .then(function (r) {
+        var data = r.data || {};
+        if (!data.ok) {
+          $('invite-error').textContent = data.message || 'The invite didn’t go. Try again.';
+          $('invite-error').hidden = false;
+          return;
+        }
+        sent(data, email);
+        $('invite-form').reset();
+        return load();
+      })
+      .catch(function () {
+        $('invite-error').textContent = 'The invite didn’t go. Try again.';
+        $('invite-error').hidden = false;
+      })
+      .then(function () { state.busy = false; $('invite-btn').disabled = false; });
+  });
+
+  function resend(p, button) {
+    button.disabled = true;
+    invoke({ action: 'admin_resend', id: p.id }).then(function (r) {
+      var data = r.data || {};
+      if (!data.ok) { toast(data.message || 'That didn’t go. Try again.'); return; }
+      sent(data, p.email);
+      return load();
+    }).catch(function () { toast('That didn’t go. Try again.'); })
+      .then(function () { button.disabled = false; });
+  }
+
+  function endOne(p, button) {
+    var name = [p.firstName, p.lastName].filter(Boolean).join(' ') || p.email;
+    if (!window.confirm('End ' + name + ' as an ambassador? Their share stops being covered straight away. You can invite them again later.')) return;
+    button.disabled = true;
+    rpc('dashboard_end_ambassador', { p_id: p.id }).then(function (r) {
+      if (r.error) throw r.error;
+      toast(name + ' is no longer an ambassador.');
+      return load();
+    }).catch(function () { toast('That didn’t work. Try again.'); button.disabled = false; });
+  }
+
+  $('signin-btn').addEventListener('click', signIn);
+  $('signout').addEventListener('click', signOut);
+  $('denied-switch').addEventListener('click', function () { signOut().then(signIn); });
+
+  if (MOCK) {
+    currentUser = 'mock';
+    state.email = MOCK.email;
+    load();
+  } else if (!sb) {
+    show('signin');
+    $('signin-error').textContent = 'This copy of the page has no database to talk to.';
+    $('signin-error').hidden = false;
+    $('signin-btn').disabled = true;
+  } else {
+    sb.auth.onAuthStateChange(function (event, session) {
+      setTimeout(function () { onSession(session); }, 0);
+    });
+  }
+})();
+</script>
+</body>
+</html>
