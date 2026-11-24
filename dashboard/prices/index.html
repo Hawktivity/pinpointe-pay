@@ -155,6 +155,7 @@ h2 {
 .board .line {
   font: 500 17px/1.45 var(--body); color: #fff; white-space: pre-wrap; overflow-wrap: anywhere;
 }
+.board .line.lane { font-size: 14px; }
 .board .count { font: 500 11px/1 var(--mono); color: var(--dimmer); }
 .board .count.long { color: var(--warn); }
 
@@ -400,7 +401,7 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
         <div class="field">
           <label for="note">Words on the welcome line <span class="hint">(optional)</span></label>
           <input class="text" id="note" maxlength="120" placeholder="Launch, to 6 Dec:  {price}">
-          <p class="hint"><code>{price}</code> stands for the lengths and their prices (“30 min £12 · 1 hour £20 · 90 min £30”), and then nothing else follows. Without it, the words go in front of the usual line. <span id="note-count">0</span>/120.</p>
+          <p class="hint"><code>{price}</code> stands for the lengths and their prices (“30 min £12 · 1 hour £20 · 90 min £30”). Without it, the words go in front of them. A board price also says “Per lane, up to 8 players” on a line of its own underneath, whatever the words. <span id="note-count">0</span>/120.</p>
         </div>
 
         <div class="field" id="bands-field">
@@ -436,6 +437,7 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
         <div class="board" aria-live="polite">
           <span class="lbl" id="pv-label">The board’s welcome line will read</span>
           <span class="line" id="pv-line"></span>
+          <span class="line lane" id="pv-lane" hidden></span>
           <span class="count" id="pv-count"></span>
         </div>
         <ul class="lengths" id="pv-lengths"></ul>
@@ -559,10 +561,11 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     var amount = money(minor, currency);
     return minor % 100 === 0 && /\.00$/.test(amount) ? amount.slice(0, -3) : amount;
   }
-  // PaymentWording.PriceLine as of board release 1.42.41: every length with its price, then
-  // "per lane, up to 8 players" for a board price or "per person" per player. {price} in the
-  // note stands for the priced lengths; a note without it goes in front of the line.
-  function priceLine(row, lengths, maxPlayers, lastEnd) {
+  // PaymentWording.PriceLine as of suite#248: every length with its price, then "per person"
+  // per player. {price} in the note stands for the priced lengths; a note without it goes in
+  // front of the line. A board price says "Per lane, up to 8 players" on a line of its own
+  // (laneLine), so a long note can't push it off as it did at Metropolis (23 Nov 2026).
+  function priceLine(row, lengths, lastEnd) {
     if (!row || !lengths || !lengths.length) return '';
     var priced = lengths.map(function (m) {
       return spoken(m) + ' ' + shortMoney(quote(row, m, 1).minor, row.currency);
@@ -573,15 +576,23 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
       var noted = note.split('{price}').join(priced);
       return closing ? noted + ' · ' + closing : noted;
     }
-    var line = row.model === 'per_group'
-      ? priced + ' · ' + (closing || 'per lane, up to ' + maxPlayers + ' players')
-      : priced + ' per person' + (closing ? ' · ' + closing : '');
+    var line = (row.model === 'per_group' ? priced : priced + ' per person') + (closing ? ' · ' + closing : '');
     return note ? note + '  ' + line : line;
+  }
+  // PaymentWording.LaneLine: the line under the prices on a board sold as a whole.
+  function laneLine(row, maxPlayers) {
+    return row && row.model === 'per_group' ? 'Per lane, up to ' + maxPlayers + ' players' : '';
+  }
+  // What the board will say, for a sentence: both lines when there are two.
+  function boardSays(row) {
+    var lane = welcomeLane(row);
+    return '“' + welcomeLine(row) + '”' + (lane ? ', with “' + lane + '” under it' : '');
   }
   // WelcomeScreenConsoleScreen.ShowPricing outside the last hour before closing (which drops
   // the lengths that no longer fit and says when the last game ends). Boards allow 8 players
   // unless their config says otherwise (PlayerLimit.Default).
-  function welcomeLine(row) { return priceLine(row, row.lengths || [], 8); }
+  function welcomeLine(row) { return priceLine(row, row.lengths || []); }
+  function welcomeLane(row) { return laneLine(row, 8); }
   // PriceCalculator.Quote: an override per length, else rate x minutes / period, multiplied
   // first, divided once, rounded half up. A board price ignores the number of players.
   function quote(row, minutes, players) {
@@ -901,6 +912,7 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     return h('div', { cls: 'board' }, [
       h('span', { cls: 'lbl', text: label }),
       h('span', { cls: 'line', text: line }),
+      welcomeLane(row) ? h('span', { cls: 'line lane', text: welcomeLane(row) }) : null,
       h('span', { cls: 'count' + (line.length > LONG_LINE ? ' long' : ''),
                   text: line.length + ' characters' + (line.length > LONG_LINE ? ': long enough to reach the SEE THE GAMES card' : '') })
     ]);
@@ -1427,6 +1439,8 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
 
     var line = ok ? welcomeLine(row) : '';
     $('pv-line').textContent = ok ? line : 'Type a price per hour to see it.';
+    $('pv-lane').textContent = ok ? welcomeLane(row) : '';
+    $('pv-lane').hidden = !$('pv-lane').textContent;
     $('pv-count').textContent = ok ? line.length + ' characters' + (line.length > LONG_LINE ? ': long enough to reach the SEE THE GAMES card' : '') : '';
     $('pv-count').classList.toggle('long', ok && line.length > LONG_LINE);
     $('note-count').textContent = $('note').value.length;
@@ -1570,18 +1584,17 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     var wrong = problems(d);
     if (wrong.length) { showFormError(wrong.join(' ')); markBad(); return; }
     showFormError('');
-    var line = welcomeLine(d);
     var ed = state.editing;
     if (ed && d.later) {
       $('confirm-text').textContent = 'The price due ' + when(ed.effectiveFrom) + ' is replaced. From ' + when(d.startsAt.toISOString()) +
-        ', ' + nameOf(v) + '’s board will read “' + line + '”. Until then it keeps today’s price.';
+        ', ' + nameOf(v) + '’s board will read ' + boardSays(d) + '. Until then it keeps today’s price.';
     } else if (ed) {
-      $('confirm-text').textContent = nameOf(v) + '’s board will read “' + line + '” from its next welcome screen, instead of from ' +
+      $('confirm-text').textContent = nameOf(v) + '’s board will read ' + boardSays(d) + ' from its next welcome screen, instead of from ' +
         when(ed.effectiveFrom) + '.';
     } else {
       $('confirm-text').textContent = d.later
-        ? 'From ' + when(d.startsAt.toISOString()) + ', ' + nameOf(v) + '’s board will read “' + line + '”. Until then it keeps today’s price.'
-        : nameOf(v) + '’s board will read “' + line + '” from its next welcome screen.';
+        ? 'From ' + when(d.startsAt.toISOString()) + ', ' + nameOf(v) + '’s board will read ' + boardSays(d) + '. Until then it keeps today’s price.'
+        : nameOf(v) + '’s board will read ' + boardSays(d) + ' from its next welcome screen.';
     }
     $('confirm-text').textContent += ' ' + pricingWords(d);
     if (d.bands.length) {
