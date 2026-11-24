@@ -285,6 +285,18 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
   font-size: .93rem;
 }
 
+/* --- a private event's night (24 Nov 2026) ---------------------------------
+   The clips promise, above the form, where nobody can miss it. */
+.event-clips {
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--go);
+  border-radius: 3px;
+  padding: .9rem 1rem;
+  margin: 0 0 1.4rem;
+}
+.event-clips b { color: var(--text, inherit); }
+
 /* --- remembered players ----------------------------------------------------
    The returning card sits above the form; the Remember me card on the done screen. */
 .saved {
@@ -409,6 +421,11 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
 
     <div id="form-notice-slot"></div>
 
+    <!-- A private event's night only (describe says event): the clips promise, up front. -->
+    <p class="event-clips" id="event-clips" hidden><b>Get your clips by email.</b> Add your email
+      and after tonight we'll send you your scores and videos of your best throws. We never sell
+      your email and never spam you.</p>
+
     <!-- Only when this phone can use a passkey and the backend offers them. -->
     <div class="saved" id="returning" hidden>
       <h2>Played here before?</h2>
@@ -455,14 +472,14 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
           <input id="firstName" name="firstName" type="text" autocomplete="given-name"
                  enterkeyhint="next" maxlength="40" required>
         </div>
-        <div class="field">
+        <div class="field" id="lastName-field">
           <label for="lastName">Last name <span class="opt">optional</span></label>
           <input id="lastName" name="lastName" type="text" autocomplete="family-name"
                  enterkeyhint="next" maxlength="40">
         </div>
       </div>
 
-      <div class="field">
+      <div class="field" id="dateOfBirth-field">
         <label for="dateOfBirth">Date of birth</label>
         <div class="date-entry">
           <input id="dateOfBirth" name="dateOfBirth" type="text" inputmode="numeric"
@@ -517,7 +534,7 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
         </label>
       </div>
 
-      <div class="field">
+      <div class="field" id="mobile-field">
         <label for="mobileNumber">Mobile <span class="opt">optional</span></label>
         <input id="mobileNumber" name="mobileNumber" type="tel" autocomplete="tel"
                inputmode="tel" enterkeyhint="next" maxlength="30">
@@ -542,7 +559,7 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
         </label>
         <label class="tick" for="disclaimer">
           <input id="disclaimer" type="checkbox">
-          <span>I've read these and I'll play by them.</span>
+          <span id="disclaimer-text">I've read these and I'll play by them.</span>
         </label>
       </div>
 
@@ -650,6 +667,46 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
   // Whether the backend can email a code. Where it can, Remember me needs a proved email and
   // a new phone can get saved details back; where it can't, the page is as it was before.
   var emailCodes = false;
+  // A private event's night (24 Nov 2026): set from describe, never from the code itself.
+  var eventMode = null;
+
+  /** Venue-time HH:MM of an ISO instant, in London (every venue so far). */
+  function localTime(iso) {
+    try {
+      return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' });
+    } catch (e) { return ''; }
+  }
+
+  /**
+   * The short sign-up: a first name, the email (asked for up front, for the clips) and one tick
+   * that says 18 or over. No last name, date of birth or mobile: everybody here is an adult on a
+   * company night, and every field is a few more seconds before somebody can play.
+   */
+  function applyEventMode(ev) {
+    eventMode = ev;
+    document.querySelector('#screen-form h1').textContent = 'Join the darts';
+    var lede = document.querySelector('#screen-form .lede');
+    lede.textContent = '';
+    lede.appendChild(document.createTextNode('Free darts tonight for '));
+    var b = document.createElement('b');
+    b.textContent = ev.clientName;
+    lede.appendChild(b);
+    var until = localTime(ev.endsAt);
+    lede.appendChild(document.createTextNode((until ? ' until ' + until : '') +
+      '. Sign up once and you’re on the list all night: someone at the board taps you in for each game.'));
+    el('event-clips').hidden = false;
+    ['lastName-field', 'dateOfBirth-field', 'minor-note', 'mobile-field'].forEach(function (id) {
+      el(id).hidden = true;
+    });
+    // The email straight after the name, where it is the next thing to fill in.
+    var row = el('firstName').closest('.row');
+    row.parentNode.insertBefore(el('email-field'), row.nextSibling);
+    el('email').placeholder = 'For your clips and scores';
+    // The box above already says what the email is for.
+    el('email-hint').hidden = true;
+    el('disclaimer-text').textContent = 'I’m 18 or over, I’ve read these and I’ll play by them.';
+    document.title = 'Join the darts';
+  }
 
   function el(id) { return document.getElementById(id); }
 
@@ -726,6 +783,8 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
         'It has had all the registrations it can take. Ask a member of staff.');
       el('submit').disabled = true;
     }
+
+    if (data.event && data.event.clientName) { applyEventMode(data.event); }
 
     show('form');
     el('firstName').focus();
@@ -950,7 +1009,7 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
       return;
     }
 
-    if (ageFrom(birthDateIso()) === null) {
+    if (!eventMode && ageFrom(birthDateIso()) === null) {
       if (el('dateOfBirth').value.trim()) {
         notice('form-notice-slot', 'Check your date of birth',
           'Type it as day, month and year, like 25/12/1990, or pick it from the calendar.');
@@ -964,7 +1023,8 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
 
     if (!el('disclaimer').checked) {
       notice('form-notice-slot', 'One more thing',
-        'Tick to say you’ve read the rules before you throw.');
+        eventMode ? 'Tick to say you’re 18 or over and you’ve read the rules.'
+                  : 'Tick to say you’ve read the rules before you throw.');
       el('disclaimer').focus();
       return;
     }
@@ -987,7 +1047,6 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
       lastName: el('lastName').value.trim(),
       email: isMinor() ? '' : el('email').value.trim(),
       mobileNumber: el('mobileNumber').value.trim(),
-      dateOfBirth: birthDateIso(),
       acceptedDisclaimer: true,
       // Their own tick, separate from the rules. Exactly true or false; a minor is always false.
       marketingConsent: !isMinor() && el('marketingConsent').checked === true,
@@ -995,6 +1054,13 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
       offersConsent: !isMinor() && el('email').value.trim() !== '' && el('offersConsent').checked === true,
       photo: isMinor() ? null : photoBase64
     };
+
+    // At an event the tick says 18 or over and no date of birth is sent; otherwise the date.
+    if (eventMode) {
+      details.adultConfirmed = true;
+    } else {
+      details.dateOfBirth = birthDateIso();
+    }
 
     post(Object.assign({ code: code, submissionId: submissionId }, details)).then(function (res) {
       var data = res.data || {};
@@ -1510,7 +1576,8 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
   }
 
   function offerRemember(registered, details) {
-    if (!registered.canRemember) { return; }
+    // Remember me keeps a date of birth, which an event sign-up never gave.
+    if (!registered.canRemember || eventMode) { return; }
     enrolDetails = details;
     passkeysUsable().then(function (usable) {
       if (!usable) { return; }
