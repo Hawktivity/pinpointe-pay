@@ -217,7 +217,7 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
 
   <main id="story" class="hidden">
     <div class="topbar">
-      <span class="brand">Hawktivity Darts</span>
+      <span class="brand">GroupDarts</span>
       <label class="switch">
         <span class="hidden" id="switch-label">See the night as</span>
         <select id="switch" aria-labelledby="switch-label"></select>
@@ -310,7 +310,7 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
 
     <footer>
       <p id="expiry"></p>
-      <p>Hawktivity Darts</p>
+      <p>GroupDarts</p>
     </footer>
   </main>
 </div>
@@ -430,7 +430,7 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
     g.textBaseline = 'alphabetic';
     g.fillStyle = '#c0504b';
     g.font = Math.round(band * 0.36) + 'px Anton, Impact, sans-serif';
-    g.fillText('HAWKTIVITY DARTS', pad, img.height + band * 0.47);
+    g.fillText('GROUPDARTS', pad, img.height + band * 0.47);
     g.fillStyle = '#f0f0f2';
     g.font = '600 ' + Math.round(band * 0.19) + 'px Montserrat, sans-serif';
     g.fillText((story.venue + ' · ' + shortDate(story.startedAt)).toUpperCase(), pad, img.height + band * 0.8);
@@ -472,7 +472,7 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
 
   /** What a share says alongside the file: always the pub and the brand. */
   function shareText(what) {
-    return what + ' at ' + story.venue + ' · Hawktivity Darts';
+    return what + ' at ' + story.venue + ' · GroupDarts';
   }
 
   function mediaButtons(url, makeFile, text) {
@@ -914,7 +914,7 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
       });
       var body = await response.json().catch(function () { return {}; });
       if (response.status === 401) { problem('Sign in again', 'Your sign-in to the sessions dashboard has run out.', false, DASHBOARD); return null; }
-      if (response.status === 403) { problem('Not for this account', 'Only Hawktivity people signed in to the sessions dashboard can open a guest’s page this way.', false, DASHBOARD); return null; }
+      if (response.status === 403) { problem('Not for this account', 'Only the GroupDarts team, signed in to the sessions dashboard, can open a guest’s page this way.', false, DASHBOARD); return null; }
       if (response.status === 404) { problem('Nothing to show', 'No clips email went out for this guest.'); return null; }
       if (response.status === 410) { problem('These highlights have gone', 'Clips and photos are kept for 30 days after a game, then deleted for good.'); return null; }
       if (!response.ok) throw new Error(body.error || response.status);

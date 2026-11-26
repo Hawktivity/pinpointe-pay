@@ -89,7 +89,7 @@ details.terms li { margin: 0 0 .5rem; }
 </head>
 <body>
 <div class="wrap">
-  <p class="brand">Hawktivity Darts</p>
+  <p class="brand">GroupDarts</p>
 
   <section id="loading">
     <p class="lede">One moment&hellip;</p>
@@ -117,13 +117,13 @@ details.terms li { margin: 0 0 .5rem; }
       <details class="terms" id="terms">
         <summary>Ambassador terms</summary>
         <ol>
-          <li>You must be 18 or over, and invited by Hawktivity.</li>
+          <li>You must be 18 or over, and invited by GroupDarts.</li>
           <li>Once a day (UK time), your own share of a new game is covered, up to &pound;5, when at least one
             other person in your group pays the rest by card. It doesn&rsquo;t cover extra time, joining a game
             that&rsquo;s already running, the free 15 or vouchers.</li>
           <li>The covered share is just for you. Use your own phone and your own Face ID or fingerprint, and
             don&rsquo;t let anyone else use them for it.</li>
-          <li>When you post about Hawktivity Darts, say you&rsquo;re an ambassador (for example with #ad).
+          <li>When you post about GroupDarts, say you&rsquo;re an ambassador (for example with #ad).
             Don&rsquo;t promote it to under-18s, and don&rsquo;t tie it to drinking offers.</li>
           <li>We can change or end the programme, or your place on it, at any time, and we will if it&rsquo;s
             misused. You can stop at any time by replying to any of our emails.</li>
@@ -262,7 +262,7 @@ details.terms li { margin: 0 0 .5rem; }
   // ---- 1. the invite ------------------------------------------------------------
   function start() {
     if (!invite) {
-      problem('Ambassadors', 'Hawktivity Darts ambassadors are invited by us. If you have an invite, open the link in the email we sent you.');
+      problem('Ambassadors', 'GroupDarts ambassadors are invited by us. If you have an invite, open the link in the email we sent you.');
       return;
     }
     Promise.all([post({ action: 'invite' }), window.HawkPasskey.usable()]).then(function (both) {
@@ -296,7 +296,7 @@ details.terms li { margin: 0 0 .5rem; }
       }
       show('details');
     }).catch(function () {
-      problem('We can’t reach Hawktivity', 'Check this phone has signal and try again.');
+      problem('We can’t reach GroupDarts', 'Check this phone has signal and try again.');
     });
   }
 
@@ -328,7 +328,7 @@ details.terms li { margin: 0 0 .5rem; }
     }).catch(function () {
       busy = false;
       el('next').disabled = false;
-      error('details-error', 'We can’t reach Hawktivity. Check this phone has signal and try again.');
+      error('details-error', 'We can’t reach GroupDarts. Check this phone has signal and try again.');
     });
   });
 
@@ -368,7 +368,7 @@ details.terms li { margin: 0 0 .5rem; }
       if (e && e.name === 'InvalidStateError') {
         // This phone already holds a passkey for them (a remembered player, or an earlier
         // invite). Using it is enough; the options for that are fetched now, before the tap.
-        el('faceid-note').textContent = 'This phone already has your Face ID for Hawktivity Darts. Use that instead.';
+        el('faceid-note').textContent = 'This phone already has your Face ID for GroupDarts. Use that instead.';
         el('faceid-note').classList.remove('hidden');
         el('create').classList.add('hidden');
         post({ action: 'enrol_existing_options' }).then(function (data) {
