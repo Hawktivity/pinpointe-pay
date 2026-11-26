@@ -199,6 +199,27 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
 .spinner { width: 2.4rem; height: 2.4rem; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--brick-lit); margin: 0 auto 1rem; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } .reel { scroll-behavior: auto; } }
+/* The group leader's route (26 Nov 2026): the group page, the under-18 note, removing clips. */
+.group-head { margin: .4rem 0 1rem; }
+.group-head .eyebrow { font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; font-weight: 700; color: var(--dim); }
+.group-head h1 { font-size: 2.3rem; line-height: 1.05; margin: .2rem 0 .3rem; }
+.lead-note { background: #17241b; border: 1px solid #2c4a33; color: #d4ead9; border-radius: 12px; padding: .8rem .9rem; font-size: .9rem; line-height: 1.45; margin: 0 0 1.1rem; }
+.gplayers { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+.gplayer { background: var(--ink-2); border: 1px solid var(--line); border-radius: 14px; padding: .7rem; display: grid; grid-template-columns: 3.6rem 1fr; gap: .25rem .75rem; align-items: center; }
+.gplayer .gthumb { grid-row: span 2; width: 3.6rem; height: 3.6rem; border-radius: 10px; background: var(--ink-3); object-fit: cover; }
+.gplayer .gname { font-weight: 700; font-size: 1.02rem; display: flex; gap: .45rem; align-items: center; flex-wrap: wrap; min-width: 0; }
+.gplayer .gmeta { color: var(--dim); font-size: .85rem; min-width: 0; }
+.gplayer .gacts { grid-column: 1 / -1; display: flex; gap: .45rem; flex-wrap: wrap; margin-top: .35rem; }
+.gplayer .gacts .btn { padding: .5rem .85rem; font-size: .85rem; }
+.tag { font-size: .62rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; border-radius: 999px; padding: .15rem .5rem; }
+.tag.u18 { background: rgba(192, 80, 75, .18); color: #f0a39e; }
+.tag.lead { background: rgba(217, 164, 65, .16); color: var(--gold); }
+.btn.danger { background: transparent; border-color: #6a2f2c; color: #f0a39e; }
+.minor-note { background: #2a2416; border: 1px solid #5c4b22; border-radius: 12px; padding: .7rem .9rem; font-size: .85rem; margin: 0 0 1rem; }
+.removebox { margin-top: 2.4rem; border: 1px solid var(--line); border-radius: 14px; padding: 1rem; }
+.removebox .confirm { margin-top: .8rem; background: #221615; border: 1px solid #5a2f2c; border-radius: 12px; padding: .9rem; }
+.removebox .confirm p { margin: 0 0 .7rem; font-size: .9rem; }
+.sharebox { margin-top: .5rem; grid-column: 1 / -1; background: var(--ink-3); border-radius: 10px; padding: .6rem .7rem; font-size: .8rem; word-break: break-all; }
 .toast { position: fixed; left: 50%; bottom: calc(1.2rem + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--paper); color: var(--ink); font-weight: 600; font-size: .85rem; border-radius: 999px; padding: .55rem 1rem; box-shadow: 0 6px 24px rgba(0,0,0,.4); }
 </style>
 </head>
@@ -215,6 +236,22 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
     <button id="retry" class="btn hidden" type="button">Try again</button>
   </div>
 
+  <main id="group" class="hidden">
+    <div class="topbar">
+      <span class="brand">Hawktivity Darts</span>
+    </div>
+    <div class="group-head">
+      <div class="eyebrow" id="group-when"></div>
+      <h1 class="display">Your group&rsquo;s clips</h1>
+    </div>
+    <p class="lead-note">This page is for you only. To give a parent or guardian their child&rsquo;s clips, tap <b>Send to parent</b> and send them that link. It opens their child&rsquo;s page and nobody else&rsquo;s.</p>
+    <ul id="gplayers" class="gplayers"></ul>
+    <footer>
+      <p id="group-expiry"></p>
+      <p>Questions, or anything to remove: darts@hawktivity.com</p>
+    </footer>
+  </main>
+
   <main id="story" class="hidden">
     <div class="topbar">
       <span class="brand">Hawktivity Darts</span>
@@ -226,6 +263,7 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
 
     <p id="staff-note" class="staff-note hidden"></p>
     <p id="viewing" class="viewing hidden"></p>
+    <p id="minor-note" class="minor-note hidden"></p>
     <div id="confirmed" class="confirmed hidden" role="status">
       <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="#2f7a3d"></circle><path d="M6 11.5l3.2 3.2L16 8" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
       <span><b>Email confirmed.</b> You’re on our offers list. Unsubscribe any time from any of our emails.</span>
@@ -308,6 +346,19 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
       <a id="review-link" class="btn primary" target="_blank" rel="noopener noreferrer">Leave a review</a>
     </div>
 
+    <div id="remove-sec" class="removebox hidden">
+      <button type="button" id="remove-open" class="btn danger"></button>
+      <div id="remove-confirm" class="confirm hidden">
+        <p id="remove-text"></p>
+        <div class="actions">
+          <button type="button" id="remove-yes" class="btn primary">Remove for good</button>
+          <button type="button" id="remove-no" class="btn">Keep them</button>
+        </div>
+      </div>
+      <p id="remove-done" class="muted hidden" role="status"></p>
+      <p class="muted" style="font-size:.8rem;margin:.8rem 0 0">Is a child in the background of someone else&rsquo;s clip? Email darts@hawktivity.com with the date and their first name, and we&rsquo;ll remove that clip.</p>
+    </div>
+
     <footer>
       <p id="expiry"></p>
       <p>Hawktivity Darts</p>
@@ -328,6 +379,12 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
   // using the dashboard's own sign-in on this site in place of the guest's link, which the
   // database cannot rebuild. get-story checks the sign-in, and does not count it as the guest
   // opening their link.
+  // The group leader's route (26 Nov 2026): #group.<token> is the leader's link to the group
+  // page; #player.<token> is a link the leader made for one player's parent. Neither ever goes
+  // to a child. Pages opened this way show one player's clips, with no review link or offers.
+  var groupToken = (/^group\.([A-Za-z0-9_-]{43})$/.exec(token) || [])[1] || null;
+  var playerToken = (/^player\.([A-Za-z0-9_-]{43})$/.exec(token) || [])[1] || null;
+  var groupPlayer = null; // the player the leader opened from the group page
   var staffClaim = (/^staff=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(token) || [])[1] || null;
   var DASHBOARD = 'dashboard/';
   var story = null;
@@ -588,7 +645,9 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
 
   function render() {
     var me = player(view);
-    var mine = view === story.you;
+    // On the leader's route the page is one player's, read by an adult: never "you".
+    var own = !story.audience || story.audience === 'guest';
+    var mine = own && view === story.you;
     var their = mine ? 'Your' : possessive(me.name);
     document.title = possessive(me.name) + ' night at ' + story.venue;
 
@@ -596,22 +655,35 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
     var sel = $('switch');
     clear(sel);
     story.players.slice().sort(function (a, b) { return (b.key === story.you) - (a.key === story.you); }).forEach(function (p) {
-      var o = el('option', { value: p.key, text: p.key === story.you ? p.name + ' (you)' : p.name });
+      var o = el('option', { value: p.key, text: p.key === story.you && own ? p.name + ' (you)' : p.name });
       if (p.key === view) o.selected = true;
       sel.appendChild(o);
     });
 
     var viewing = $('viewing');
     clear(viewing);
-    if (!mine) {
+    if (view !== story.you) {
       viewing.appendChild(document.createTextNode('You’re looking at ' + possessive(me.name) + ' night. '));
-      var back = el('button', { type: 'button', text: 'Back to yours' });
+      var back = el('button', { type: 'button', text: own ? 'Back to yours' : 'Back to ' + possessive(nameOf(story.you)) });
       back.addEventListener('click', function () { setView(story.you); });
       viewing.appendChild(back);
+      viewing.classList.remove('hidden');
+    } else if (groupToken) {
+      viewing.appendChild(document.createTextNode('You’re looking at ' + possessive(me.name) + ' page. '));
+      var toGroup = el('button', { type: 'button', text: 'Back to the group' });
+      toGroup.addEventListener('click', showGroup);
+      viewing.appendChild(toGroup);
       viewing.classList.remove('hidden');
     } else {
       viewing.classList.add('hidden');
     }
+
+    var you = player(story.you);
+    $('minor-note').textContent = you.isMinor && !own
+      ? you.name + ' is under 18. These clips were sent to the adult responsible for the group. Please don’t post them publicly.'
+      : '';
+    $('minor-note').classList.toggle('hidden', !(you.isMinor && !own));
+    renderRemove(own);
 
     // Hero
     $('hero-name').textContent = possessive(me.name) + ' night';
@@ -783,7 +855,7 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
     var options = [{ key: 'all', label: 'Everyone' }];
     story.players.forEach(function (p) {
       var n = story.highlights.filter(function (h) { return h.player === p.key; }).length;
-      if (n > 0) options.push({ key: p.key, label: (p.key === story.you ? 'You' : p.name) + ' ' + n });
+      if (n > 0) options.push({ key: p.key, label: (p.key === story.you && (!story.audience || story.audience === 'guest') ? 'You' : p.name) + ' ' + n });
     });
     // Mine first.
     options.sort(function (a, b) { return (b.key === view) - (a.key === view); });
@@ -856,6 +928,7 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
   function problem(title, text, canRetry, link) {
     $('loading').classList.add('hidden');
     $('story').classList.add('hidden');
+    $('group').classList.add('hidden');
     $('problem').classList.remove('hidden');
     $('problem-title').textContent = title;
     $('problem-text').textContent = text;
@@ -931,6 +1004,12 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
 
     if (isLocal && window.STORY_DEMO) {
       story = window.STORY_DEMO;
+    } else if (groupToken) {
+      showGroup();
+      return;
+    } else if (playerToken) {
+      story = await groupCall({ playerToken: playerToken });
+      if (!story) return;
     } else if (staffClaim) {
       story = await staffStory();
       if (!story) return;
@@ -967,6 +1046,138 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
     confirmWhenSeen();
   }
 
+  // ---- the group leader's route (26 Nov 2026) ---------------------------------------------------
+
+  /** quiet: report a failure to the caller only, leaving the page as it is. */
+  async function groupCall(body, quiet) {
+    try {
+      var response = await fetch(cfg.storyUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', apikey: cfg.anonKey, authorization: 'Bearer ' + cfg.anonKey },
+        body: JSON.stringify(body)
+      });
+      var data = await response.json().catch(function () { return {}; });
+      if (quiet && !response.ok) return null;
+      if (response.status === 404) { problem('Link not recognised', 'This link doesn’t open anything. Check you used the whole link.'); return null; }
+      if (response.status === 410) { problem('These clips have gone', 'Clips are kept for 30 days after a game, then deleted for good.'); return null; }
+      if (!response.ok) throw new Error(data.error || response.status);
+      return data;
+    } catch (e) {
+      if (!quiet) problem('Couldn’t load this', 'Something went wrong getting it just now. Try again in a minute.', true);
+      return null;
+    }
+  }
+
+  var group = null;
+  async function showGroup() {
+    $('story').classList.add('hidden');
+    $('problem').classList.add('hidden');
+    $('loading').classList.remove('hidden');
+    var g = await groupCall({ groupToken: groupToken });
+    if (!g) return;
+    group = g;
+    groupPlayer = null;
+    document.title = 'Your group’s clips';
+    $('group-when').textContent = [g.venue, longDay(g.startedAt), plural(g.players.length, 'player')].filter(Boolean).join(' · ');
+    $('group-expiry').textContent = g.expiresAt ? 'Everything here is deleted on ' + longDay(g.expiresAt) + '.' : '';
+    var list = $('gplayers');
+    clear(list);
+    g.players.forEach(function (p) {
+      var li = el('li', { class: 'gplayer' });
+      var thumb = p.best && p.best.thumbnail ? el('img', { class: 'gthumb', src: p.best.thumbnail, alt: '' }) : el('div', { class: 'gthumb' });
+      li.appendChild(thumb);
+      var name = el('div', { class: 'gname', text: p.name });
+      if (p.isMinor) name.appendChild(el('span', { class: 'tag u18', text: 'Under 18' }));
+      if (p.isLeader) name.appendChild(el('span', { class: 'tag lead', text: 'You' }));
+      li.appendChild(name);
+      li.appendChild(el('div', { class: 'gmeta', text: p.removed ? 'Clips removed'
+        : p.clips ? plural(p.clips, 'clip') + (p.best ? ' · ' + p.best.label : '') : 'No clips this time' }));
+      var acts = el('div', { class: 'gacts' });
+      var open = el('button', { type: 'button', class: 'btn primary', text: 'Open' });
+      open.addEventListener('click', function () { openPlayer(p.key); });
+      acts.appendChild(open);
+      if (!p.isLeader) {
+        // An adult gets their own link; a child's goes to their parent or guardian.
+        var send = el('button', { type: 'button', class: 'btn', text: p.isMinor ? 'Send to parent' : 'Send their link' });
+        send.addEventListener('click', function () { sendToParent(p, li, send); });
+        acts.appendChild(send);
+      }
+      li.appendChild(acts);
+      list.appendChild(li);
+    });
+    $('loading').classList.add('hidden');
+    $('group').classList.remove('hidden');
+    window.scrollTo(0, 0);
+  }
+
+  async function openPlayer(key) {
+    $('group').classList.add('hidden');
+    $('loading').classList.remove('hidden');
+    var s = await groupCall({ groupToken: groupToken, player: key });
+    if (!s) return;
+    story = s;
+    groupPlayer = key;
+    view = story.you;
+    render();
+    $('loading').classList.add('hidden');
+    $('story').classList.remove('hidden');
+    window.scrollTo(0, 0);
+  }
+
+  async function sendToParent(p, li, button) {
+    button.disabled = true;
+    var made = await groupCall({ groupToken: groupToken, player: p.key, action: 'link' }, true);
+    button.disabled = false;
+    if (!made) { toast('Couldn’t make the link. Try again.'); return; }
+    var link = window.location.href.replace(/#.*$/, '') + '#player.' + made.token;
+    var text = possessive(p.name) + ' darts clips: ' + link;
+    if (navigator.share) {
+      try { await navigator.share({ title: possessive(p.name) + ' darts clips', text: possessive(p.name) + ' darts clips', url: link }); return; } catch (e) { /* fall through to copying */ }
+    }
+    var shown = li.querySelector('.sharebox');
+    if (!shown) { shown = el('div', { class: 'sharebox' }); li.appendChild(shown); }
+    shown.textContent = link;
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('Link to ' + possessive(p.name) + ' page copied. Send it to ' + (p.isMinor ? 'their parent or guardian.' : p.name + '.'));
+    } catch (e) {
+      toast('Copy the link below and send it to ' + (p.isMinor ? 'their parent or guardian.' : p.name + '.'));
+    }
+  }
+
+  function renderRemove(own) {
+    var sec = $('remove-sec');
+    var me = player(story.you);
+    var canRemove = !own && (groupToken || playerToken) && view === story.you;
+    sec.classList.toggle('hidden', !canRemove);
+    if (!canRemove) return;
+    var n = me.highlights.length;
+    $('remove-open').textContent = 'Remove ' + possessive(me.name) + ' clips';
+    $('remove-open').classList.toggle('hidden', n === 0);
+    $('remove-text').textContent = 'This deletes ' + plural(n, 'clip') + ' straight away, for everyone with a link. It can’t be undone.';
+    $('remove-confirm').classList.add('hidden');
+    $('remove-done').classList.toggle('hidden', n !== 0);
+    $('remove-done').textContent = possessive(me.name) + ' clips have been removed, or there were none.';
+  }
+
+  $('remove-open').addEventListener('click', function () { $('remove-confirm').classList.remove('hidden'); });
+  $('remove-no').addEventListener('click', function () { $('remove-confirm').classList.add('hidden'); });
+  $('remove-yes').addEventListener('click', async function () {
+    var btn = $('remove-yes');
+    btn.disabled = true;
+    var body = groupToken ? { groupToken: groupToken, player: groupPlayer, action: 'remove' } : { playerToken: playerToken, action: 'remove' };
+    var done = await groupCall(body, true);
+    btn.disabled = false;
+    if (!done) { toast('Couldn’t remove them just now. Try again.'); return; }
+    var me = player(story.you);
+    story.highlights = story.highlights.filter(function (h) { return h.player !== me.key; });
+    me.highlights = [];
+    me.bestMoment = null;
+    render();
+    $('remove-done').textContent = possessive(me.name) + ' clips have been deleted from our servers. Anything already saved to a phone is outside our reach.';
+    $('remove-done').classList.remove('hidden');
+  });
+
   // ---- confirming the address (free minutes, 26 Nov 2026) -------------------------------------
   // Once this page has been on screen for two seconds running, it tells get-story so, and the
   // guest's address counts as confirmed: their free-minutes email, and any offers they agreed to,
@@ -976,7 +1187,7 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
   var CONFIRM_AFTER_MS = 2000;
   var confirmStarted = false;
   function confirmWhenSeen() {
-    if (confirmStarted || staffClaim) return;
+    if (confirmStarted || staffClaim || groupToken || playerToken) return;
     var demo = isLocal && window.STORY_DEMO;
     if (!demo && !/^[A-Za-z0-9_-]{43}$/.test(token)) return;
     confirmStarted = true;
