@@ -529,7 +529,11 @@ button.quiet { background: none; border: 0; color: var(--dim); text-decoration: 
       if (!data.ok) { problem('Can’t open this', data.message || 'Something went wrong. Try again in a minute.'); return; }
       var venues = data.venues || [];
       if (venues.length === 0) {
-        problem('Not on right now', 'The free 15 isn’t running at any of our venues just now.');
+        // Free minutes replaced the free 15 (26 Nov 2026): once no venue offers the codes, a
+        // poster or an old link lands here, and the free time is earned at the board instead.
+        problem('Free minutes are at the board now',
+          'No code needed. Off-peak, every adult who adds their email when signing up at the board, '
+          + 'with the offers box ticked, adds 5 free minutes for the group, up to 20.');
         return;
       }
       var select = el('venue');
