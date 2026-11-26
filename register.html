@@ -183,6 +183,12 @@ input:focus-visible {
 /* The offers opt-in, under the email it would use: quiet, and only once there is an email. */
 .tick.offers { padding-top: .7rem; }
 .tick.offers span { font-size: .9rem; font-weight: 400; text-transform: none; letter-spacing: normal; line-height: 1.4; color: var(--dim); }
+/* Free minutes (26 Nov 2026): in their hours the tick is what earns them, and says so. */
+.tick.offers.free { margin-top: .6rem; padding: .8rem; background: #17281c; border: 1px solid #2f7a3d; border-radius: 12px; }
+.tick.offers.free span { color: var(--paper); }
+.tick.offers.free b { color: #8fe3a2; font-weight: 600; }
+.free-note { display: flex; gap: .7rem; align-items: center; margin-top: .6rem; padding: .65rem .8rem; background: #1f5a2d; border-radius: 12px; font-size: .9rem; line-height: 1.35; }
+.free-note strong { font-family: var(--display); font-size: 1.6rem; font-weight: 400; line-height: 1; }
 
 /* --- buttons ----------------------------------------------------------- */
 button {
@@ -529,9 +535,12 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
           videos of your best throws. We never sell your email and never spam you.</p>
         <label class="tick offers" for="offersConsent" id="offers-field" hidden>
           <input id="offersConsent" type="checkbox">
-          <span>Also send me the odd special offer from Hawktivity Darts. Unsubscribe any
+          <span id="offers-text">Also send me the odd special offer from Hawktivity Darts. Unsubscribe any
             time.</span>
         </label>
+        <!-- Free minutes, only in their hours: see applyFreeMinutes. -->
+        <p class="free-note" id="free-note" hidden><strong id="free-note-minutes">+5</strong>
+          <span id="free-note-text">free minutes for your group</span></p>
       </div>
 
       <div class="field" id="mobile-field">
@@ -785,6 +794,7 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
     }
 
     if (data.event && data.event.clientName) { applyEventMode(data.event); }
+    else if (data.freeMinutes && data.freeMinutes.perEmail > 0) { applyFreeMinutes(data.freeMinutes); }
 
     show('form');
     el('firstName').focus();
@@ -830,6 +840,27 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
     var hasEmail = !isMinor() && el('email').value.indexOf('@') > 0;
     el('offers-field').hidden = !hasEmail;
     if (!hasEmail) { el('offersConsent').checked = false; }
+    // The free-minutes line is for adults only: an under-18 earns nothing and is never asked.
+    if (freeMinutesOn) { el('free-note').hidden = isMinor(); }
+  }
+
+  // --- free minutes (26 Nov 2026) ------------------------------------------------
+  // In the venue's free hours every adult's email, with the offers box ticked, adds free minutes
+  // for the group at the board. The box says so, unticked as always; the board does the rest.
+  var freeMinutesOn = false;
+  function applyFreeMinutes(fm) {
+    freeMinutesOn = true;
+    el('offers-field').classList.add('free');
+    var text = el('offers-text');
+    text.textContent = 'Yes, send me offers from Hawktivity Darts. ';
+    var need = document.createElement('b');
+    need.textContent = 'Needed for your ' + fm.perEmail + ' free minutes.';
+    text.appendChild(need);
+    text.appendChild(document.createTextNode(' Unsubscribe any time. We never sell your email.'));
+    el('free-note-minutes').textContent = '+' + fm.perEmail;
+    el('free-note-text').textContent = 'free minutes for your group'
+      + (fm.until === '24:00' ? ' until midnight' : ' until ' + fm.until) + ' today';
+    el('free-note').hidden = isMinor();
   }
 
   // --- date of birth: typed as DD/MM/YYYY, sent as YYYY-MM-DD ------------------

@@ -499,7 +499,9 @@
     if (request.action === 'describe') {
       return later(body({ ok: true, suiteName: 'Lane 1', expiresInSeconds: 1500, registered: 0, full: false,
                           remember: scenario !== 'nopasskeys',
-                          emailCodes: scenario !== 'nopasskeys' && scenario !== 'nocodes' }));
+                          emailCodes: scenario !== 'nopasskeys' && scenario !== 'nocodes',
+                          // &case=freeminutes: in the venue's free hours (26 Nov 2026).
+                          freeMinutes: scenario === 'freeminutes' ? { perEmail: 5, until: '19:00' } : null }));
     }
     if (request.action === 'email_code') {
       window.lastEmailCode = request;

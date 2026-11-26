@@ -51,6 +51,11 @@
       newAct.stripe = newAct.sharesPaid === 2
         ? [stripeRef(newAct.priceMinor / 2), stripeRef(newAct.priceMinor / 2)]
         : [stripeRef(newAct.priceMinor)];
+    } else if (how < 0.65) {
+      // Free minutes earned by the players' emails (26 Nov 2026): GBP 0, 5 a head up to 20.
+      minutes = Math.min(20, 5 * heads);
+      acts.push({ kind: 'new', paidVia: 'free', at: at, players: heads, minutes: minutes, priceMinor: 0,
+        currency: 'GBP', isTest: false, acked: true, voucher: null, sharesPaid: 0, refundedMinor: 0 });
     } else if (how < 0.92) {
       minutes = 15;
       acts.push({ kind: 'new', paidVia: 'voucher', at: at, players: heads, minutes: 15, priceMinor: heads * 250,

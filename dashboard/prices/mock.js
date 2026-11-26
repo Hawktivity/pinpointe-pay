@@ -163,12 +163,40 @@
     return { data: view(), error: null };
   }
 
+  // Free minutes (26 Nov 2026): on at the Rising Sun with Richard's hours, off at Metropolis
+  // (which still has the old free 15 on), custom hours at the venue with no board.
+  var DEFAULT_HOURS = { weekly: [{ days: [1, 2, 3, 4, 5], from: '00:00', to: '19:00' }, { days: [6, 7], from: '00:00', to: '17:00' }], dates: [] };
+  var free = {
+    'mock-rising-sun': { perEmail: 5, cap: 20, hours: DEFAULT_HOURS, freeSignupMinutes: null },
+    'mock-metropolis': { perEmail: null, cap: 20, hours: DEFAULT_HOURS, freeSignupMinutes: 15 },
+    'cd243f94-1d65-4dc6-8f1f-63748d27d38e': { perEmail: 5, cap: 20,
+      hours: { weekly: [{ days: [1, 2, 3, 4, 5, 6, 7], from: '12:00', to: '16:00' }], dates: [] }, freeSignupMinutes: null }
+  };
+  function freeView() {
+    var d = new Date();
+    var dow = d.getDay() || 7;
+    var t = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    return Object.keys(free).map(function (loc) {
+      var f = free[loc];
+      var open = !!f.perEmail && (f.hours.weekly || []).some(function (w) { return w.days.indexOf(dow) >= 0 && t >= w.from && t < w.to; });
+      return { locationId: loc, venue: loc, isTest: false, perEmail: f.perEmail, cap: f.cap, laneGap: 120,
+               hours: f.hours, openNow: open, freeSignupMinutes: f.freeSignupMinutes };
+    });
+  }
+
   window.PRICES_MOCK = {
     email: EMAIL,
     call: function (name, args) {
       if (params.has('fail')) return fail('', 'Failed to fetch');
       if (!/@hawktivity\.com$/.test(EMAIL)) return fail('42501', 'Only a Hawktivity Google account can see and change prices');
       if (name === 'dashboard_prices') return { data: view(), error: null };
+      if (name === 'dashboard_free_minutes') return { data: freeView(), error: null };
+      if (name === 'dashboard_set_free_minutes') {
+        var f = free[args.p_location_id];
+        if (!f) return fail('22023', 'no such venue');
+        f.perEmail = args.p_per_email; f.cap = args.p_cap; f.hours = args.p_hours;
+        return { data: freeView(), error: null };
+      }
       if (name === 'dashboard_set_price') return setPrice(args);
       if (name === 'dashboard_cancel_price') return cancelPrice(args);
       return fail('42883', 'mock has no ' + name);

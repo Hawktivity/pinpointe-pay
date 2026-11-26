@@ -228,6 +228,10 @@ form.edit { display: flex; flex-direction: column; gap: 20px; }
   color: var(--paper); font: 500 14px/1 var(--body);
 }
 .radio input:disabled { opacity: .5; }
+.radio input[type="number"] {
+  width: 84px; min-height: 42px; padding: 0 10px; background: var(--ink); border: 1px solid var(--line); border-radius: 10px;
+  color: var(--paper); font: 500 14px/1 var(--body);
+}
 
 .changes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--dim); }
 .changes .was { color: var(--dimmer); text-decoration: line-through; }
@@ -455,6 +459,30 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
             <button class="ghost" id="confirm-no" type="button">Back</button>
           </div>
         </div>
+      </form>
+    </section>
+
+    <!-- Free minutes (26 Nov 2026): every adult player's email adds free minutes off-peak. -->
+    <section class="card" id="free-card" hidden>
+      <div class="card-top"><h2>Free minutes</h2><span class="chip" id="free-chip">Off</span></div>
+      <p class="hint">In these hours every adult player’s email, with the offers box ticked, adds free minutes for their group, up to the most per group. One per email, ever. A lane can start a free session once every two hours. A change reaches the board at its next welcome screen.</p>
+      <form class="edit" id="free-form" autocomplete="off" novalidate>
+        <div class="radio" role="group" aria-label="Free minutes on or off">
+          <label><input type="radio" name="free-on" value="on"> On</label>
+          <label><input type="radio" name="free-on" value="off"> Off</label>
+        </div>
+        <div class="radio">
+          <label>Minutes per email <input type="number" id="free-per" min="1" max="30" step="1"></label>
+          <label>Most per group <input type="number" id="free-cap" min="1" max="60" step="1"></label>
+        </div>
+        <div class="radio">
+          <label>Monday to Friday: free until <input type="time" id="free-weekday" step="900"> <span class="hint">London time</span></label>
+          <label>Saturday and Sunday: free until <input type="time" id="free-weekend" step="900"></label>
+        </div>
+        <p class="hint" id="free-custom" hidden>These hours were set some other way and don’t fit this form. Saving replaces them with the two times above.</p>
+        <p class="hint" id="free-old" hidden>The old free 15 is still switched on at this venue. It stops when the board update with free minutes is installed.</p>
+        <p class="error" id="free-error" role="alert" hidden></p>
+        <button class="primary" id="free-save" type="submit">Save free minutes</button>
       </form>
     </section>
 
@@ -891,7 +919,95 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     if (MOCK) $('dash-link').href = '../?mock';
     show('loading');
     fetchPrices();
+    fetchFree();
   }
+
+  // ---- free minutes (26 Nov 2026) ----------------------------------------------------------
+  // Per venue: on or off, minutes per email, the most per group, and the hours. The hours are a
+  // timetable like the price bands'; this card edits the shape Richard chose (Mon-Fri free until
+  // one time, Sat-Sun until another) and says so when a venue's hours are something else.
+  var free = { rows: [], dirty: false, forVenue: null, busy: false };
+  var DEFAULT_FREE = { weekday: '19:00', weekend: '17:00' };
+
+  function fetchFree() {
+    return rpc('dashboard_free_minutes').then(function (r) {
+      if (r.error) throw r.error;
+      free.rows = r.data || [];
+      renderFree();
+    }).catch(function (e) { console.warn('dashboard_free_minutes failed', e); });
+  }
+  function freeRow() {
+    for (var i = 0; i < free.rows.length; i++) if (free.rows[i].locationId === state.venueId) return free.rows[i];
+    return null;
+  }
+  // { weekday, weekend } when the hours are the two-rule shape this card edits, else null.
+  function simpleHours(hours) {
+    var w = (hours && hours.weekly) || [];
+    if ((hours && hours.dates || []).length || w.length !== 2) return null;
+    var wd = w[0], we = w[1];
+    if (String(wd.days) !== '1,2,3,4,5' || String(we.days) !== '6,7' || wd.from !== '00:00' || we.from !== '00:00') return null;
+    return { weekday: wd.to, weekend: we.to };
+  }
+  function renderFree() {
+    var row = freeRow();
+    $('free-card').hidden = !row;
+    if (!row) return;
+    var chip = $('free-chip');
+    chip.textContent = !row.perEmail ? 'Off' : row.openNow ? 'On now' : 'Off-peak only, not now';
+    chip.className = 'chip' + (row.perEmail && row.openNow ? ' live' : '');
+    $('free-old').hidden = !row.freeSignupMinutes;
+    // Never refill a form somebody is part-way through for this venue.
+    if (free.dirty && free.forVenue === row.locationId) return;
+    var hours = simpleHours(row.hours);
+    $('free-custom').hidden = !!hours;
+    hours = hours || DEFAULT_FREE;
+    document.querySelector('input[name="free-on"][value="' + (row.perEmail ? 'on' : 'off') + '"]').checked = true;
+    $('free-per').value = row.perEmail || 5;
+    $('free-cap').value = row.cap || 20;
+    $('free-weekday').value = hours.weekday === '24:00' ? '23:59' : hours.weekday;
+    $('free-weekend').value = hours.weekend === '24:00' ? '23:59' : hours.weekend;
+    $('free-error').hidden = true;
+    free.dirty = false;
+    free.forVenue = row.locationId;
+  }
+  $('free-form').addEventListener('input', function () { free.dirty = true; free.forVenue = state.venueId; });
+  $('free-form').addEventListener('change', function () { free.dirty = true; free.forVenue = state.venueId; });
+  $('free-form').addEventListener('submit', function (event) {
+    event.preventDefault();
+    if (free.busy) return;
+    var row = freeRow();
+    if (!row) return;
+    var on = document.querySelector('input[name="free-on"]:checked');
+    on = on && on.value === 'on';
+    var per = parseInt($('free-per').value, 10);
+    var cap = parseInt($('free-cap').value, 10);
+    var weekday = $('free-weekday').value;
+    var weekend = $('free-weekend').value;
+    var problem = !(per >= 1 && per <= 30) ? 'Minutes per email must be between 1 and 30.'
+      : !(cap >= 1 && cap <= 60) ? 'The most per group must be between 1 and 60.'
+      : cap < per ? 'The most per group can’t be less than one email’s minutes.'
+      : !/^\d\d:\d\d$/.test(weekday) || weekday === '00:00' ? 'Pick until when free minutes last on weekdays.'
+      : !/^\d\d:\d\d$/.test(weekend) || weekend === '00:00' ? 'Pick until when free minutes last at weekends.'
+      : '';
+    if (problem) { $('free-error').textContent = problem; $('free-error').hidden = false; return; }
+    var hours = { weekly: [{ days: [1, 2, 3, 4, 5], from: '00:00', to: weekday === '23:59' ? '24:00' : weekday },
+                           { days: [6, 7], from: '00:00', to: weekend === '23:59' ? '24:00' : weekend }], dates: [] };
+    free.busy = true;
+    $('free-save').disabled = true;
+    rpc('dashboard_set_free_minutes', { p_location_id: row.locationId, p_per_email: on ? per : null, p_cap: cap, p_hours: hours })
+      .then(function (r) {
+        if (r.error) throw r.error;
+        free.rows = r.data || free.rows;
+        free.dirty = false;
+        renderFree();
+        toast('Free minutes ' + (on ? 'saved' : 'switched off') + ' for ' + nameOf(venue() || { locationId: row.locationId, name: row.venue }) + '.');
+      })
+      .catch(function (e) {
+        $('free-error').textContent = 'That didn’t save: ' + ((e && e.message) || 'try again') + '.';
+        $('free-error').hidden = false;
+      })
+      .then(function () { free.busy = false; $('free-save').disabled = false; });
+  });
 
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden && currentUser && !$('app').hidden) fetchPrices();
@@ -1065,6 +1181,7 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     renderNow(v);
     renderComing(v);
     renderHistory(v);
+    renderFree();
     $('edit-card').hidden = !v;
     // Fill the form from the active price unless someone is part-way through editing.
     var key = v ? v.locationId + '#' + (v.active ? v.active.version : 0) : null;
@@ -1673,7 +1790,7 @@ footer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
     }, function () { button.disabled = false; toast('Couldn’t reach the database. Nothing was deleted.'); });
   }
 
-  $('refresh').addEventListener('click', function () { state.dirty = false; state.editing = null; fetchPrices(); });
+  $('refresh').addEventListener('click', function () { state.dirty = false; state.editing = null; free.dirty = false; fetchPrices(); fetchFree(); });
   $('stop-editing').addEventListener('click', stopEdit);
   $('signout').addEventListener('click', signOut);
   $('denied-out').addEventListener('click', signOut);

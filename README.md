@@ -51,6 +51,22 @@ cover the price. Somebody who has paid their share waits on a screen that says s
 and never offers to take it again; anything a group pays that does not end up as a
 session is refunded automatically.
 
+### Free minutes
+
+Off-peak, every adult player's email with the offers box ticked adds 5 free minutes for the
+group, up to 20 (26 Nov 2026; replaces the free 15's emailed codes). The board does the
+counting and starts the free session itself; these pages only play their part:
+
+- `register.html`: in the venue's free hours (register-player's describe says `freeMinutes`),
+  the offers tick reads "Needed for your 5 free minutes" and a "+5 free minutes for your group
+  until 19:00 today" line shows (`register.html?mock&c=x&case=freeminutes`).
+- `story.html`: once the clips page has been on screen for two seconds it posts get-story's
+  `confirm`, which confirms the guest's address and with it their offers consent; never on
+  opening the link, which mail scanners do (`story.html?demo&confirmed` shows the note).
+- `dashboard/prices/`: a Free minutes card per venue: on or off, minutes per email, the most
+  per group, and until when (weekdays, weekends).
+- The sessions dashboard counts a free session as free time, at £0.
+
 ### Ambassadors
 
 Once a day an ambassador's own share of a new game is covered, up to £5, while the rest of

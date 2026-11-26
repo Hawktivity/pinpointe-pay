@@ -322,7 +322,7 @@ select, .small {
           <h2 id="per-title">Hours per day</h2>
           <div class="legend">
             <span><i class="sw card"></i>Card</span>
-            <span><i class="sw voucher"></i>Voucher</span>
+            <span><i class="sw voucher"></i>Voucher or free minutes</span>
             <span><i class="sw none"></i>No payment</span>
           </div>
         </div>
@@ -581,7 +581,7 @@ select, .small {
     var x = r;
     x.start = new Date(r.startedAt);
     x.end = r.boardEndedAt ? new Date(r.boardEndedAt) : null;
-    x.how = !first ? 'none' : (first.paidVia === 'voucher' ? 'voucher' : 'card');
+    x.how = !first ? 'none' : (freeTime(first.paidVia) ? 'voucher' : 'card');
     x.paidFor = 0; x.cardMinor = 0; x.voucherMinor = 0; x.refundedMinor = 0; x.minutesBought = 0; x.vouchers = 0;
     x.currency = (first && first.currency) || 'GBP';
     acts.forEach(function (a) {
@@ -694,7 +694,7 @@ select, .small {
     var m = { card: 0, voucher: 0, none: 0 };
     var acts = r.activations || [];
     acts.forEach(function (a) {
-      if (a.kind === 'new' || a.kind === 'ext') m[a.paidVia === 'voucher' ? 'voucher' : 'card'] += a.minutes || 0;
+      if (a.kind === 'new' || a.kind === 'ext') m[freeTime(a.paidVia) ? 'voucher' : 'card'] += a.minutes || 0;
     });
     if (!acts.length && r.lengthMin) m.none += r.lengthMin;
     return m;
@@ -774,7 +774,7 @@ select, .small {
       var hit = s('rect', { x: padL + band * i, y: padT, width: band, height: plotH, fill: 'transparent' });
       hit.addEventListener('mousemove', function (e) {
         tipShow(e, b.long, [
-          ['card', 'Card', b.card], ['voucher', 'Voucher', b.voucher], ['none', 'No payment (on the board)', b.none]
+          ['card', 'Card', b.card], ['voucher', 'Voucher or free minutes', b.voucher], ['none', 'No payment (on the board)', b.none]
         ].filter(function (q) { return q[2]; }).map(function (q) { return { sw: q[0], label: q[1], value: mins(q[2]) }; })
           .concat(b.sessions ? [{ label: 'Total', value: mins(total) }, { label: 'Sessions', value: b.sessions }, { label: 'Card takings', value: money(b.money, b.cur) }]
                              : [{ label: 'No sessions', value: '' }]));
@@ -838,8 +838,12 @@ select, .small {
   }
   function tipHide() { $('tip').hidden = true; }
 
+  // Time nobody paid money for: a voucher, or free minutes earned by players' emails (26 Nov 2026).
+  function freeTime(paidVia) { return paidVia === 'voucher' || paidVia === 'free'; }
+
   // What one activation was, in a few words.
   function actLabel(a) {
+    if (a.kind === 'new' && a.paidVia === 'free') return 'Free minutes · ' + mins(a.minutes);
     if (a.kind === 'new') return a.paidVia === 'voucher' ? 'Voucher · ' + mins(a.minutes) : 'Card · ' + mins(a.minutes);
     if (a.kind === 'ext') return '+' + mins(a.minutes) + ' · ' + (a.paidVia === 'voucher' ? 'voucher' : 'card');
     if (a.kind === 'join') return '+' + plural(a.players, 'player') + ' joined · ' + (a.paidVia === 'voucher' ? 'voucher' : 'card');
@@ -869,7 +873,7 @@ select, .small {
     var acts = r.activations || [];
 
     var chips = acts.map(function (a) {
-      return h('span', { class: 'chip' }, h('i', { class: 'sw ' + (a.paidVia === 'voucher' ? 'voucher' : 'card') }), actLabel(a));
+      return h('span', { class: 'chip' }, h('i', { class: 'sw ' + (freeTime(a.paidVia) ? 'voucher' : 'card') }), actLabel(a));
     });
     if (!acts.length) chips.push(h('span', { class: 'chip' }, h('i', { class: 'sw none' }), 'No payment on record'));
     if (r.clipsEmailsSent) chips.push(clipsChip(r));
@@ -956,7 +960,8 @@ select, .small {
         h('td', { text: time(new Date(a.at)) }),
         h('td', null, h('div', { text: actLabel(a) + ' · ' + plural(a.players, 'player') }),
           notes.length ? h('div', { class: 'muted', text: notes.join(' · ') }) : null, paidBy),
-        h('td', { class: 'num', text: a.paidVia === 'voucher' ? '£0 (' + money(a.priceMinor, a.currency) + ')'
+        h('td', { class: 'num', text: a.paidVia === 'free' ? '£0 (free minutes)'
+          : a.paidVia === 'voucher' ? '£0 (' + money(a.priceMinor, a.currency) + ')'
           : a.compMinor ? money(a.priceMinor - a.compMinor, a.currency) + ' (' + money(a.priceMinor, a.currency) + ')'
           : money(a.priceMinor, a.currency) }));
     });

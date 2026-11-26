@@ -75,6 +75,11 @@ button { font: inherit; color: inherit; }
 .viewing { background: var(--ink-3); border: 1px solid var(--line); border-radius: 12px; padding: .7rem .9rem; font-size: .9rem; margin: 0 0 1rem; }
 .viewing button { background: none; border: 0; padding: 0; text-decoration: underline; font-weight: 600; cursor: pointer; }
 .staff-note { background: #2a2416; border: 1px solid #5c4b22; border-radius: 12px; padding: .7rem .9rem; font-size: .85rem; margin: 0 0 1rem; }
+/* "Email confirmed": once, after the page has been on screen for two seconds (free minutes). */
+.confirmed { position: fixed; left: 1rem; right: 1rem; bottom: calc(1.2rem + env(safe-area-inset-bottom)); max-width: 28rem; margin: 0 auto;
+  display: flex; gap: .7rem; align-items: flex-start; background: #f0f0f2; color: #14141a; border-radius: 14px; padding: .85rem 1rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45); font-size: .9rem; line-height: 1.45; z-index: 20; }
+.confirmed svg { flex: none; margin-top: .1rem; }
 
 .title-card {
   margin-top: 1.3rem; border-radius: 16px; padding: 1.1rem 1.15rem;
@@ -221,6 +226,10 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
 
     <p id="staff-note" class="staff-note hidden"></p>
     <p id="viewing" class="viewing hidden"></p>
+    <div id="confirmed" class="confirmed hidden" role="status">
+      <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="#2f7a3d"></circle><path d="M6 11.5l3.2 3.2L16 8" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <span><b>Email confirmed.</b> You’re on our offers list. Unsubscribe any time from any of our emails.</span>
+    </div>
 
     <section class="hero">
       <h1 id="hero-name"></h1>
@@ -955,6 +964,51 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
     render();
     $('loading').classList.add('hidden');
     $('story').classList.remove('hidden');
+    confirmWhenSeen();
+  }
+
+  // ---- confirming the address (free minutes, 26 Nov 2026) -------------------------------------
+  // Once this page has been on screen for two seconds running, it tells get-story so, and the
+  // guest's address counts as confirmed: their free-minutes email, and any offers they agreed to,
+  // which are never sent to an unconfirmed address. Never on opening the link: mail scanners
+  // follow links, but they don't keep a page in front of anyone. Once per page load; never in
+  // the staff view (that is not the guest).
+  var CONFIRM_AFTER_MS = 2000;
+  var confirmStarted = false;
+  function confirmWhenSeen() {
+    if (confirmStarted || staffClaim) return;
+    var demo = isLocal && window.STORY_DEMO;
+    if (!demo && !/^[A-Za-z0-9_-]{43}$/.test(token)) return;
+    confirmStarted = true;
+    var timer = null;
+    var sent = false;
+    function arm() {
+      clearTimeout(timer);
+      if (!sent && document.visibilityState === 'visible') timer = setTimeout(send, CONFIRM_AFTER_MS);
+    }
+    function send() {
+      if (sent || document.visibilityState !== 'visible') return;
+      sent = true;
+      document.removeEventListener('visibilitychange', arm);
+      if (demo) {
+        // story.html?demo&confirmed on localhost shows the note as a guest with offers would.
+        if (new URLSearchParams(window.location.search).has('confirmed')) showConfirmed();
+        return;
+      }
+      fetch(cfg.storyUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', apikey: cfg.anonKey, authorization: 'Bearer ' + cfg.anonKey },
+        body: JSON.stringify({ token: token, action: 'confirm' })
+      }).then(function (r) { return r.json(); })
+        .then(function (b) { if (b && b.offers > 0) showConfirmed(); })
+        .catch(function () { /* the next visit confirms it */ });
+    }
+    document.addEventListener('visibilitychange', arm);
+    arm();
+  }
+  function showConfirmed() {
+    $('confirmed').classList.remove('hidden');
+    setTimeout(function () { $('confirmed').classList.add('hidden'); }, 8000);
   }
 
   // A local copy exposes the photo branding for checking by hand. A deployed copy does not.
