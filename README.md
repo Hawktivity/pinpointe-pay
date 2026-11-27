@@ -67,6 +67,17 @@ counting and starts the free session itself; these pages only play their part:
   per group, and until when (weekdays, weekends).
 - The sessions dashboard counts a free session as free time, at £0.
 
+### Event night page
+
+At a private event the board takes a group photo after every game, and get-story sends the
+viewer's own as `groupPhotos` (27 Nov 2026). When a guest's own page has any, `story.html`
+shows the event layout (`#event`) instead: the GroupDarts logo with the venue beside it, the
+newest photo they are in, games / wins / best 3 darts, "Save all N photos", their clips with a
+Share to row (Instagram and TikTok open the phone's share sheet with the video; Facebook and
+WhatsApp share the page's own link), and a card per game with its photo and lineup. A page
+without group photos, and the group leader's and parents' pages, render exactly as before.
+Walk through it with `story.html?demo=event` (add `&selfie` for the end-of-night photo).
+
 ### Ambassadors
 
 Once a day an ambassador's own share of a new game is covered, up to £5, while the rest of

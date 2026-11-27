@@ -221,6 +221,76 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
 .removebox .confirm p { margin: 0 0 .7rem; font-size: .9rem; }
 .sharebox { margin-top: .5rem; grid-column: 1 / -1; background: var(--ink-3); border-radius: 10px; padding: .6rem .7rem; font-size: .8rem; word-break: break-all; }
 .toast { position: fixed; left: 50%; bottom: calc(1.2rem + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--paper); color: var(--ink); font-weight: 600; font-size: .85rem; border-radius: 999px; padding: .55rem 1rem; box-shadow: 0 6px 24px rgba(0,0,0,.4); }
+
+/* ---------------------------------------------------------------------------
+   Event night (27 Nov 2026): a private event's page, when get-story sends groupPhotos.
+   The board took a group photo after every game, so the night is told game by game,
+   photo first. Everything below is only ever shown in #event; a page without group
+   photos never touches it.
+--------------------------------------------------------------------------- */
+body.ev-on .toast { z-index: 40; }
+/* GroupDarts first and biggest; the venue after it, smaller. */
+.ev-brandbar { align-items: center; }
+.ev-logo { display: block; flex: 0 1 auto; }
+.ev-logo img { display: block; height: 2.1rem; width: auto; max-width: 62vw; }
+.ev-venue { color: var(--dim); font-size: .78rem; font-weight: 600; text-align: right; }
+.ev-footbrand img { height: 1.6rem; width: auto; margin-top: .4rem; }
+.ev-head { margin: .2rem 0 1rem; }
+.ev-head .eyebrow { font-size: .78rem; font-weight: 600; color: var(--dim); }
+.ev-head h1 { font-size: clamp(2.6rem, 14vw, 4.2rem); line-height: .95; margin: .25rem 0 0; overflow-wrap: anywhere; }
+.ev-hero { display: block; width: 100%; padding: 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--ink-2); cursor: pointer; text-align: left; }
+.ev-hero img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #000; }
+.ev-hero .cap { padding: .65rem .9rem .75rem; }
+.ev-hero .cap b { display: block; font-family: var(--display); font-weight: 400; text-transform: uppercase; font-size: 1.2rem; line-height: 1.1; }
+.ev-hero .cap span { color: var(--dim); font-size: .85rem; }
+.ev-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .55rem; margin-top: .8rem; }
+.ev-saveall { width: 100%; justify-content: center; margin-top: .8rem; padding: .75rem 1rem; font-size: .95rem; }
+.ev-clips { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.ev-clip { position: relative; display: block; padding: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #000; cursor: pointer; aspect-ratio: 9 / 16; text-align: left; }
+.ev-clip img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ev-clip .play { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 3rem; height: 3rem; border-radius: 50%; background: rgba(16, 16, 21, .72); border: 1px solid rgba(255, 255, 255, .35); display: grid; place-items: center; }
+.ev-clip .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 2.2rem .65rem .6rem; background: linear-gradient(transparent, rgba(0, 0, 0, .85)); }
+.ev-clip .cap b { display: block; font-family: var(--display); font-weight: 400; text-transform: uppercase; font-size: 1.05rem; line-height: 1.1; }
+.ev-clip .cap span { color: #c9c9d0; font-size: .75rem; }
+.ev-games { display: grid; gap: .9rem; }
+.ev-game { background: var(--ink-2); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.ev-game .top { display: flex; align-items: flex-start; justify-content: space-between; gap: .6rem; padding: .8rem .9rem .7rem; }
+.ev-game .n { color: var(--dim); font-size: .78rem; font-weight: 600; }
+.ev-game .gname { font-family: var(--display); text-transform: uppercase; font-size: 1.35rem; line-height: 1.1; }
+.ev-result { flex: none; border-radius: 999px; padding: .25rem .7rem; font-size: .78rem; font-weight: 700; background: var(--ink-3); border: 1px solid var(--line); }
+.ev-result.won { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+.ev-game .shot { display: block; width: 100%; padding: 0; border: 0; background: #000; cursor: pointer; }
+.ev-game .shot img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.ev-lineup { list-style: none; margin: 0; padding: .3rem 0; }
+.ev-lineup li { display: flex; gap: .7rem; align-items: center; padding: .35rem .9rem; font-size: .92rem; }
+.ev-lineup li.me { background: rgba(192, 80, 75, .16); font-weight: 700; }
+.ev-lineup .pos { width: 2.2rem; color: var(--dim); font-weight: 600; font-size: .82rem; }
+.ev-lineup li.first .pos { color: var(--gold); }
+.ev-lineup .nm { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ev-gclip { display: flex; align-items: center; gap: .7rem; width: 100%; margin: 0; padding: .7rem .9rem; border: 0; border-top: 1px solid var(--line); background: none; cursor: pointer; text-align: left; }
+.ev-gclip .pi { flex: none; width: 2.2rem; height: 2.2rem; border-radius: 50%; background: var(--brick); display: grid; place-items: center; }
+.ev-gclip b { display: block; font-size: .92rem; }
+.ev-gclip span { color: var(--dim); font-size: .78rem; }
+.ev-foot p { margin: 0 0 .5rem; }
+/* The clip and photo views: full screen over the page. */
+.viewer { position: fixed; inset: 0; z-index: 30; background: #0b0b0f; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.viewer .vin { max-width: 34rem; margin: 0 auto; padding: calc(.8rem + env(safe-area-inset-top)) 1rem calc(2rem + env(safe-area-inset-bottom)); }
+.viewer .vbar { display: flex; align-items: center; justify-content: space-between; gap: .6rem; margin-bottom: .7rem; min-height: 2.6rem; }
+.viewer .vcount { color: var(--dim); font-size: .85rem; font-weight: 600; }
+.viewer .vclose { width: 2.6rem; height: 2.6rem; border-radius: 50%; border: 1px solid var(--line); background: var(--ink-3); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.viewer video { display: block; width: 100%; aspect-ratio: 9 / 16; max-height: 52vh; background: #000; border-radius: 14px; object-fit: contain; }
+.viewer .vphoto { position: relative; }
+.viewer .vphoto img { display: block; width: 100%; max-height: 70vh; object-fit: contain; background: #000; border-radius: 14px; }
+.viewer .vphoto .reel-nav { top: 50%; }
+.viewer .vt { font-family: var(--display); text-transform: uppercase; font-size: 1.5rem; line-height: 1.1; margin: .8rem 0 .15rem; }
+.viewer .vs { color: var(--dim); font-size: .85rem; margin: 0; }
+.viewer .vlabel { font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--dim); margin: 1.1rem 0 .55rem; }
+.apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; }
+.app { display: flex; flex-direction: column; align-items: center; gap: .35rem; padding: .55rem .2rem; border: 1px solid var(--line); border-radius: 14px; background: var(--ink-2); cursor: pointer; text-decoration: none; color: var(--paper); font-size: .75rem; font-weight: 600; }
+.app:disabled { opacity: .55; }
+.app i { width: 2.4rem; height: 2.4rem; border-radius: 12px; display: grid; place-items: center; font-style: normal; font-weight: 800; font-size: .85rem; color: #fff; }
+.viewer .actions .btn { flex: 1; justify-content: center; }
+.viewer .hint { color: var(--dim); font-size: .8rem; margin: .7rem 0 0; }
 </style>
 </head>
 <body>
@@ -364,6 +434,53 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
       <p>GroupDarts</p>
     </footer>
   </main>
+
+  <!-- Event night (27 Nov 2026): shown in place of #story when get-story sends group photos. -->
+  <main id="event" class="hidden">
+    <div class="topbar ev-brandbar">
+      <a href="https://groupdarts.com" target="_blank" rel="noopener" class="ev-logo"><img src="brand/groupdarts-web-dark.svg" alt="GroupDarts" width="739" height="123"></a>
+      <span class="ev-venue" id="ev-venue"></span>
+    </div>
+    <p id="ev-staff-note" class="staff-note hidden"></p>
+    <div class="ev-head">
+      <div class="eyebrow" id="ev-when"></div>
+      <h1 id="ev-name"></h1>
+    </div>
+    <button type="button" id="ev-hero" class="ev-hero">
+      <img id="ev-hero-img" alt="">
+      <div class="cap"><b id="ev-hero-t"></b><span id="ev-hero-s"></span></div>
+    </button>
+    <div id="ev-stats" class="ev-stats"></div>
+    <button type="button" id="ev-saveall" class="btn primary ev-saveall"></button>
+
+    <section id="ev-clips-sec" class="hidden">
+      <h2>Your clips<small>Tap one to watch it and share it.</small></h2>
+      <div id="ev-clips" class="ev-clips"></div>
+    </section>
+
+    <section id="ev-games-sec" class="hidden">
+      <h2>Your games<small>In the order you played them.</small></h2>
+      <div id="ev-games" class="ev-games"></div>
+    </section>
+
+    <footer class="ev-foot">
+      <p id="ev-expiry"></p>
+      <p>Anyone with the link can see this page.</p>
+      <p class="ev-footbrand"><a href="https://groupdarts.com" target="_blank" rel="noopener"><img src="brand/groupdarts-web-dark.svg" alt="GroupDarts" width="739" height="123"></a></p>
+    </footer>
+  </main>
+</div>
+
+<div id="viewer" class="viewer hidden" role="dialog" aria-modal="true" aria-label="Clip or photo">
+  <div class="vin">
+    <div class="vbar">
+      <span class="vcount" id="viewer-count"></span>
+      <button type="button" class="vclose" id="viewer-close" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div id="viewer-body"></div>
+  </div>
 </div>
 
 <script src="config.js"></script>
@@ -499,7 +616,7 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
    * Share the file itself -- one tap opens the phone's own list of apps, a second picks one --
    * so it plays wherever it is sent and never expires, with the pub and the brand in it.
    */
-  async function share(makeFile, text, button) {
+  async function share(makeFile, text, button, savedText) {
     button.disabled = true;
     try {
       var file = await makeFile();
@@ -507,7 +624,7 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
         await navigator.share({ files: [file], text: text });
       } else {
         saveBlob(file);
-        toast('Saved. Share it from your downloads.');
+        toast(savedText || 'Saved. Share it from your downloads.');
       }
     } catch (e) {
       if (!e || e.name !== 'AbortError') toast('That didn’t work. Try Save instead.');
@@ -923,11 +1040,347 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  // ------------------------------------------------------------------ event night (27 Nov 2026)
+  // A private event: the board took a group photo after every game, and get-story sends the
+  // viewer's own (groupPhotos, in the order played). The page tells the night game by game,
+  // photo first, with the guest's clips near the top and a share row aimed at the apps people
+  // post to. Nothing here runs for a page without group photos.
+
+  function isEventNight(s) {
+    return !!(s && s.groupPhotos && s.groupPhotos.length > 0 && (!s.audience || s.audience === 'guest'));
+  }
+
+  function gameOf(key) {
+    for (var i = 0; i < story.games.length; i++) if (story.games[i].key === key) return story.games[i];
+    return null;
+  }
+
+  function gameIndex(key) {
+    for (var i = 0; i < story.games.length; i++) if (story.games[i].key === key) return i;
+    return 1e9;
+  }
+
+  function clockTime(iso) {
+    if (!iso) return '';
+    return new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' }).format(new Date(iso));
+  }
+
+  /** The page's own link: what Facebook and WhatsApp share. The same link the email gave. */
+  function pageLink() { return window.location.href; }
+
+  /** Every photo the viewer is in, oldest first: one per game, then the end-of-night selfie. */
+  function eventPhotos() {
+    var list = story.groupPhotos.map(function (p) {
+      var g = gameOf(p.game);
+      return { url: p.url, game: p.game, name: p.gameName || (g && g.name) || 'Group photo', takenAt: p.takenAt,
+        lineup: g && g.results && g.results.length ? g.results : null };
+    });
+    // The selfie comes only to the last game's players (get-story): the end of their night.
+    if (story.selfie) list.push({ url: story.selfie, game: null, name: 'End of the night', takenAt: story.endedAt, lineup: null });
+    return list;
+  }
+
+  function photoCaption(p) {
+    var others = p.lineup ? p.lineup.filter(function (r) { return r.player !== view; }).length : 0;
+    var inIt = p.lineup && p.lineup.some(function (r) { return r.player === view; });
+    return [clockTime(p.takenAt), inIt && others > 0 ? 'you and ' + plural(others, 'other') : null].filter(Boolean).join(' · ');
+  }
+
+  function photoFileName(p, i) { return slug(story.venue + ' ' + (i + 1) + ' ' + p.name) + '.jpg'; }
+
+  function lineupOrder(results) {
+    return results.slice().sort(function (a, b) {
+      return (a.rank == null ? 1e9 : a.rank) - (b.rank == null ? 1e9 : b.rank);
+    });
+  }
+
+  function myClips() {
+    var me = player(view);
+    return me.highlights.map(function (id) {
+      return story.highlights.filter(function (h) { return h.id === id; })[0];
+    }).filter(function (h) { return h; });
+  }
+
+  var PLAY_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="#fff"/></svg>';
+
+  function playIcon(cls) {
+    var span = el('span', { class: cls, 'aria-hidden': 'true' });
+    span.innerHTML = PLAY_ICON; // a constant, never guest text
+    return span;
+  }
+
+  function renderEvent() {
+    var me = player(view);
+    var photos = eventPhotos();
+    document.body.classList.add('ev-on');
+    document.title = possessive(me.name) + ' night at ' + story.venue + ' · GroupDarts';
+
+    $('ev-venue').textContent = story.venue;
+    // The venue is beside the GroupDarts logo above, so the line under it is the day alone.
+    $('ev-when').textContent = longDay(story.startedAt);
+    $('ev-name').textContent = possessive(me.name) + ' night';
+
+    // Hero: the newest photo they are in.
+    var heroIndex = photos.length - 1, hero = photos[heroIndex];
+    $('ev-hero-img').src = hero.url;
+    $('ev-hero-img').alt = 'Group photo: ' + hero.name;
+    $('ev-hero-t').textContent = hero.name;
+    $('ev-hero-s').textContent = photoCaption(hero);
+    $('ev-hero').onclick = function () { openPhoto(heroIndex); };
+
+    // Numbers: games, wins, best three darts.
+    var st = me.stats, tiles = $('ev-stats');
+    clear(tiles);
+    tiles.appendChild(stat(st.games, st.games === 1 ? 'Game' : 'Games'));
+    tiles.appendChild(stat(st.wins, st.wins === 1 ? 'Win' : 'Wins'));
+    tiles.appendChild(stat(st.bestVisit, 'Best 3 darts'));
+
+    var all = $('ev-saveall');
+    all.textContent = photos.length === 1 ? 'Save the photo' : 'Save all ' + photos.length + ' photos';
+    all.onclick = function () { saveAllPhotos(photos, all); };
+
+    // Clips
+    var clips = myClips(), box = $('ev-clips');
+    clear(box);
+    clips.forEach(function (h) {
+      var card = el('button', { type: 'button', class: 'ev-clip', 'aria-label': 'Watch ' + h.label });
+      if (h.thumbnail) card.appendChild(el('img', { src: h.thumbnail, alt: '', loading: 'lazy' }));
+      card.appendChild(playIcon('play'));
+      card.appendChild(el('div', { class: 'cap' }, [el('b', { text: h.label }), el('span', { text: h.gameName || '' })]));
+      card.addEventListener('click', function () { openClip(h); });
+      box.appendChild(card);
+    });
+    $('ev-clips-sec').classList.toggle('hidden', clips.length === 0);
+
+    // Games, in the order played: each with its photo, the lineup and the viewer's result.
+    var list = $('ev-games');
+    clear(list);
+    var played = me.games.slice().sort(function (a, b) { return gameIndex(a.game) - gameIndex(b.game); });
+    var n = 0;
+    played.forEach(function (pg) {
+      var g = gameOf(pg.game);
+      var pi = -1;
+      for (var i = 0; i < photos.length; i++) if (photos[i].game === pg.game) { pi = i; break; }
+      // A game left halfway with no photo has nothing to show.
+      if (!g || (pi < 0 && !g.completed)) return;
+      n++;
+      var photo = pi >= 0 ? photos[pi] : null;
+      var card = el('article', { class: 'ev-game' });
+      var result = !g.completed ? 'Not finished'
+        : pg.rank === 1 ? 'You won'
+        : pg.rank ? ordinal(pg.rank) + ' of ' + pg.of : null;
+      card.appendChild(el('div', { class: 'top' }, [
+        el('div', null, [
+          el('div', { class: 'n', text: ['Game ' + n, photo ? clockTime(photo.takenAt) : ''].filter(Boolean).join(' · ') }),
+          el('div', { class: 'gname', text: g.name })
+        ]),
+        result ? el('span', { class: 'ev-result' + (pg.rank === 1 && g.completed ? ' won' : ''), text: result }) : null
+      ]));
+      if (photo) {
+        var shot = el('button', { type: 'button', class: 'shot', 'aria-label': 'Open the group photo from ' + g.name },
+          [el('img', { src: photo.url, alt: 'Group photo: ' + g.name, loading: 'lazy' })]);
+        shot.addEventListener('click', function () { openPhoto(pi); });
+        card.appendChild(shot);
+      }
+      if (g.results && g.results.length) {
+        var ul = el('ul', { class: 'ev-lineup' });
+        lineupOrder(g.results).forEach(function (r) {
+          var isMe = r.player === view;
+          ul.appendChild(el('li', { class: (isMe ? 'me' : '') + (r.rank === 1 ? ' first' : '') }, [
+            el('span', { class: 'pos', text: r.rank ? ordinal(r.rank) : '' }),
+            el('span', { class: 'nm', text: nameOf(r.player) + (isMe ? ' (you)' : '') })
+          ]));
+        });
+        card.appendChild(ul);
+      }
+      clips.filter(function (h) { return h.game === pg.game; }).forEach(function (h) {
+        var b = el('button', { type: 'button', class: 'ev-gclip' }, [playIcon('pi'),
+          el('div', null, [el('b', { text: h.label }), el('span', { text: 'Your clip' })])]);
+        b.addEventListener('click', function () { openClip(h); });
+        card.appendChild(b);
+      });
+      list.appendChild(card);
+    });
+    $('ev-games-sec').classList.toggle('hidden', n === 0);
+
+    $('ev-expiry').textContent = story.expiresAt
+      ? 'Your photos and clips are kept until ' + shortDate(story.expiresAt) + '. Save the ones you want before then.'
+      : '';
+  }
+
+  /**
+   * Every photo at once. A phone that can share several files gets one share sheet (where
+   * "Save N images" puts them all in Photos); anything else downloads them one after another.
+   */
+  async function saveAllPhotos(photos, button) {
+    button.disabled = true;
+    try {
+      var files = [];
+      for (var i = 0; i < photos.length; i++) files.push(await brandedPhoto(photos[i].url, photoFileName(photos[i], i)));
+      if (navigator.canShare && navigator.canShare({ files: files })) {
+        await navigator.share({ files: files, text: shareText('Our night of darts') });
+      } else {
+        for (var j = 0; j < files.length; j++) {
+          saveBlob(files[j]);
+          await new Promise(function (r) { setTimeout(r, 450); });
+        }
+        toast(files.length === 1 ? 'Saved to your downloads.' : 'Saved ' + files.length + ' photos to your downloads.');
+      }
+    } catch (e) {
+      if (!e || e.name !== 'AbortError') toast('That didn’t work. Open a photo and save it from there.');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  // ---- the clip and photo views
+
+  var viewerOpen = false;
+  function showViewer(content, count) {
+    var body = $('viewer-body');
+    Array.prototype.forEach.call(body.querySelectorAll('video'), function (v) { v.pause(); });
+    clear(body);
+    body.appendChild(content);
+    $('viewer-count').textContent = count || '';
+    if (!viewerOpen) {
+      viewerOpen = true;
+      $('viewer').classList.remove('hidden');
+      document.documentElement.style.overflow = 'hidden';
+      // Back (a phone's own button or gesture) closes the view rather than leaving the page.
+      try { history.pushState({ viewer: true }, ''); } catch (e) { /* closes with the X only */ }
+    }
+    $('viewer').scrollTop = 0;
+  }
+
+  function hideViewer() {
+    if (!viewerOpen) return;
+    viewerOpen = false;
+    Array.prototype.forEach.call($('viewer-body').querySelectorAll('video'), function (v) { v.pause(); });
+    clear($('viewer-body'));
+    $('viewer').classList.add('hidden');
+    document.documentElement.style.overflow = '';
+  }
+
+  function closeViewer() {
+    if (!viewerOpen) return;
+    if (history.state && history.state.viewer) history.back(); else hideViewer();
+  }
+
+  window.addEventListener('popstate', hideViewer);
+  $('viewer-close').addEventListener('click', closeViewer);
+
+  function appButton(name, mark, colour, onClick, href) {
+    var icon = el('i', { text: mark, style: 'background:' + colour, 'aria-hidden': 'true' });
+    var b = href
+      ? el('a', { class: 'app', href: href, target: '_blank', rel: 'noopener noreferrer' }, [icon, el('span', { text: name })])
+      : el('button', { class: 'app', type: 'button' }, [icon, el('span', { text: name })]);
+    if (onClick) b.addEventListener('click', function () { onClick(b); });
+    return b;
+  }
+
+  function openClip(h) {
+    var who = nameOf(h.player);
+    var clipName = slug(story.venue + ' ' + who + ' ' + h.label) + '.mp4';
+    var makeFile = function () { return fileFrom(h.video, clipName); };
+    var text = shareText(who + ' – ' + h.label);
+    var savedHint = 'Saved. Post it from your gallery or downloads.';
+    var game = h.game ? gameOf(h.game) : null;
+    var photo = h.game ? story.groupPhotos.filter(function (p) { return p.game === h.game; })[0] : null;
+
+    var wrap = el('div');
+    if (h.video) {
+      var v = el('video', { controls: '', playsinline: '', autoplay: '', preload: 'auto' });
+      if (h.thumbnail) v.setAttribute('poster', h.thumbnail);
+      v.src = h.video;
+      wrap.appendChild(v);
+    } else {
+      wrap.appendChild(el('p', { class: 'muted', text: 'This clip is no longer available.' }));
+    }
+    wrap.appendChild(el('div', { class: 'vt', text: h.label }));
+    wrap.appendChild(el('p', { class: 'vs', text: [game ? game.name : h.gameName, photo ? clockTime(photo.takenAt) : ''].filter(Boolean).join(' · ') }));
+    if (!h.video) { showViewer(wrap); return; }
+
+    wrap.appendChild(el('div', { class: 'vlabel', text: 'Share to' }));
+    var link = pageLink();
+    wrap.appendChild(el('div', { class: 'apps' }, [
+      // Instagram and TikTok take a video only through the phone's share sheet: this opens it
+      // with the video in, and the guest picks the app.
+      appButton('Instagram', 'IG', '#C13584', function (b) { share(makeFile, text, b, savedHint); }),
+      appButton('TikTok', 'TT', '#111111', function (b) { share(makeFile, text, b, savedHint); }),
+      appButton('Facebook', 'f', '#1877F2', null, 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(link)),
+      appButton('WhatsApp', 'WA', '#25D366', null, 'https://wa.me/?text=' + encodeURIComponent(text + ' ' + link))
+    ]));
+    wrap.appendChild(el('p', { class: 'hint', text: 'Pick Instagram or TikTok in the list that opens.' }));
+    var row = el('div', { class: 'actions' });
+    var saveBtn = el('button', { class: 'btn', type: 'button', text: 'Save video' });
+    var moreBtn = el('button', { class: 'btn', type: 'button', text: 'More apps' });
+    saveBtn.addEventListener('click', function () { save(makeFile, h.video, saveBtn); });
+    moreBtn.addEventListener('click', function () { share(makeFile, text, moreBtn); });
+    row.appendChild(saveBtn);
+    row.appendChild(moreBtn);
+    wrap.appendChild(row);
+    showViewer(wrap);
+  }
+
+  function openPhoto(index) {
+    var photos = eventPhotos();
+    var i = Math.max(0, Math.min(photos.length - 1, index));
+    var p = photos[i];
+    var makeFile = function () { return brandedPhoto(p.url, photoFileName(p, i)); };
+
+    var wrap = el('div');
+    var frame = el('div', { class: 'vphoto' }, [el('img', { src: p.url, alt: 'Group photo: ' + p.name })]);
+    if (photos.length > 1) {
+      var prev = el('button', { type: 'button', class: 'reel-nav prev' + (i === 0 ? ' hidden' : ''), 'aria-label': 'Previous photo' });
+      prev.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
+      var next = el('button', { type: 'button', class: 'reel-nav next' + (i === photos.length - 1 ? ' hidden' : ''), 'aria-label': 'Next photo' });
+      next.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
+      prev.addEventListener('click', function () { openPhoto(i - 1); });
+      next.addEventListener('click', function () { openPhoto(i + 1); });
+      frame.appendChild(prev);
+      frame.appendChild(next);
+      // A swipe sideways moves along, as on a phone's own photos.
+      var x0 = null;
+      frame.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+      frame.addEventListener('touchend', function (e) {
+        if (x0 == null) return;
+        var dx = e.changedTouches[0].clientX - x0;
+        x0 = null;
+        if (Math.abs(dx) > 50) openPhoto(i + (dx < 0 ? 1 : -1));
+      }, { passive: true });
+    }
+    wrap.appendChild(frame);
+    wrap.appendChild(el('div', { class: 'vt', text: p.name }));
+    var names = p.lineup ? lineupOrder(p.lineup).map(function (r) {
+      var tags = [r.player === view ? 'you' : null, r.rank === 1 ? 'winner' : null].filter(Boolean);
+      return nameOf(r.player) + (tags.length ? ' (' + tags.join(', ') + ')' : '');
+    }).join(', ') : '';
+    wrap.appendChild(el('p', { class: 'vs', text: [clockTime(p.takenAt), names].filter(Boolean).join(' · ') }));
+    var row = el('div', { class: 'actions' });
+    var saveBtn = el('button', { class: 'btn', type: 'button', text: 'Save' });
+    var shareBtn = el('button', { class: 'btn primary', type: 'button', text: 'Share to apps' });
+    saveBtn.addEventListener('click', function () { save(makeFile, p.url, saveBtn); });
+    shareBtn.addEventListener('click', function () { share(makeFile, shareText('Our night of darts'), shareBtn); });
+    row.appendChild(saveBtn);
+    row.appendChild(shareBtn);
+    wrap.appendChild(row);
+    wrap.appendChild(el('p', { class: 'hint', text: 'Saved and shared photos carry a GroupDarts band with ' + story.venue + ' and the date.' }));
+    showViewer(wrap, photos.length > 1 ? (i + 1) + ' of ' + photos.length : '');
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (!viewerOpen) return;
+    if (e.key === 'Escape') closeViewer();
+    var nav = $('viewer-body').querySelector(e.key === 'ArrowLeft' ? '.reel-nav.prev' : e.key === 'ArrowRight' ? '.reel-nav.next' : null);
+    if (nav && !nav.classList.contains('hidden')) nav.click();
+  });
+
   // ------------------------------------------------------------------ load
 
   function problem(title, text, canRetry, link) {
     $('loading').classList.add('hidden');
     $('story').classList.add('hidden');
+    $('event').classList.add('hidden');
     $('group').classList.add('hidden');
     $('problem').classList.remove('hidden');
     $('problem-title').textContent = title;
@@ -1003,6 +1456,7 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
     $('loading').classList.remove('hidden');
 
     if (isLocal && window.STORY_DEMO) {
+      if (window.STORY_DEMO_READY) await window.STORY_DEMO_READY;
       story = window.STORY_DEMO;
     } else if (groupToken) {
       showGroup();
@@ -1036,13 +1490,17 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
     }
 
     view = story.you;
+    // Event night: a guest's own page with group photos gets the event layout. Every other
+    // page (no photos, or the group leader's and parents' routes) is the page as it was.
+    var eventNight = isEventNight(story);
     if (staffClaim) {
-      $('staff-note').textContent = 'Staff view of the page ' + nameOf(story.you) + ' was emailed. Opening it here doesn’t count as ' + nameOf(story.you) + ' opening it.';
-      $('staff-note').classList.remove('hidden');
+      var note = $(eventNight ? 'ev-staff-note' : 'staff-note');
+      note.textContent = 'Staff view of the page ' + nameOf(story.you) + ' was emailed. Opening it here doesn’t count as ' + nameOf(story.you) + ' opening it.';
+      note.classList.remove('hidden');
     }
-    render();
+    if (eventNight) renderEvent(); else render();
     $('loading').classList.add('hidden');
-    $('story').classList.remove('hidden');
+    $(eventNight ? 'event' : 'story').classList.remove('hidden');
     confirmWhenSeen();
   }
 
@@ -1235,7 +1693,8 @@ footer { margin-top: 2.4rem; color: var(--dimmer); font-size: .8rem; text-align:
   // A local copy can be walked through with made-up data: story.html?demo on localhost.
   if (isLocal && new URLSearchParams(window.location.search).has('demo')) {
     var s = document.createElement('script');
-    s.src = 'story-demo.js';
+    // story.html?demo=event: an event night (group photos after each game).
+    s.src = new URLSearchParams(window.location.search).get('demo') === 'event' ? 'story-demo-event.js' : 'story-demo.js';
     s.onload = load;
     s.onerror = function () { problem('No demo data', 'story-demo.js did not load.'); };
     document.body.appendChild(s);
