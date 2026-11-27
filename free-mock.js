@@ -3,6 +3,7 @@
  *   http://localhost:8000/free.html?mock            (sign up at home)
  *   http://localhost:8000/free.html?mock&c=board    (at the board: Ann, Bob, Cat)
  *   ...&case=one                                    (at the board, one adult)
+ *   http://localhost:8000/free.html?mock&case=none  (no venue offers the free 15: free minutes)
  * Loaded by config.js only on localhost and only with ?mock. Any code typed works except
  * FR-USED-USED (already used) and FR-GONE-GONE (expired).
  * -------------------------------------------------------------------------- */
@@ -37,6 +38,7 @@
     return now().then(function () {
       switch (request.action) {
         case 'venues':
+          if (params.get('case') === 'none') { return { ok: true, venues: [] }; }
           return { ok: true, venues: [
             { venue: 'rs', name: 'The Rising Sun', minutes: 15 },
             { venue: 'met', name: 'Metropolis Epsom', minutes: 15 }

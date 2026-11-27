@@ -531,6 +531,10 @@ button.quiet { background: none; border: 0; color: var(--dim); text-decoration: 
       if (venues.length === 0) {
         // Free minutes replaced the free 15 (26 Nov 2026): once no venue offers the codes, a
         // poster or an old link lands here, and the free time is earned at the board instead.
+        // Nothing is collected here any more, so the code-and-free-15 small print goes too.
+        document.title = 'Free minutes';
+        var privacy = document.querySelector('.privacy');
+        if (privacy) { privacy.classList.add('hidden'); }
         problem('Free minutes are at the board now',
           'No code needed. Off-peak, every adult who adds their email when signing up at the board, '
           + 'with the offers box ticked, adds 5 free minutes for the group, up to 20.');
