@@ -491,7 +491,7 @@
     get: function () { return later(scenario === 'cancel' ? refused() : fakeCredential('get'), 700); }
   };
   var mockOptions = {
-    create: { challenge: 'AAAA', rp: { id: 'localhost', name: 'Hawktivity Darts' },
+    create: { challenge: 'AAAA', rp: { id: 'localhost', name: 'GroupDarts' },
               user: { id: 'AAAAAAAAAAAAAAAAAAAAAA', name: 'Sam', displayName: 'Sam' },
               pubKeyCredParams: [{ type: 'public-key', alg: -7 }] },
     get: { challenge: 'AAAA', rpId: 'localhost', allowCredentials: [] }
