@@ -305,6 +305,19 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
 }
 .event-clips b { color: var(--text, inherit); }
 
+/* One tap back in (27 Nov 2026): somebody who signed up on this phone tonight plays the next
+   game without the form. */
+.rejoin { margin: 0 0 1.4rem; }
+.rejoin button.big {
+  width: 100%;
+  background: var(--go);
+  font-size: 1.25rem;
+  padding: 1.15rem 1rem;
+  line-height: 1.25;
+}
+.rejoin button.big:disabled { background: var(--ink-3); color: var(--dim); }
+.rejoin p.after { margin: 1rem 0 0; text-align: center; }
+
 /* --- remembered players ----------------------------------------------------
    The returning card sits above the form; the Remember me card on the done screen. */
 .saved {
@@ -431,6 +444,12 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
     <p class="games-link"><a href="https://groupdarts.com/games" target="_blank" rel="noopener">New to the games? See how each one works</a></p>
 
     <div id="form-notice-slot"></div>
+
+    <!-- A private event's night, on a phone that signed up tonight: one tap for the next game. -->
+    <div class="rejoin" id="rejoin" hidden>
+      <button type="button" class="big" id="rejoin-go">Play the next game</button>
+      <p class="after"><button type="button" class="link" id="rejoin-other">Sign up someone else</button></p>
+    </div>
 
     <!-- A private event's night only (describe says event): the clips promise, up front. -->
     <p class="event-clips" id="event-clips" hidden><b>Get your clips by email.</b> Add your email
@@ -733,6 +752,66 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
     document.title = 'Join the darts';
   }
 
+  // --- one tap for the next game (27 Nov 2026) ------------------------------------------
+  // After a sign-up at a private event, this phone keeps the guest's first name, email and
+  // ticks for that event only. Scanning the board's code again during the event shows one big
+  // button that sends the same details through register-player as a normal sign-up; the board
+  // matches the email to the player it already has. Only with an email, which is what the board
+  // matches on. Storage can throw (private mode, blocked site data): the form still works.
+  var REJOIN_PREFIX = 'hawktivity.eventGuest.';
+  var rejoinSaved = null;
+
+  function eventKey(ev) {
+    return REJOIN_PREFIX + (ev.id || (ev.clientName + '|' + ev.endsAt));
+  }
+
+  function saveForEvent(ev, details) {
+    if (!ev || !details.email) { return; }
+    try {
+      window.localStorage.setItem(eventKey(ev), JSON.stringify({
+        firstName: details.firstName,
+        email: details.email,
+        adultConfirmed: true,
+        marketingConsent: details.marketingConsent === true,
+        offersConsent: details.offersConsent === true,
+        endsAt: ev.endsAt
+      }));
+    } catch (e) { /* nothing kept: the form next time */ }
+  }
+
+  function savedForEvent(ev) {
+    try {
+      var raw = window.localStorage.getItem(eventKey(ev));
+      var saved = raw ? JSON.parse(raw) : null;
+      if (!saved || !saved.firstName || !saved.email || saved.adultConfirmed !== true) { return null; }
+      if (ev.endsAt && Date.parse(ev.endsAt) <= Date.now()) { return null; }
+      return saved;
+    } catch (e) { return null; }
+  }
+
+  function forgetForEvent(ev) {
+    try { window.localStorage.removeItem(eventKey(ev)); } catch (e) { /* nothing to do */ }
+  }
+
+  function setRejoinVisible(on) {
+    el('rejoin').hidden = !on;
+    el('form').hidden = on;
+    el('event-clips').hidden = on;
+    var games = document.querySelector('#screen-form .games-link');
+    if (games) { games.hidden = on; }
+  }
+
+  function offerRejoin(ev) {
+    rejoinSaved = savedForEvent(ev);
+    if (!rejoinSaved) { return false; }
+    var name = rejoinSaved.firstName;
+    el('rejoin-go').textContent = 'PLAY THE NEXT GAME, ' + name.toUpperCase();
+    el('rejoin-other').textContent = 'Not ' + name + '? Sign up someone else';
+    document.querySelector('#screen-form h1').textContent = 'Welcome back, ' + name;
+    setRejoinVisible(true);
+    return true;
+  }
+
   function el(id) { return document.getElementById(id); }
 
   function show(name) {
@@ -816,6 +895,7 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
     else if (data.freeMinutes && data.freeMinutes.perEmail > 0) { applyFreeMinutes(data.freeMinutes); }
 
     show('form');
+    if (eventMode && !data.full && offerRejoin(eventMode)) { return; }
     el('firstName').focus();
     offerReturning(data);
   }).catch(function () {
@@ -1163,6 +1243,7 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
         // The form is gone, so a second submit is impossible; Remember me and Forget me
         // share this flag and would otherwise never respond.
         busy = false;
+        if (eventMode) { saveForEvent(eventMode, details); }
         offerRemember(data, details);
         return;
       }
@@ -1189,6 +1270,78 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
       notice('form-notice-slot', 'No connection',
         'Your phone could not reach us. Try again, or ask a member of staff.');
     });
+  });
+
+  // --- one tap for the next game: the handlers ----------------------------------------
+  function newSubmissionId() {
+    if (window.crypto && window.crypto.randomUUID) { return window.crypto.randomUUID(); }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      var r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  }
+
+  // One id per page load, like the form's: a double tap or a retry after a lost answer adds
+  // one sign-up, not two. The next game is the next scan.
+  var rejoinSubmissionId = newSubmissionId();
+
+  el('rejoin-go').addEventListener('click', function () {
+    if (busy || !rejoinSaved) { return; }
+    busy = true;
+    var button = el('rejoin-go');
+    var label = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Sending…';
+    var s = rejoinSaved;
+    post({
+      code: code,
+      submissionId: rejoinSubmissionId,
+      firstName: s.firstName,
+      lastName: '',
+      email: s.email,
+      mobileNumber: '',
+      acceptedDisclaimer: true,
+      adultConfirmed: true,
+      marketingConsent: s.marketingConsent === true,
+      offersConsent: s.offersConsent === true,
+      photo: null
+    }).then(function (res) {
+      var data = res.data || {};
+      busy = false;
+      if (data.ok) {
+        el('done-heading').textContent = 'You’re next up — watch the board';
+        el('done-body').textContent = 'Someone at the board taps you in when it’s your game, ' +
+          (data.firstName || s.firstName) + '. Scan the board’s code again after this game to play another.';
+        show('done');
+        return;
+      }
+      button.disabled = false;
+      button.textContent = label;
+      if (data.reason === 'expired') {
+        fail('This code has expired', 'The board will be showing a new one. Scan that.');
+      } else if (data.reason === 'full') {
+        notice('form-notice-slot', 'This board is full', data.message);
+      } else {
+        notice('form-notice-slot', 'That didn’t work',
+          data.message || 'Try again, or ask a member of staff.');
+      }
+    }).catch(function () {
+      busy = false;
+      button.disabled = false;
+      button.textContent = label;
+      notice('form-notice-slot', 'No connection',
+        'Your phone could not reach us. Try again, or ask a member of staff.');
+    });
+  });
+
+  el('rejoin-other').addEventListener('click', function () {
+    if (busy) { return; }
+    forgetForEvent(eventMode);
+    rejoinSaved = null;
+    document.querySelector('#screen-form h1').textContent = 'Join the darts';
+    el('form-notice-slot').replaceChildren();
+    setRejoinVisible(false);
+    el('firstName').focus();
   });
 
   // --- remembered players ---------------------------------------------------------
