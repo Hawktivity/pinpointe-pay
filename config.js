@@ -30,9 +30,22 @@
   var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '' ||
                 host === '[::1]' || /\.local$/.test(host);
 
-  // pay.hawktivity.com is the live domain. Everything else -- the github.io copy
-  // the dev boards use, a preview, a branch deploy -- is treated as dev.
-  var project = host === 'pay.hawktivity.com' ? PROJECTS.prod : PROJECTS.dev;
+  // The live domains. play.groupdarts.com since the GroupDarts move (27 Nov 2026);
+  // pay.hawktivity.com until every link and bookmark has moved over (it redirects once
+  // REDIRECT_OLD_HOST is on). Everything else -- the github.io copy the dev boards use,
+  // a preview, a branch deploy -- is treated as dev.
+  var LIVE_HOSTS = ['play.groupdarts.com', 'pay.hawktivity.com'];
+  var project = LIVE_HOSTS.indexOf(host) !== -1 ? PROJECTS.prod : PROJECTS.dev;
+
+  // The old address sends every page to the same path on the new one, keeping ?query and
+  // #hash: story links in sent emails, ambassador invites, staff bookmarks, and a Stripe
+  // return that left before the switch. Off until the boards point at the new address.
+  var REDIRECT_OLD_HOST = false;
+  if (REDIRECT_OLD_HOST && host === 'pay.hawktivity.com') {
+    window.location.replace('https://play.groupdarts.com' + window.location.pathname +
+      window.location.search + window.location.hash);
+    return;
+  }
 
   window.PAY_CONFIG = {
     // Despite its name, the page only ever asks this one to `describe` a code: what it
