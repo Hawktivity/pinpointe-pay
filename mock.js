@@ -459,6 +459,7 @@
   //   nocodes      a backend that can't email codes: no new-phone route
   //   norecover    a new phone's email has no saved details
   //   event        a private event's short form: no date of birth, photo offered at once
+  //   minorphoto   a board that asks the parent about an under-18's photo: offered to them too
   // New phone: the code is always 123456 and the date of birth 17/05/1990.
   // The phone's passkey store is faked too (PAY_CONFIG.passkeys), so no real Face ID or
   // Windows Hello prompt ever appears.
@@ -506,7 +507,9 @@
                           // &case=event: a private event's short form, no date of birth asked.
                           event: scenario === 'event'
                             ? { clientName: 'Acme Ltd', endsAt: new Date(Date.now() + 3 * 3600e3).toISOString() }
-                            : null }));
+                            : null,
+                          // &case=minorphoto: the board holds an under-18's photo for their parent.
+                          minorPhoto: scenario === 'minorphoto' }));
     }
     if (request.action === 'email_code') {
       window.lastEmailCode = request;
@@ -566,6 +569,7 @@
     return later(body({
       ok: true, firstName: request.firstName, suiteName: 'Lane 1',
       underEighteen: minor, photoKept: !minor && !!request.photo,
+      photoHeldForParent: minor && !!request.photo && scenario === 'minorphoto',
       marketingConsent: !minor && request.marketingConsent === true,
       canRemember: !minor && scenario !== 'nopasskeys'
     }));

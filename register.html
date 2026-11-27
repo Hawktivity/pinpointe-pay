@@ -506,12 +506,13 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
 
       <p class="minor-note" id="minor-note" hidden>
         Under 18? You can still join. A parent or guardian gives their consent at the
-        board before you play, and you can add a photo there afterwards.
+        board before you play<span id="minor-photo-later">, and you can add a photo there afterwards</span>.
         <span id="minor-photo-removed" hidden><b>The photo you added has been taken off:</b>
           under-18s add theirs on the board's screen once a parent has agreed.</span>
       </p>
 
-      <!-- Shown once the date of birth says 18 or over (see onBirthDate), or at an event. -->
+      <!-- Shown once the date of birth says 18 or over, or under 18 at a board that asks the
+           parent about the photo (see onBirthDate), or at an event. -->
       <div class="field" id="photo-field" hidden>
         <label>Photo <span class="opt">optional &mdash; shown next to your name</span></label>
         <div class="photo-row">
@@ -527,6 +528,8 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
              opens the front camera directly (and is ignored on a computer). -->
         <input id="photo-camera" type="file" accept="image/*" capture="user" hidden>
         <input id="photo" type="file" accept="image/*" hidden>
+        <p class="hint" id="photo-parent-hint" hidden>Your parent or guardian is asked at the board
+          whether it can be kept. It isn't shown until they say yes.</p>
       </div>
 
       <!-- Hidden (and cleared) for an under-18: they are not sent clips, so nothing here is
@@ -800,6 +803,9 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
       el('submit').disabled = true;
     }
 
+    // This board holds an under-18's photo until a parent says it can be kept (27 Nov 2026).
+    minorPhotoAsked = data.minorPhoto === true;
+
     if (data.event && data.event.clientName) { applyEventMode(data.event); }
     else if (data.freeMinutes && data.freeMinutes.perEmail > 0) { applyFreeMinutes(data.freeMinutes); }
 
@@ -813,8 +819,12 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
 
   // --- age: decides the consent and whether a photo is offered ---------------
   // The endpoint decides for itself; this only keeps the page from offering what it
-  // will not keep. Under 18, no photo: the phone is filled in before any parent has
-  // agreed to anything, so a child's photo waits until the consent at the board.
+  // will not keep. Under 18: a photo only at a board that holds it, unseen, until the
+  // parent agrees to the consent there and says it can be kept (minorPhotoAsked, from
+  // describe, 27 Nov 2026). Anywhere else none: the phone is filled in before any parent
+  // has agreed to anything, so the photo waits for the board.
+  var minorPhotoAsked = false;
+
   function ageFrom(iso) {
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
     if (!m) { return null; }
@@ -842,14 +852,19 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
     // under-18 date, which threw the photo away without a word. Metropolis, 26 Nov: a guest
     // said they added a photo on their phone, the board showed none, and they took it again on
     // the touchscreen; the youth group's under-18 phone sign-up reached us with no photo in it.
-    // At an event no date is asked, so it stays (applyEventMode).
-    el('photo-field').hidden = !eventMode && !isAdult();
+    // At an event no date is asked, so it stays (applyEventMode). An under-18 gets it too where
+    // the board asks their parent whether to keep it, and is told so.
+    var photoForMinor = minor && minorPhotoAsked;
+    el('photo-field').hidden = !eventMode && !isAdult() && !photoForMinor;
+    el('photo-parent-hint').hidden = !photoForMinor;
+    el('minor-photo-later').hidden = photoForMinor;
     // Never asked of an under-18; the server refuses it for one as well.
     el('social-field').hidden = minor;
     // Only after an adult date was changed to an under-18 one can a photo be here to lose. Say so.
-    if (minor && photoBase64 !== null) { el('minor-photo-removed').hidden = false; }
+    if (minor && !minorPhotoAsked && photoBase64 !== null) { el('minor-photo-removed').hidden = false; }
     if (!minor) { el('minor-photo-removed').hidden = true; }
-    if (minor) { clearPhoto(); el('marketingConsent').checked = false; }
+    if (minor && !minorPhotoAsked) { clearPhoto(); }
+    if (minor) { el('marketingConsent').checked = false; }
     // No email for an under-18 either: they are not sent clips. The server drops one if sent.
     el('email-field').hidden = minor;
     if (minor) { el('email').value = ''; }
@@ -1104,7 +1119,8 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
       marketingConsent: !isMinor() && el('marketingConsent').checked === true,
       // The separate offers box: exactly true, from an adult, with an email to send to.
       offersConsent: !isMinor() && el('email').value.trim() !== '' && el('offersConsent').checked === true,
-      photo: isMinor() ? null : photoBase64
+      // An under-18's only where the board asks their parent whether to keep it.
+      photo: isMinor() && !minorPhotoAsked ? null : photoBase64
     };
 
     // At an event the tick says 18 or over and no date of birth is sent; otherwise the date.
@@ -1122,7 +1138,10 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
         if (data.underEighteen) {
           el('done-body').textContent = 'Look up at the board — your name is on it. ' +
             'Before you play, a parent or guardian gives their consent there when ' +
-            'somebody taps you in. Add your photo on the board’s screen after that.';
+            'somebody taps you in. ' +
+            (data.photoHeldForParent
+              ? 'They’re asked then whether your photo can be kept.'
+              : 'Add your photo on the board’s screen after that.');
         }
 
         show('done');
