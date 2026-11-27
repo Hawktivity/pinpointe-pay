@@ -458,6 +458,7 @@
   //   sameemail    Remember me keeps everything but the email
   //   nocodes      a backend that can't email codes: no new-phone route
   //   norecover    a new phone's email has no saved details
+  //   event        a private event's short form: no date of birth, photo offered at once
   // New phone: the code is always 123456 and the date of birth 17/05/1990.
   // The phone's passkey store is faked too (PAY_CONFIG.passkeys), so no real Face ID or
   // Windows Hello prompt ever appears.
@@ -501,7 +502,11 @@
                           remember: scenario !== 'nopasskeys',
                           emailCodes: scenario !== 'nopasskeys' && scenario !== 'nocodes',
                           // &case=freeminutes: in the venue's free hours (26 Nov 2026).
-                          freeMinutes: scenario === 'freeminutes' ? { perEmail: 5, until: '19:00' } : null }));
+                          freeMinutes: scenario === 'freeminutes' ? { perEmail: 5, until: '19:00' } : null,
+                          // &case=event: a private event's short form, no date of birth asked.
+                          event: scenario === 'event'
+                            ? { clientName: 'Acme Ltd', endsAt: new Date(Date.now() + 3 * 3600e3).toISOString() }
+                            : null }));
     }
     if (request.action === 'email_code') {
       window.lastEmailCode = request;
