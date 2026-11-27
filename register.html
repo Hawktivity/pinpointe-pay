@@ -406,6 +406,9 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
   font-size: .9rem;
   font-weight: 700;
 }
+/* Free minutes' line (27 Nov 2026): first, in the free-note's green, with a green tick. */
+.skip-card li.free { margin-left: -.55rem; padding: .5rem .55rem; background: #1f5a2d; border: 1px solid #2f7a3d; border-radius: 10px; color: var(--paper); font-weight: 600; }
+.skip-card li.free::before { background: #8fe3a2; color: #1f5a2d; }
 .skip-card p.promise { margin: 1rem 0 0; color: var(--paper); font-weight: 600; font-size: .95rem; }
 .skip-card .actions { margin-top: 1.2rem; display: grid; gap: .6rem; }
 .skip-card button.no { background: transparent; border: 1px solid var(--line); color: var(--dim); font-size: 1.05rem; }
@@ -583,12 +586,15 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
     <!-- "Sure you want to skip?" (Richard, 22 Nov 2026). Once per guest, the first time I'M IN
          is tapped by an adult who left the email blank; never an under-18, whose email field is
          hidden. Each line is something the clips page really shows; the offers box is not part
-         of the pitch. The board asks the same, in the same words (QuickSignup.SkipCheck*). -->
+         of the pitch. The board asks the same, in the same words (QuickSignup.SkipCheck*).
+         In free hours (27 Nov 2026) the group's free minutes lead the list, in green, and the
+         intro mentions the box: the same as the board (FreeMinutes.SkipCheckLine). -->
     <div class="skip-check" id="skip-check" role="dialog" aria-modal="true" aria-labelledby="skip-check-h" hidden>
       <div class="skip-card">
         <h2 id="skip-check-h">Sure you want to skip?</h2>
-        <p>Add your email and when your session ends we'll send you:</p>
+        <p id="skip-check-intro">Add your email and when your session ends we'll send you:</p>
         <ul>
+          <li class="free" id="skip-check-free" hidden>5 free minutes for your group, right now</li>
           <li>Videos of your best throws, ready to share</li>
           <li>Your scores, your stats and where every dart landed</li>
           <li>The group photo</li>
@@ -869,8 +875,10 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
   // In the venue's free hours every adult's email, with the offers box ticked, adds free minutes
   // for the group at the board. The box says so, unticked as always; the board does the rest.
   var freeMinutesOn = false;
+  var freePerEmail = 5;
   function applyFreeMinutes(fm) {
     freeMinutesOn = true;
+    freePerEmail = fm.perEmail;
     el('offers-field').classList.add('free');
     var text = el('offers-text');
     text.textContent = 'Yes, send me offers from Hawktivity Darts. ';
@@ -1026,6 +1034,13 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
 
   function openSkipCheck() {
     skipCheckAsked = true;
+    // Free hours (27 Nov 2026): the group's free minutes first, and the box in the intro.
+    var free = freeMinutesOn && !isMinor();
+    el('skip-check-free').textContent = freePerEmail + ' free minutes for your group, right now';
+    el('skip-check-free').hidden = !free;
+    el('skip-check-intro').textContent = free
+      ? 'Add your email and tick the box, and you get:'
+      : 'Add your email and when your session ends we\'ll send you:';
     el('skip-check').hidden = false;
     el('skip-check-add').focus();
   }
