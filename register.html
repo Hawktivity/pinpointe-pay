@@ -290,6 +290,8 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
   color: var(--dim);
   font-size: .93rem;
 }
+/* After an adult date was changed to an under-18 one: the photo they added is gone, and why. */
+#minor-photo-removed { display: block; margin-top: .5rem; color: var(--paper); }
 
 /* --- a private event's night (24 Nov 2026) ---------------------------------
    The clips promise, above the form, where nobody can miss it. */
@@ -505,9 +507,12 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
       <p class="minor-note" id="minor-note" hidden>
         Under 18? You can still join. A parent or guardian gives their consent at the
         board before you play, and you can add a photo there afterwards.
+        <span id="minor-photo-removed" hidden><b>The photo you added has been taken off:</b>
+          under-18s add theirs on the board's screen once a parent has agreed.</span>
       </p>
 
-      <div class="field" id="photo-field">
+      <!-- Shown once the date of birth says 18 or over (see onBirthDate), or at an event. -->
+      <div class="field" id="photo-field" hidden>
         <label>Photo <span class="opt">optional &mdash; shown next to your name</span></label>
         <div class="photo-row">
           <div class="photo-preview" id="photo-preview" aria-hidden="true"></div>
@@ -707,6 +712,8 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
     ['lastName-field', 'dateOfBirth-field', 'minor-note', 'mobile-field'].forEach(function (id) {
       el(id).hidden = true;
     });
+    // No date of birth is asked here (the tick says 18 or over), so the photo is offered at once.
+    el('photo-field').hidden = false;
     // The email straight after the name, where it is the next thing to fill in.
     var row = el('firstName').closest('.row');
     row.parentNode.insertBefore(el('email-field'), row.nextSibling);
@@ -822,12 +829,26 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
     return age !== null && age < 18;
   }
 
+  function isAdult() {
+    var age = ageFrom(birthDateIso());
+    return age !== null && age >= 18;
+  }
+
   function onBirthDate() {
     var minor = isMinor();
     el('minor-note').hidden = !minor;
-    el('photo-field').hidden = minor;
+    // The photo is offered once the date of birth says 18 or over, not before (27 Nov 2026).
+    // It used to show from the start, so a guest could add a photo first and then type an
+    // under-18 date, which threw the photo away without a word. Metropolis, 26 Nov: a guest
+    // said they added a photo on their phone, the board showed none, and they took it again on
+    // the touchscreen; the youth group's under-18 phone sign-up reached us with no photo in it.
+    // At an event no date is asked, so it stays (applyEventMode).
+    el('photo-field').hidden = !eventMode && !isAdult();
     // Never asked of an under-18; the server refuses it for one as well.
     el('social-field').hidden = minor;
+    // Only after an adult date was changed to an under-18 one can a photo be here to lose. Say so.
+    if (minor && photoBase64 !== null) { el('minor-photo-removed').hidden = false; }
+    if (!minor) { el('minor-photo-removed').hidden = true; }
     if (minor) { clearPhoto(); el('marketingConsent').checked = false; }
     // No email for an under-18 either: they are not sent clips. The server drops one if sent.
     el('email-field').hidden = minor;
@@ -1101,7 +1122,7 @@ input.code { letter-spacing: .3em; font-size: 1.3rem; text-align: center; }
         if (data.underEighteen) {
           el('done-body').textContent = 'Look up at the board — your name is on it. ' +
             'Before you play, a parent or guardian gives their consent there when ' +
-            'somebody taps you in.';
+            'somebody taps you in. Add your photo on the board’s screen after that.';
         }
 
         show('done');
